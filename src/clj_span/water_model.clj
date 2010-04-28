@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-span.
 ;;;
@@ -17,8 +17,8 @@
 
 (ns clj-span.water-model
   (:use [clj-misc.utils     :only (memoize-by-first-arg depth-first-tree-search)]
-	[clj-span.randvars  :only (rv-lt rv-scale rv-scalar-divide rv-zero-below-scalar rv-mean)]
-	[clj-span.model-api :only (distribute-flow! service-carrier distribute-load-over-processors)]
+	[clj-misc.randvars  :only (rv-lt rv-scale rv-scalar-divide rv-zero-below-scalar rv-mean)]
+	[clj-span.model-api :only (distribute-flow! service-carrier)]
 	[clj-span.analyzer  :only (source-loc? sink-loc? use-loc?)]
 	[clj-span.params    :only (*trans-threshold*)]))
 
@@ -96,6 +96,6 @@
 
 (defmethod distribute-flow! "Water"
   [_ location-map _ _]
-  (distribute-load-over-processors
-   (fn [_ source-location] (distribute-downhill! location-map source-location))
-   (filter source-loc? (vals location-map))))
+  (dorun (pmap
+	  (fn [source-location] (distribute-downhill! location-map source-location))
+	  (filter source-loc? (vals location-map)))))

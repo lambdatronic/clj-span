@@ -22,19 +22,21 @@ To run clj-span, you will need:
 Then simply place clj-span.jar, clojure.jar, and clojure-contrib.jar
 on your classpath and fire up your JVM as follows:
 
-java -cp clj-span.jar:clojure.jar:clojure-contrib.jar clj_span.core \
-     -source-layer     <filepath> \
-     -sink-layer       <filepath> \
-     -use-layer        <filepath> \
-     -source-threshold <double> \
-     -sink-threshold   <double> \
-     -use-threshold    <double> \
-     -trans-threshold  <double> \
-     -rv-max-states    <integer> \
-     -sink-type        <absolute|relative> \
-     -use-type         <absolute|relative> \
-     -benefit-type     <rival|non-rival> \
-     -flow-model       <line-of-sight|proximity|carbon|hydrosheds>
+java -cp clj-span.jar:clojure.jar:clojure-contrib.jar clj_span.commandline \
+     -source-layer       <filepath> \
+     -sink-layer         <filepath> \
+     -use-layer          <filepath> \
+     -flow-layers        <filepath> \
+     -source-threshold   <double> \
+     -sink-threshold     <double> \
+     -use-threshold      <double> \
+     -trans-threshold    <double> \
+     -rv-max-states      <integer> \
+     -downscaling-factor <integer> \
+     -sink-type          <absolute|relative> \
+     -use-type           <absolute|relative> \
+     -benefit-type       <rival|non-rival> \
+     -flow-model         <line-of-sight|proximity|carbon|hydrosheds>
 
 
 * License

@@ -1,44 +1,35 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
-;;; This file is part of clj-span.
+;;; This file is part of clj-misc.
 ;;;
-;;; clj-span is free software: you can redistribute it and/or modify
+;;; clj-misc is free software: you can redistribute it and/or modify
 ;;; it under the terms of the GNU General Public License as published
 ;;; by the Free Software Foundation, either version 3 of the License,
 ;;; or (at your option) any later version.
 ;;;
-;;; clj-span is distributed in the hope that it will be useful, but
+;;; clj-misc is distributed in the hope that it will be useful, but
 ;;; WITHOUT ANY WARRANTY; without even the implied warranty of
 ;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
 ;;; General Public License for more details.
 ;;;
 ;;; You should have received a copy of the GNU General Public License
-;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;; along with clj-misc.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines functions for creating, querying, and
+;;; manipulating random variables, which are defined to be maps of
+;;; {state -> probability}.  Both discrete and continuous random
+;;; variables are supported.  Continuous RVs are represented using
+;;; samples from their cumulative distribution functions (CDFs).
 
-(ns clj-span.randvars
-  (:use [clj-misc.utils  :only (maphash)]
-	[clj-span.params :only (*rv-max-states*)]))
-;;(comment
-(refer 'modelling   :only '(probabilistic?
-			    binary?
-			    encodes-continuous-distribution?
-			    get-dist-breakpoints
-			    get-possible-states
-			    get-probabilities
-			    get-data))
-;;)
-(comment
-  (declare probabilistic?
-	   binary?
-	   encodes-continuous-distribution?
-	   get-dist-breakpoints
-	   get-possible-states
-	   get-probabilities
-	   get-data)
-)
+(ns clj-misc.randvars)
 
-(def #^{:private true} cont-type {:type ::continuous-distribution})
-(def #^{:private true} disc-type {:type ::discrete-distribution})
+(def *rv-max-states* 10)
+(defn reset-rv-max-states! [new-val] (alter-var-root #'*rv-max-states* (constantly new-val)))
+
+(def cont-type {:type ::continuous-distribution})
+(def disc-type {:type ::discrete-distribution})
 
 (defn- successive-sums
   ([nums]
@@ -46,7 +37,7 @@
   ([total nums]
      (if (empty? nums)
        (list total)
-       (lazy-cons total (successive-sums (+ total (first nums)) (rest nums))))))
+       (lazy-seq (cons total (successive-sums (+ total (first nums)) (rest nums)))))))
 
 (defn- successive-differences
   [nums]
@@ -54,60 +45,14 @@
     nums
     (cons (first nums) (map - (rest nums) nums))))
 
-(defn unpack-datasource
-  "Returns a seq of length n of the values in ds,
-   represented as probability distributions.  All values and
-   probabilities are represented as rationals."
-  [ds n]
-  (println "DS:           " ds)
-  (println "PROBABILISTIC?" (probabilistic? ds))
-  (println "ENCODES?      " (encodes-continuous-distribution? ds))
-  (let [to-rationals (partial map #(if (Double/isNaN %) 0 (rationalize %)))]
-    (if (and (probabilistic? ds) (not (binary? ds)))
-      (if (encodes-continuous-distribution? ds)
-	;; sampled continuous distributions (FIXME: How is missing information represented?)
-	(let [bounds                (get-dist-breakpoints ds)
-	      unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
-	      unbounded-from-above? (== Double/POSITIVE_INFINITY (last bounds))]
-	  (println "BREAKPOINTS:    " bounds)
-	  (println "UNBOUNDED-BELOW?" unbounded-from-below?)
-	  (println "UNBOUNDED-ABOVE?" unbounded-from-above?)
-	  (let [prob-dist             (apply create-struct (to-rationals
-							    (if unbounded-from-below?
-							      (if unbounded-from-above?
-								(rest (butlast bounds))
-								(rest bounds))
-							      (if unbounded-from-above?
-								(butlast bounds)
-								bounds))))
-		get-cdf-vals          (if unbounded-from-below?
-					(if unbounded-from-above?
-					  #(successive-sums (to-rationals (butlast (get-probabilities ds %))))
-					  #(successive-sums (to-rationals (get-probabilities ds %))))
-					(if unbounded-from-above?
-					  #(successive-sums 0 (to-rationals (butlast (get-probabilities ds %))))
-					  #(successive-sums 0 (to-rationals (get-probabilities ds %)))))]
-	    (for [idx (range n)]
-	      (with-meta (apply struct prob-dist (get-cdf-vals idx)) cont-type))))
-	;; discrete distributions (FIXME: How is missing information represented? Fns aren't setup for non-numeric values.)
-	(let [prob-dist (apply create-struct (get-possible-states ds))]
-	  (for [idx (range n)]
-	    (with-meta (apply struct prob-dist (to-rationals (get-probabilities ds idx))) disc-type))))
-      ;; binary distributions and deterministic values (FIXME: NaNs become 0s)
-      (for [value (to-rationals (get-data ds))]
-	(with-meta (array-map value 1) disc-type)))))
-
-;; FIXME: upgrade clojure and change to type
 (defmulti rv-resample
-  ;;"Returns a new random variable with <=*rv-max-states* states sampled from X."
-  (fn [X] (:type (meta X))))
+  "Returns a new random variable with <=*rv-max-states* states sampled from X."
+  type)
 
-;; FIXME: upgrade clojure and change to (lazy-seq (cons ...))
 (defn- my-partition
   [size coll]
   (when (seq coll)
-    (lazy-cons (take size coll) (my-partition size (drop size coll)))))
-;;    (lazy-seq (cons (take size coll) (my-partition size (drop size coll))))))
+    (lazy-seq (cons (take size coll) (my-partition size (drop size coll))))))
 
 (defmethod rv-resample ::discrete-distribution
   [X]
@@ -129,10 +74,9 @@
     (let [step-size (Math/ceil (/ (dec (count X)) (dec *rv-max-states*)))]
       (with-meta (into {} (take-nth step-size (sort X))) (meta X)))))
 
-;; FIXME change to type; upgrade clojure!
 (defmulti rv-mean
-  ;;"Returns the mean value of a random variable X."
-  (fn [X] (:type (meta X))))
+  "Returns the mean value of a random variable X."
+  type)
 
 (defmethod rv-mean ::discrete-distribution
   [X]
@@ -167,7 +111,6 @@
 			    (rest convolution))]
     all-unique))
 
-(comment
 (defn rv-convolute-3
   [f X Y]
   (let [convolution (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)])
@@ -178,7 +121,6 @@
 			    (transient (apply array-map (first convolution)))
 			    (rest convolution))]
     (persistent! all-unique)))
-)
 
 (defn rv-convolute-4
   [f X Y]
@@ -192,7 +134,6 @@
 			    (rest convolution))]
     (into {} all-unique)))
 
-(comment
 (defn rv-convolute-5
   [f X Y]
   (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
@@ -205,7 +146,6 @@
 			    (transient (vector (first convolution)))
 			    (rest convolution))]
     (into {} (persistent! all-unique))))
-)
 
 (defn rv-convolute-6
   [f X Y]
@@ -223,7 +163,6 @@
 				(assoc fXY v (+ old-p p))
 				(assoc fXY v p))))))))
 
-(comment
 (defn rv-convolute-7
   [f X Y]
   (loop [X* X, Y* Y, fXY (transient {})]
@@ -238,18 +177,15 @@
 			      (if-let [old-p (fXY v)]
 				(assoc! fXY v (+ old-p p))
 				(assoc! fXY v p))))))))
-)
 
 ;;; finish testing functions
 
-;; FIXME upgrade clojure and change to type
 (defn- rv-convolute
   "Returns the distribution of f of two random variables X and Y."
   [f X Y]
   (with-meta
     (rv-convolute-6 f X Y)
-    (if (or (= (meta X) cont-type)
-	    (= (meta Y) cont-type))
+    (if (#{(type X) (type Y)} ::continuous-distribution)
       cont-type
       disc-type)))
 
@@ -280,7 +216,7 @@
 (defn- rv-map
   "Returns the distribution of the random variable X with f applied to its range values."
   [f X]
-  (with-meta (maphash f identity X) (meta X)))
+  (with-meta (into {} (map (fn [[s p]] [(f s) p]) X)) (meta X)))
 
 (defn scalar-rv-add
   [x Y]
@@ -332,8 +268,12 @@
   [X y]
   (rv-convolute #(if (< %2 %1) 0 %2) {(rationalize y) 1} X))
 
+(defn rv-average
+  [RVs]
+  (rv-scalar-divide (reduce rv-add RVs) (count RVs)))
+
 (defmulti rv-scale
-  (fn [rv scale-factor] (:type (meta rv))))
+  (fn [rv scale-factor] (type rv)))
 
 (defmethod rv-scale ::continuous-distribution
   [rv-unsorted scale-factor-double]

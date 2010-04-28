@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-span.
 ;;;
@@ -14,35 +14,32 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines the global symbols available to all SPAN
+;;; functions.  They should be set using set-global-params! before any
+;;; data-preprocessing, flow model simulations, or result analyses.
 
-(ns clj-span.params)
+(ns clj-span.params
+  (:use [clj-misc.randvars :only (*rv-max-states* reset-rv-max-states!)]))
 
-;; FIXME do we ever want both absolute and relative, sources, sinks, or uses?
-;; FIXME *source-type* should exist now since it can also be absolute or relative
-(def *source-threshold* 0)
-
-(def *sink-threshold* 0)
-
-(def *use-threshold* 0)
-
-(def *trans-threshold* 0)
-
-(def *rv-max-states* 10)
-
-(def *sink-type* nil)
-
-(def *use-type* nil)
-
-(def *benefit-type* nil)
+(declare *trans-threshold* *sink-type* *use-type* *benefit-type*)
 
 (defn set-global-params!
-  [flow-params]
-  (and (flow-params :source-threshold) (alter-var-root #'*source-threshold* (constantly (flow-params :source-threshold))))
-  (and (flow-params :sink-threshold)   (alter-var-root #'*sink-threshold*   (constantly (flow-params :sink-threshold))))
-  (and (flow-params :use-threshold)    (alter-var-root #'*use-threshold*    (constantly (flow-params :use-threshold))))
-  (and (flow-params :trans-threshold)  (alter-var-root #'*trans-threshold*  (constantly (flow-params :trans-threshold))))
-  (and (flow-params :rv-max-states)    (alter-var-root #'*rv-max-states*    (constantly (flow-params :rv-max-states))))
-  (alter-var-root #'*sink-type*        (constantly (flow-params :sink-type)))
-  (alter-var-root #'*use-type*         (constantly (flow-params :use-type)))
-  (alter-var-root #'*benefit-type*     (constantly (flow-params :benefit-type)))
-  (assert (and *sink-type* *use-type* *benefit-type*)))
+  [{:keys [rv-max-states trans-threshold sink-type use-type benefit-type] :or {rv-max-states 10, trans-threshold 0.01}}]
+  {:pre [(and sink-type use-type benefit-type)]}
+  (reset-rv-max-states! rv-max-states)
+  (doseq [[sym value] {'*trans-threshold* trans-threshold,
+		       '*sink-type*       sink-type,
+		       '*use-type*        use-type,
+		       '*benefit-type*    benefit-type}]
+    (intern (find-ns 'clj-span.params) sym value)))
+
+(defn print-global-params
+  []
+  (println "*rv-max-states*"   *rv-max-states*)
+  (println "*trans-threshold*" *trans-threshold*)
+  (println "*sink-type*"       *sink-type*)
+  (println "*use-type*"        *use-type*)
+  (println "*benefit-type*"    *benefit-type*))

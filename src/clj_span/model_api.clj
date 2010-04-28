@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-span.
 ;;;
@@ -14,36 +14,33 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines the service-carrier type and the
+;;; multimethods which must be implemented by each flow model
+;;; specification: distribute-flow!, decay, and undecay.
 
 (ns clj-span.model-api)
 
+(defstruct service-carrier :weight :route)
+
 (defmulti distribute-flow!
-  ;;"Service-specific flow distribution functions."
-  (fn [flow-concept-name location-map rows cols] flow-concept-name))
+  "Service-specific flow distribution functions."
+  (fn [flow-model location-map rows cols] flow-model))
 
 (defmethod distribute-flow! :default
-  [flow-concept-name _ _ _]
-  (throw (Exception. (str "distribute-flow! is undefined for flow type: " flow-concept-name))))
+  [flow-model _ _ _]
+  (throw (Exception. (str "distribute-flow! is undefined for flow type: " flow-model))))
 
 (defmulti decay
-  ;;"Service-specific decay functions."
-  (fn [flow-concept-name weight steps] flow-concept-name))
+  "Service-specific decay functions."
+  (fn [flow-model weight steps] flow-model))
 
 (defmethod decay :default [_ weight _] weight)
 
 (defmulti undecay
-  ;;"Service-specific inverse decay functions."
-  (fn [flow-concept-name weight steps] flow-concept-name))
+  "Service-specific inverse decay functions."
+  (fn [flow-model weight steps] flow-model))
 
 (defmethod undecay :default [_ weight _] weight)
-
-(defstruct service-carrier :weight :route)
-
-(defn distribute-load-over-processors
-  [action-fn arg-seq]
-  (let [num-processors (.availableProcessors (Runtime/getRuntime))
-	agents (map agent (replicate (+ 2 num-processors) ()))]
-    (println "Sending Tasks to" (count agents) "Agents...")
-    (dorun (map #(send %1 action-fn %2) (cycle agents) arg-seq))
-    (println "Waiting for Agents to Finish...")
-    (apply await agents)))

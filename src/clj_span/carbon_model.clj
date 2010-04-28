@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-span.
 ;;;
@@ -17,8 +17,8 @@
 
 (ns clj-span.carbon-model
   (:use [clj-misc.utils     :only (seq2map)]
-	[clj-span.randvars  :only (rv-add rv-divide rv-multiply)]
-	[clj-span.model-api :only (distribute-flow! service-carrier distribute-load-over-processors)]
+	[clj-misc.randvars  :only (rv-add rv-divide rv-multiply)]
+	[clj-span.model-api :only (distribute-flow! service-carrier)]
 	[clj-span.analyzer  :only (source-loc? use-loc?)]))
 
 (defmethod distribute-flow! "Carbon"
@@ -31,12 +31,11 @@
 	use-locations     (filter use-loc?    locations)
 	total-consumption (reduce rv-add (map :use use-locations))
 	percent-consumed  (seq2map use-locations #(vector % (rv-divide (:use %) total-consumption)))]
-    (distribute-load-over-processors
-     (fn [_ c]
-       ;;(reset! (:carrier-cache c) ; FIXME upgrade clojure!
-       (swap! (:carrier-cache c) (constantly
-				  (for [p source-locations]
-				    (struct service-carrier
-					    (rv-multiply (:source p) (percent-consumed c))
-					    [p c])))))
-     use-locations)))
+    (dorun (pmap
+	    (fn [c]
+	      (reset! (:carrier-cache c)
+		      (for [p source-locations]
+			(struct service-carrier
+				(rv-multiply (:source p) (percent-consumed c))
+				[p c]))))
+	    use-locations))))

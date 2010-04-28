@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-span.
 ;;;
@@ -17,8 +17,8 @@
 
 (ns clj-span.proximity-model
   (:use [clj-misc.matrix-ops :only (get-neighbors)]
-	[clj-span.randvars   :only (scalar-rv-subtract rv-multiply rv-scalar-multiply rv-scalar-divide rv-mean)]
-	[clj-span.model-api  :only (distribute-flow! decay undecay service-carrier distribute-load-over-processors)]
+	[clj-misc.randvars   :only (scalar-rv-subtract rv-multiply rv-scalar-multiply rv-scalar-divide rv-mean)]
+	[clj-span.model-api  :only (distribute-flow! decay undecay service-carrier)]
 	[clj-span.analyzer   :only (source-loc? sink-loc? use-loc?)]
 	[clj-span.params     :only (*trans-threshold*)]))
 
@@ -90,6 +90,6 @@
 
 (defmethod distribute-flow! "Proximity"
   [_ location-map rows cols]
-  (distribute-load-over-processors
-   (fn [_ source-location] (distribute-gaussian! location-map rows cols source-location (:source source-location)))
-   (filter source-loc? (vals location-map))))
+  (dorun (pmap
+	  (fn [source-location] (distribute-gaussian! location-map rows cols source-location (:source source-location)))
+	  (filter source-loc? (vals location-map)))))

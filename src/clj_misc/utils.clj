@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-misc.
 ;;;
@@ -14,6 +14,11 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-misc.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines miscellaneous functions.  These should be
+;;; moved at some point into more specific utility libraries.
 
 (ns clj-misc.utils
   (:import (java.util HashMap)))
@@ -36,13 +41,7 @@
    element of the sequence.  keyvalfn should return a pair [key val]
    to be added to the map for each input sequence element."
   [aseq keyvalfn]
-  (loop [aseq aseq
-	 amap {}]
-    (if (empty? aseq)
-      amap
-      (let [[key val] (keyvalfn (first aseq))]
-	(recur (rest aseq)
-	       (assoc amap key val))))))
+  (into {} (map keyvalfn aseq)))
 
 (defn seq2redundant-map
   "Constructs a map from a sequence by applying keyvalfn to each
@@ -51,21 +50,19 @@
    already in the map, its current value will be combined with the new
    val using (mergefn curval val)."
   [aseq keyvalfn mergefn]
-  (loop [aseq aseq
-	 amap {}]
-    (if (empty? aseq)
-      amap
-      (let [[key val] (keyvalfn (first aseq))]
-	(recur (rest aseq)
-	       (update-in amap [key] mergefn val))))))
+  (reduce (fn [amap x]
+	    (let [[key val] (keyvalfn x)]
+	      (update-in amap [key] mergefn val)))
+	  {}
+	  aseq))
 
-(defn maphash
+(defn mapmap
   "Creates a new map by applying keyfn to every key of in-map and
    valfn to every corresponding val."
   [keyfn valfn in-map]
-  (seq2map (seq in-map) (fn [[key val]] [(keyfn key) (valfn val)])))
+  (into {} (map (fn [[k v]] [(keyfn k) (valfn v)]) in-map)))
 
-(defn maphash-java
+(defn mapmap-java
   "Creates a new Java map by applying keyfn to every key of in-map and
    valfn to every corresponding val."
   [keyfn valfn in-map]
@@ -102,13 +99,13 @@
   "Creates a map of {keywords -> vect-of-vects} from a Java
    HashMap<String,Array[]>."
   [java-map]
-  (maphash keyword vectorize java-map))
+  (mapmap keyword vectorize java-map))
 
 (defn arrayify-map
   "Creates a Java HashMap<String,Array[]> from a map of {keywords ->
    vect-of-vects}."
   [clojure-map]
-  (maphash-java name arrayify clojure-map))
+  (mapmap-java name arrayify clojure-map))
 
 (defn multi-conj
   "Conjoins an element multiple times onto a base-coll."
@@ -203,3 +200,12 @@
 	  (let [result (apply function args)]
 	    (swap! cache assoc (first args) result)
 	    result)))))
+
+(defn distribute-load-over-processors
+  [action-fn arg-seq]
+  (let [num-processors (.availableProcessors (Runtime/getRuntime))
+	agents (map agent (replicate (+ 2 num-processors) ()))]
+    (println "Sending Tasks to" (count agents) "Agents...")
+    (dorun (map #(send %1 action-fn %2) (cycle agents) arg-seq))
+    (println "Waiting for Agents to Finish...")
+    (apply await agents)))

@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-misc.
 ;;;
@@ -14,6 +14,11 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-misc.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines functions for checking the JVM's current
+;;; memory usage and estimating the memory usage for a passed in form.
 
 (ns clj-misc.memtest
   (:import (java.lang.management ManagementFactory MemoryType)))

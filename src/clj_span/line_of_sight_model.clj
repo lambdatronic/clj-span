@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-span.
 ;;;
@@ -16,7 +16,7 @@
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
 
 (ns clj-span.line-of-sight-model
-  (:use [clj-span.randvars  :only (rv-zero-above-scalar
+  (:use [clj-misc.randvars  :only (rv-zero-above-scalar
 				   rv-add
 				   rv-subtract
 				   rv-scale
@@ -61,23 +61,23 @@
 
 	  :otherwise (let [get-i-range
 			   (cond (and (< pi bi) (< pj bj))
-				 (fn [j] (let [left-i  (Math/round (f (- j (if (== j pj) 0.0 0.5))))
-					       right-i (Math/round (f (+ j (if (== j bj) 0.0 0.5))))]
+				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j pj) 0.0 0.5)))))
+					       right-i (int (Math/round (f (+ j (if (== j bj) 0.0 0.5)))))]
 					   (range left-i (inc right-i))))
 					       
 				 (and (< pi bi) (> pj bj))
-				 (fn [j] (let [left-i  (Math/round (f (- j (if (== j bj) 0.0 0.5))))
-					       right-i (Math/round (f (+ j (if (== j pj) 0.0 0.5))))]
+				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j bj) 0.0 0.5)))))
+					       right-i (int (Math/round (f (+ j (if (== j pj) 0.0 0.5)))))]
 					   (range right-i (inc left-i))))
 					       
 				 (and (> pi bi) (< pj bj))
-				 (fn [j] (let [left-i  (Math/round (f (- j (if (== j pj) 0.0 0.5))))
-					       right-i (Math/round (f (+ j (if (== j bj) 0.0 0.5))))]
+				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j pj) 0.0 0.5)))))
+					       right-i (int (Math/round (f (+ j (if (== j bj) 0.0 0.5)))))]
 					   (range left-i  (dec right-i) -1)))
 					       
 				 (and (> pi bi) (> pj bj))
-				 (fn [j] (let [left-i  (Math/round (f (- j (if (== j bj) 0.0 0.5))))
-					       right-i (Math/round (f (+ j (if (== j pj) 0.0 0.5))))]
+				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j bj) 0.0 0.5)))))
+					       right-i (int (Math/round (f (+ j (if (== j pj) 0.0 0.5)))))]
 					   (range right-i (dec left-i)  -1))))
 			   j-range (if (< pj bj)
 				     (range pj (inc bj))
@@ -92,14 +92,14 @@
 
 ;; FIXME convert step to distance metric based on map resolution and make this gaussian to 1/2 mile
 (defmethod decay "LineOfSight"
-  [_ weight step] (rv-scalar-divide weight (/ (* step step) 100)))
+  [_ weight step] (rv-scalar-divide weight (* step step)))
 
 ;; FIXME convert step to distance metric based on map resolution and make this gaussian to 1/2 mile
 (defmethod undecay "LineOfSight"
-  [_ weight step] (rv-scalar-multiply weight (/ (* step step) 100)))
+  [_ weight step] (rv-scalar-multiply weight (* step step)))
 
 (defn- distribute-raycast!
-  [flow-conc-name location-map [provider beneficiary]]
+  [flow-model location-map [provider beneficiary]]
   (if (= provider beneficiary)
     (swap! (:carrier-cache provider) conj
 	   (struct service-carrier (:source provider) [provider]))
@@ -107,7 +107,7 @@
 	  steps       (dec (count path))
 	  source-val  (:source provider)]
       (when (or (== steps 1)
-		(> (rv-mean (decay flow-conc-name source-val (dec steps))) *trans-threshold*))
+		(> (rv-mean (decay flow-model source-val (dec steps))) *trans-threshold*))
 	(let [source-elev (get-valid-elevation provider)
 	      rise        (rv-subtract (get-valid-elevation beneficiary) source-elev)
 	      m           (rv-scalar-divide rise steps)]
@@ -121,7 +121,7 @@
 			       [#(swap! (:carrier-cache provider) conj
 					(struct service-carrier weight [provider]))]
 			       [])]
-	    (let [decayed-weight (decay flow-conc-name weight step)]
+	    (let [decayed-weight (decay flow-model weight step)]
 	      (if (== step steps)
 		(do
 		  (doseq [op delayed-ops] (op))
@@ -141,7 +141,7 @@
 			   delayed-ops)))))))))))
 
 (defn- distribute-raycast-debug!
-  [flow-conc-name location-map [provider beneficiary]]
+  [flow-model location-map [provider beneficiary]]
   (println "Distribute-raycast called!\nWaiting...")
   (Thread/sleep 1000)
   (println "Resuming")
@@ -150,19 +150,21 @@
       (println "In Situ Usage")
       (swap! (:carrier-cache provider) conj
 	     (struct service-carrier (:source provider) [provider])))
-    (let [path        (map location-map (find-viewpath provider beneficiary))
+    (let [viewpath    (find-viewpath provider beneficiary)
+	  path        (map location-map viewpath)
 	  steps       (dec (count path))
 	  source-val  (:source provider)]
+      (newline)
+      (println "ViewPath:        " viewpath)
+      (println "First Path ID:   " (first viewpath))
+      (println "First ID Type:   " (map type (first viewpath)))
       (println "Path Length:     " steps)
       (println "Source-val:      " source-val)
       (println "Trans-threshold: " *trans-threshold*)
       (println "Steps-1 Squared: " (Math/pow (dec steps) 2))
-      (println "RV-Scalar-Divide:" (decay flow-conc-name source-val (dec steps)))
-      (println "RV-Mean:         " (rv-mean (decay flow-conc-name source-val (dec steps))))
       (if (or (== steps 1)
-	      (> (rv-mean (decay flow-conc-name source-val (dec steps))) *trans-threshold*))
+	      (> (rv-mean (decay flow-model source-val (dec steps))) *trans-threshold*))
 	(do
-	  (println "Foo")
 	  (let [source-elev (get-valid-elevation provider)
 		use-elev    (get-valid-elevation beneficiary)]
 	    (println "Source-elev:" source-elev)
@@ -183,7 +185,7 @@
 				     [])]
 		  (println step ":" current (count explored) (count frontier) (first elev-bounds) weight (count delayed-ops))
 		  (Thread/sleep 500)
-		  (let [decayed-weight (decay flow-conc-name weight step)]
+		  (let [decayed-weight (decay flow-model weight step)]
 		    (println "Decayed-weight:" decayed-weight)
 		    (if (== step steps)
 		      (do
@@ -211,16 +213,16 @@
 				 delayed-ops))))))))))
 	(println "Distribute raycast completed!")))))
 
-(defmethod distribute-flow! "LineOfSight_silent"
-  [flow-conc-name location-map _ _]
+(defmethod distribute-flow! "LineOfSight"
+  [flow-model location-map _ _]
   (let [locations (vals location-map)]
     (dorun
      (pmap
-      (partial distribute-raycast! flow-conc-name location-map)
+      (partial distribute-raycast! flow-model location-map)
       (for [p (filter source-loc? locations) b (filter use-loc? locations)] [p b])))))
 
-(defmethod distribute-flow! "LineOfSight"
-  [flow-conc-name location-map _ _]
+(defmethod distribute-flow! "LineOfSightDebug"
+  [flow-model location-map _ _]
   (let [locations (vals location-map)
 	sources   (filter source-loc? locations)
 	sinks     (filter sink-loc?   locations)
@@ -230,4 +232,4 @@
     (println "Num Sinks:"   (count sinks))
     (println "Num Uses:"    (count uses))
     (println "Num Pairs:"   (count pbs))
-    (dorun (pmap (partial distribute-raycast! flow-conc-name location-map) pbs))))
+    (dorun (map (partial distribute-raycast-debug! flow-model location-map) pbs))))

@@ -14,97 +14,101 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines the run-span, simulate-service-flows, and
+;;; data-preprocessing functions.  run-span is the main entry point
+;;; into the SPAN system and may be called with a number of different
+;;; options specifying the form of its results.
 
 (ns clj-span.core
-  (:gen-class)
-  (:import (java.io File))
-  (:use [clojure.set :as set :only (difference)]
-	[clojure.contrib.duck-streams :only (spit)]))
+  (:use [clj-misc.utils         :only (mapmap)]
+	[clj-span.model-api     :only (distribute-flow!)]
+	[clj-span.params        :only (set-global-params!)]
+	[clj-span.interface     :only (show-span-results-menu)]
+	[clj-span.route-caching :only (cache-all-actual-routes!)]
+	[clj-misc.randvars      :only (rv-mean rv-zero rv-average)]
+	[clj-misc.matrix-ops    :only (map-matrix downsample-matrix print-matrix get-rows get-cols get-neighbors grids-align?)])
+  (:require clj-span.water-model
+	    clj-span.carbon-model
+	    clj-span.proximity-model
+	    clj-span.line-of-sight-model))
 
-(def #^{:private true} usage-message
-     (str
-      "Usage: java -cp clj-span.jar:clojure.jar:clojure-contrib.jar clj_span.core \\ \n"
-      "            -source-layer     <filepath> \\ \n"
-      "            -sink-layer       <filepath> \\ \n"
-      "            -use-layer        <filepath> \\ \n"
-      "            -source-threshold <double> \\ \n"
-      "            -sink-threshold   <double> \\ \n"
-      "            -use-threshold    <double> \\ \n"
-      "            -trans-threshold  <double> \\ \n"
-      "            -rv-max-states    <integer> \\ \n"
-      "            -sink-type        <absolute|relative> \\ \n"
-      "            -use-type         <absolute|relative> \\ \n"
-      "            -benefit-type     <rival|non-rival> \\ \n"
-      "            -flow-model       <line-of-sight|proximity|carbon|hydrosheds>\n"))
+(defn- zero-layer-below-threshold
+  "Takes a two dimensional array of RVs and replaces all values whose
+   means are less than the threshold with rv-zero."
+  [threshold layer]
+  (map-matrix #(if (< (rv-mean %) threshold) rv-zero %) layer))
 
-(defmulti #^{:private true} print-usage (fn [error-type extra-info] error-type))
+(defstruct location :id :neighbors :source :sink :use :flow-features :carrier-cache)
 
-(defmethod print-usage :args-not-even [_ extra-info]
-  (println (str "\nError: The number of input arguments must be even.\n\n" usage-message)))
+(defn make-location-map
+  "Returns a map of ids to location objects, one per location in the
+   data layers."
+  [source-layer sink-layer use-layer flow-layers]
+  (let [rows (get-rows source-layer)
+	cols (get-cols source-layer)]
+    (into {}
+	  (for [i (range rows) j (range cols) :let [id [i j]]]
+	    [id (struct-map location
+		  :id            id
+		  :neighbors     (get-neighbors id rows cols)
+		  :source        (get-in source-layer id)
+		  :sink          (get-in sink-layer   id)
+		  :use           (get-in use-layer    id)
+		  :flow-features (mapmap identity #(get-in % id) flow-layers)
+		  :carrier-cache (atom ()))]))))
 
-(defmethod print-usage :param-errors [_ extra-info]
-  (let [error-message (apply str (interpose "\t\n" extra-info))]
-    (println (str "\nError: The parameter values that you entered are incorrect.\n\t" error-message "\n\n" usage-message))))
+(defn- simulate-service-flows
+  "Creates a network of interconnected locations, and starts a
+   service-carrier propagating in every location whose source value is
+   greater than 0.  These carriers propagate child carriers through
+   the network which collect information about the routes traveled and
+   the service weight transmitted along these routes.  When the
+   simulation completes, a sequence of the locations in the network is
+   returned."
+  [flow-model source-layer sink-layer use-layer flow-layers]
+  {:pre [(#{"LineOfSight" "Proximity" "Carbon" "Hydrosheds"} flow-model)]}
+  (let [location-map (make-location-map source-layer sink-layer use-layer flow-layers)
+	locations    (vals location-map)]
+    (distribute-flow! flow-model location-map (get-rows source-layer) (get-cols source-layer))
+    (cache-all-actual-routes! locations flow-model)
+    locations))
 
-(def #^{:private true} param-tests
-     [["-source-layer"     #(.exists (File. %))        " is not a valid filepath."            ]
-      ["-sink-layer"       #(.exists (File. %))        " is not a valid filepath."            ]
-      ["-use-layer"        #(.exists (File. %))        " is not a valid filepath."            ]
-      ["-source-threshold" #(float?   (read-string %)) " is not a double."                    ]
-      ["-sink-threshold"   #(float?   (read-string %)) " is not a double."                    ]
-      ["-use-threshold"    #(float?   (read-string %)) " is not a double."                    ]
-      ["-trans-threshold"  #(float?   (read-string %)) " is not a double."                    ]
-      ["-rv-max-states"    #(integer? (read-string %)) " is not an integer."                  ]
-      ["-sink-type"        #{"absolute" "relative"}    " must be one of absolute or relative."]
-      ["-use-type"         #{"absolute" "relative"}    " must be one of absolute or relative." ]
-      ["-benefit-type"     #{"rival" "non-rival"}      " must be one of rival or non-rival"   ]
-      ["-flow-model"       #{"line-of-sight" "proximity" "carbon" "hydrosheds"} " must be one of line-of-sight, proximity, carbon, or hydrosheds."]])
-
-(defn- valid-params?
-  [params]
-  (let [errors (remove nil?
-		       (map (fn [[key test? error-msg]]
-			      (if-let [val (params key)]
-				(if (not (test? val)) (str val error-msg))
-				(str "No value provided for " key)))
-			    param-tests))
-	input-keys   (set (keys params))
-	valid-keys   (set (map first param-tests))
-	invalid-keys (set/difference input-keys valid-keys)
-	errors (concat errors (map #(str % " is not a valid parameter name.") invalid-keys))]
-    (if (empty? errors)
-      true
-      (print-usage :param-errors errors))))
-
-(defn -main
-  [& args]
-  (if (odd? (count args))
-    (print-usage :args-not-even nil)
-    (let [input-params (into {} (map vec (partition 2 args)))]
-      (when (valid-params? input-params)
-	(println "\nCongratulations! Everything was input correctly!\n")
-	(doseq [[key _ _] param-tests] (println (find input-params key)))))))
-
-(defn generate-layer-at-random
-  [filename rows cols type]
-  {:pre [(#{:discrete :continuous} type)]}
-  (binding [*print-dup* true]
-    (spit filename
-	  (let [meta (if (= type :discrete)
-		       {:type :discrete-distribution}
-		       {:type :continuous-distribution})]
-	    (vec (for [_ (range rows)]
-		   (vec (for [_ (range cols)]
-			  (with-meta {(rand 100.0) 1} meta)))))))))
-
-(defn generate-layer-from-ascii-grid
-  [filename]
-  (let [lines  (read-lines filename)
-	rows (Integer/parseInt (second (re-find #"^NROWS\s+(\d+)" (first  lines))))
-	cols (Integer/parseInt (second (re-find #"^NCOLS\s+(\d+)" (second lines))))
-	data (drop-while #(re-find #"^[^\d].*" %) lines)]
-    (comment "...process the data...")))
-
-(defn load-layer [filename] (read-string (slurp filename)))
-
-;;(into {} (map (fn [[k v]] [(keyword (subs k 1)) v])
+(defn run-span
+  [{:keys [source-layer  source-threshold
+	   sink-layer    sink-threshold
+	   use-layer     use-threshold
+	   flow-layers   trans-threshold
+	   rv-max-states downscaling-factor
+	   sink-type     use-type
+	   benefit-type  flow-model
+	   result-type]}]
+  ;; Make sure all layers have the same number of rows and columns
+  {:pre [(apply grids-align? source-layer sink-layer use-layer (vals flow-layers))
+	 (#{:cli-menu :closure-map :matrix-list :raw-locations} result-type)]}
+  ;; Initialize global parameters
+  (set-global-params! {:rv-max-states      rv-max-states
+		       :trans-threshold    trans-threshold
+		       :sink-type          sink-type
+		       :use-type           use-type
+		       :benefit-type       benefit-type})
+  ;; Preprocess data layers (downsampling and zeroing below their thresholds)
+  (let [preprocess-layer (fn [[l t]] (zero-layer-below-threshold t (downsample-matrix downscaling-factor rv-average l)))
+	[source-layer sink-layer use-layer] (map preprocess-layer
+						 {source-layer source-threshold,
+						  sink-layer   sink-threshold,
+						  use-layer    use-threshold})
+	flow-layers (mapmap identity #(downsample-matrix downscaling-factor rv-average %) flow-layers)]
+    ;; Display layers
+    (newline)
+    (apply print-matrix source-layer sink-layer use-layer (vals flow-layers))
+    (newline)
+    ;; Run flow model and return the results
+    (let [locations (simulate-service-flows flow-model source-layer sink-layer use-layer flow-layers)]
+      (condp = result-type
+	:cli-menu      (show-span-results-menu flow-model source-layer sink-layer use-layer flow-layers locations)
+	:closure-map   :closure-map
+	:matrix-list   :matrix-list
+	:raw-locations :raw-locations))))

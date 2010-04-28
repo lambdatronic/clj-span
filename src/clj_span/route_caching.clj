@@ -1,4 +1,4 @@
-;;; Copyright 2009 Gary Johnson
+;;; Copyright 2010 Gary Johnson
 ;;;
 ;;; This file is part of clj-span.
 ;;;
@@ -14,8 +14,16 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines functions for rerunning the carrier routes
+;;; captured from the first pass of the SPAN flow simulation.  The
+;;; routes are processed this time with sink and use effects taken
+;;; into account.  All the newly computed carrier route information is
+;;; cached via memoization for use by the analyzer functions.
 
-(ns clj-span.actualizer
+(ns clj-span.route-caching
   (:use [clj-span.analyzer :only (rerun-actual-route sink-loc? use-loc?)]
 	[clj-span.params   :only (*sink-type* *use-type* *benefit-type*)]))
 
@@ -62,12 +70,12 @@
 		     (concat successors open-list)))))))))
 
 (defn cache-all-actual-routes!
-  [locations flow-concept-name]
+  [locations flow-model]
   (println "Computing actual routes from possible routes...")
   (let [carriers (doall (mapcat (comp deref :carrier-cache) (filter #(or (sink-loc? %) (use-loc? %)) locations)))]
     (println "Ordering carriers by dependence...")
     (let [sorted-carriers (order-carriers-by-dependence carriers)]
       (println "Rerunning routes by dependence order...")
       (doseq [c sorted-carriers]
-	(rerun-actual-route c flow-concept-name))
+	(rerun-actual-route c flow-model))
       (println "All runs completed."))))
