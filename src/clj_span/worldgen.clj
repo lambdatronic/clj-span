@@ -24,7 +24,7 @@
 (ns clj-span.worldgen
   (:use [clj-misc.matrix-ops :only (make-matrix)]
 	[clj-misc.randvars   :only (cont-type disc-type)]
-	[clojure.contrib.duck-streams :only (spit file-str with-in-reader)]))
+	[clojure.contrib.duck-streams :only (spit file-str with-in-reader read-lines)]))
 
 (defn read-layer-from-file
   [filename]
@@ -48,3 +48,11 @@
 	(for [[name type] name-to-type-map]
 	  [name (let [meta (if (= type :discrete) disc-type cont-type)]
 		  (make-matrix rows cols #(with-meta {(rationalize (rand 100.0)) 1} meta)))])))
+
+(defn make-layer-from-ascii-grid
+  [filename]
+  (let [lines (read-lines filename)
+	rows  (Integer/parseInt (second (re-find #"^NROWS\s+(\d+)" (first  lines))))
+	cols  (Integer/parseInt (second (re-find #"^NCOLS\s+(\d+)" (second lines))))
+	data  (drop-while #(re-find #"^[^\d]" %) lines)]
+    (println "Stub...process the data...")))

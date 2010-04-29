@@ -26,7 +26,7 @@
   (:use [clj-misc.utils         :only (mapmap)]
 	[clj-span.model-api     :only (distribute-flow!)]
 	[clj-span.params        :only (set-global-params!)]
-	[clj-span.interface     :only (show-span-results-menu)]
+	[clj-span.interface     :only (show-span-results-menu provide-results)]
 	[clj-span.route-caching :only (cache-all-actual-routes!)]
 	[clj-misc.randvars      :only (rv-mean rv-zero rv-average)]
 	[clj-misc.matrix-ops    :only (map-matrix downsample-matrix print-matrix get-rows get-cols get-neighbors grids-align?)])
@@ -95,7 +95,9 @@
 		       :use-type           use-type
 		       :benefit-type       benefit-type})
   ;; Preprocess data layers (downsampling and zeroing below their thresholds)
-  (let [preprocess-layer (fn [[l t]] (zero-layer-below-threshold t (downsample-matrix downscaling-factor rv-average l)))
+  (let [rows             (get-rows source-layer)
+	cols             (get-cols source-layer)
+	preprocess-layer (fn [[l t]] (zero-layer-below-threshold t (downsample-matrix downscaling-factor rv-average l)))
 	[source-layer sink-layer use-layer] (map preprocess-layer
 						 {source-layer source-threshold,
 						  sink-layer   sink-threshold,
@@ -108,7 +110,25 @@
     ;; Run flow model and return the results
     (let [locations (simulate-service-flows flow-model source-layer sink-layer use-layer flow-layers)]
       (condp = result-type
-	:cli-menu      (show-span-results-menu flow-model source-layer sink-layer use-layer flow-layers locations)
-	:closure-map   :closure-map
-	:matrix-list   :matrix-list
-	:raw-locations :raw-locations))))
+	:cli-menu      (show-span-results-menu flow-model
+					       source-layer
+					       sink-layer
+					       use-layer
+					       flow-layers
+					       locations
+					       downscaling-factor)
+	:closure-map   (provide-results :closure-map
+					flow-model
+					locations
+					rows cols
+					downscaling-factor)
+	:matrix-list   (provide-results :matrix-list
+					flow-model
+					locations
+					rows cols
+					downscaling-factor)
+	:raw-locations (provide-results :raw-locations
+					flow-model
+					locations
+					rows cols
+					downscaling-factor)))))

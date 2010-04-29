@@ -119,10 +119,28 @@
 	(aset matrix i j (coord-map key)))
     matrix))
 
+(defn- upsample-results
+  [rows cols downscaling-factor result-map]
+  (if (== downscaling-factor 1)
+    result-map
+    (let [offset-range  (range downscaling-factor)
+	  row-remainder (rem rows downscaling-factor)
+	  col-remainder (rem cols downscaling-factor)]
+      (merge (into {} (mapcat (fn [[[i j] val]]
+				(let [i-base (* i downscaling-factor)
+				      j-base (* j downscaling-factor)]
+				  (for [i-offset offset-range j-offset offset-range]
+				    (let [idx [(+ i-base i-offset) (+ j-base j-offset)]]
+				      [idx val]))))
+			      result-map))
+	     (into {} (for [i (range rows) j (range cols (+ cols col-remainder))] [[i j] nil]))
+	     (into {} (for [i (range rows (+ rows row-remainder)) j (range cols)] [[i j] nil]))))))
+
 (defn show-span-results-menu
-  [flow-model source-layer sink-layer use-layer flow-layers locations]
-  (let [rows (get-rows source-layer)
-	cols (get-cols source-layer)
+  [flow-model source-layer sink-layer use-layer flow-layers locations downscaling-factor]
+  (let [rows     (* downscaling-factor (get-rows source-layer))
+	cols     (* downscaling-factor (get-cols source-layer))
+	upsample (partial upsample-results rows cols downscaling-factor)
 	menu (array-map
 	      "View Theoretical Source"  #(theoretical-source       locations)
 	      "View Theoretical Sink"    #(theoretical-sink         locations)
@@ -155,8 +173,60 @@
 	(when (fn? action)
 	  (let [coord-map (action)]
 	    (when (map? coord-map)
-	      (newline)
-	      (print-matrix (coord-map-to-matrix rows cols coord-map))
-	      (newline)
-	      (println "Distinct values:" (count (distinct (vals coord-map)))))
+	      (let [coord-map-upsampled (upsample coord-map)]
+		(newline)
+		(print-matrix (coord-map-to-matrix rows cols coord-map-upsampled))
+		(newline)
+		(println "Distinct values:" (count (distinct (vals coord-map-upsampled))))))
 	    (recur (select-menu-option prompts))))))))
+
+(defmulti provide-results (fn [result-type flow-model locations rows cols downscaling-factor] result-type))
+
+(defmethod provide-results :closure-map
+  [_ flow-model locations rows cols downscaling-factor]
+  (let [upsample (partial upsample-results rows cols downscaling-factor)]
+    {:theoretical-source  #(upsample (theoretical-source  locations))
+     :theoretical-sink    #(upsample (theoretical-sink    locations))
+     :theoretical-use     #(upsample (theoretical-use     locations))
+     :inaccessible-source #(upsample (inaccessible-source locations))
+     :inaccessible-sink   #(upsample (inaccessible-sink   locations))
+     :inaccessible-use    #(upsample (inaccessible-use    locations))
+     :possible-flow       #(upsample (possible-flow       locations flow-model))
+     :possible-source     #(upsample (possible-source     locations))
+     :possible-sink       #(upsample (possible-sink       locations))
+     :possible-use        #(upsample (possible-use        locations))
+     :blocked-flow        #(upsample (blocked-flow        locations flow-model))
+     :blocked-source      #(upsample (blocked-source      locations flow-model))
+     :blocked-sink        #(upsample (blocked-sink        locations flow-model))
+     :blocked-use         #(upsample (blocked-use         locations flow-model))
+     :actual-flow         #(upsample (actual-flow         locations flow-model))
+     :actual-source       #(upsample (actual-source       locations flow-model))
+     :actual-sink         #(upsample (actual-sink         locations flow-model))
+     :actual-use          #(upsample (actual-use          locations flow-model))}))
+
+(defmethod provide-results :matrix-list
+  [_ flow-model locations rows cols downscaling-factor]
+  (map (comp (partial coord-map-to-matrix rows cols)
+	     (partial upsample-results rows cols downscaling-factor))
+       [(theoretical-source  locations)
+	(theoretical-sink    locations)
+	(theoretical-use     locations)
+	(inaccessible-source locations)
+	(inaccessible-sink   locations)
+	(inaccessible-use    locations)
+	(possible-flow       locations flow-model)
+	(possible-source     locations)
+	(possible-sink       locations)
+	(possible-use        locations)
+	(blocked-flow        locations flow-model)
+	(blocked-source      locations flow-model)
+	(blocked-sink        locations flow-model)
+	(blocked-use         locations flow-model)
+	(actual-flow         locations flow-model)
+	(actual-source       locations flow-model)
+	(actual-sink         locations flow-model)
+	(actual-use          locations flow-model)]))
+
+(defmethod provide-results :raw-locations
+  [_ _ locations _ _ _]
+  locations)
