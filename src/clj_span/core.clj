@@ -82,28 +82,9 @@
     (cache-all-actual-routes! locations flow-model)
     locations))
 
-(defn- all-params-validate?
-  [{:keys [source-layer  source-threshold
-	   sink-layer    sink-threshold
-	   use-layer     use-threshold
-	   flow-layers   trans-threshold
-	   rv-max-states downscaling-factor
-	   sink-type     use-type
-	   benefit-type  flow-model
-	   result-type]}]
-  (let [nil-or-double>0? #(or (nil? %) (and (float? %) (pos? %)))
-	nil-or-int>=1?   #(or (nil? %) (and (int %) (>= % 1)))
-	nil-or-matrix?   #(or (nil? %) (is-matrix? %))]
-    (and
-     (every? is-matrix?       [source-layer use-layer])
-     (every? nil-or-matrix?   (cons sink-layer (vals flow-layers)))
-     (apply grids-align?      (remove nil? [source-layer sink-layer use-layer (vals flow-layers)]))
-     (every? nil-or-double>0? [source-threshold sink-threshold use-threshold trans-threshold])
-     (every? nil-or-int>=1?   [rv-max-states downscaling-factor])
-     (every? #{:absolute :relative} [sink-type use-type])
-     (#{:rival :non-rival} benefit-type)
-     (#{"LineOfSight" "Proximity" "Carbon" "Hydrosheds"} flow-model)
-     (#{:cli-menu :closure-map :matrix-list :raw-locations} result-type))))
+(def #^{:private true} nil-or-double>0? #(or (nil? %) (and (float? %) (pos? %))))
+(def #^{:private true} nil-or-int>=1?   #(or (nil? %) (and (int %) (>= % 1))))
+(def #^{:private true} nil-or-matrix?   #(or (nil? %) (is-matrix? %)))
 
 (defn run-span
   [{:keys [source-layer  source-threshold
@@ -121,7 +102,15 @@
 	 trans-threshold    0.01
 	 rv-max-states      10
 	 downscaling-factor 1}}]
-  {:pre [(all-params-validate? input-params)]}
+  {:pre [(every? is-matrix?       [source-layer use-layer])
+	 (every? nil-or-matrix?   (cons sink-layer (vals flow-layers)))
+	 (apply grids-align?      (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers))))
+	 (every? nil-or-double>0? [source-threshold sink-threshold use-threshold trans-threshold])
+	 (every? nil-or-int>=1?   [rv-max-states downscaling-factor])
+	 (every? #{:absolute :relative} [sink-type use-type])
+	 (#{:rival :non-rival} benefit-type)
+	 (#{"LineOfSight" "Proximity" "Carbon" "Hydrosheds"} flow-model)
+	 (#{:cli-menu :closure-map :matrix-list :raw-locations} result-type)]}
   ;; Initialize global parameters
   (set-global-params! {:rv-max-states      rv-max-states
 		       :trans-threshold    trans-threshold
