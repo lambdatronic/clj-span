@@ -27,8 +27,7 @@
 (declare *trans-threshold* *sink-type* *use-type* *benefit-type*)
 
 (defn set-global-params!
-  [{:keys [rv-max-states trans-threshold sink-type use-type benefit-type] :or {rv-max-states 10, trans-threshold 0.01}}]
-  {:pre [(and sink-type use-type benefit-type)]}
+  [{:keys [rv-max-states trans-threshold sink-type use-type benefit-type]}]
   (reset-rv-max-states! rv-max-states)
   (doseq [[sym value] {'*trans-threshold* trans-threshold,
 		       '*sink-type*       sink-type,

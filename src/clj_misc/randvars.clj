@@ -31,7 +31,7 @@
 (def cont-type {:type ::continuous-distribution})
 (def disc-type {:type ::discrete-distribution})
 
-(defn- successive-sums
+(defn successive-sums
   ([nums]
      (successive-sums (first nums) (rest nums)))
   ([total nums]

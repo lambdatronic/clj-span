@@ -17,32 +17,49 @@
 ;;;
 ;;;-------------------------------------------------------------------
 ;;;
-;;; This namespace defines the run-span, simulate-service-flows, and
-;;; data-preprocessing functions.  run-span is the main entry point
-;;; into the SPAN system and may be called with a number of different
-;;; options specifying the form of its results.
+;;; This namespace defines the span-driver function which takes in a
+;;; Thinklab observation, several SPAN-related concepts, and a map of
+;;; flow-params, extracts the SPAN source, sink, use, and flow layers
+;;; from the observation and passes everything on to
+;;; clj-span.core/run-span.
 
 (ns span.aries-span-bridge
   (:use [clj-span.core       :only (run-span)]
-	[clj-misc.utils      :only (mapmap)]
+	[clj-misc.utils      :only (mapmap remove-nil-val-entries)]
 	[clj-misc.matrix-ops :only (seq2matrix)]
 	[clj-misc.randvars   :only (cont-type disc-type successive-sums)]))
 
-(refer 'geospace :only '(grid-rows
-			 grid-columns))
+#_(refer 'geospace :only '(grid-rows
+			 grid-columns
+			 grid-extent?))
 
-(refer 'corescience :only '(find-state
+#_(refer 'corescience :only '(find-state
 			    find-observation
 			    get-state-map
 			    get-observable-class))
 
-(refer 'modelling   :only '(probabilistic?
+#_(refer 'modelling   :only '(probabilistic?
 			    binary?
 			    encodes-continuous-distribution?
 			    get-dist-breakpoints
 			    get-possible-states
 			    get-probabilities
 			    get-data))
+
+(declare grid-rows
+	 grid-columns
+	 grid-extent?
+	 find-state
+	 find-observation
+	 get-state-map
+	 get-observable-class
+	 probabilistic?
+	 binary?
+	 encodes-continuous-distribution?
+	 get-dist-breakpoints
+	 get-possible-states
+	 get-probabilities
+	 get-data)
 
 (defn- unpack-datasource
   "Returns a seq of length n of the values in ds,
@@ -92,52 +109,53 @@
   "Builds a rows x cols matrix (vector of vectors) of the concept's
    state values in the observation."
   [observation concept rows cols]
-  (let [states (when concept
-		 (unpack-datasource (find-state observation concept) rows cols))]
-    (seq2matrix rows cols states)))
+  (when concept
+    (let [states (unpack-datasource (find-state observation concept) rows cols)]
+      (seq2matrix rows cols states))))
 
 (defn- layer-map-from-observation
   "Builds a map of {concept-names -> matrices}, where each concept's
    matrix is a rows x cols vector of vectors of the concept's state
    values in the observation."
   [observation concept rows cols]
-  (let [state-map (when conc
-		    (mapmap (memfn getLocalName) #(unpack-datasource % rows cols) (get-state-map (find-observation observation concept))))]
-    (mapmap identity (partial seq2matrix rows cols) state-map)))
+  (when concept
+    (let [state-map (mapmap (memfn getLocalName)
+			    #(unpack-datasource % rows cols)
+			    (get-state-map (find-observation observation concept)))]
+      (mapmap identity (partial seq2matrix rows cols) state-map))))
 
 (defn span-driver
   "Takes the source, sink, use, and flow concepts along with the
    flow-params map and an observation containing the concepts'
    dependent features, calculates the SPAN flows, and returns the
-   results using one of the following result-types:
+   results using one of the following result-types: :cli-menu
    :closure-map :matrix-list :raw-locations"
-  ([observation source-concept use-concept sink-concept flow-concept flow-params]
-     (span-driver observation source-concept use-concept sink-concept flow-concept flow-params :closure-map))
-  ([observation source-concept use-concept sink-concept flow-concept
-    {:keys [source-threshold sink-threshold use-threshold trans-threshold
-	    rv-max-states downscaling-factor sink-type use-type benefit-type]}
-    result-type]
-     ;; This version of SPAN only works for grid-based observations (i.e. raster maps).
-     {:pre [(grid-extent? observation)]}
-     (let [rows         (grid-rows    observation)
-	   cols         (grid-columns observation)
-	   flow-model   (.getLocalName (get-observable-class observation))
-	   source-layer (layer-from-observation     observation source-concept rows cols)
-	   sink-layer   (layer-from-observation     observation sink-concept   rows cols)
-	   use-layer    (layer-from-observation     observation use-concept    rows cols)
-	   flow-layers  (layer-map-from-observation observation flow-concept   rows cols)]
-       (run-span {:source-layer       source-layer
-		  :source-threshold   source-threshold
-		  :sink-layer         sink-layer
-		  :sink-threshold     sink-threshold
-		  :use-layer          use-layer
-		  :use-threshold      use-threshold
-		  :flow-layers        flow-layers
-		  :trans-threshold    trans-threshold
-		  :rv-max-states      rv-max-states
-		  :downscaling-factor downscaling-factor
-		  :sink-type          sink-type
-		  :use-type           use-type
-		  :benefit-type       benefit-type
-		  :flow-model         flow-model
-		  :result-type        result-type}))))
+  [observation source-concept use-concept sink-concept flow-concept
+   {:keys [source-threshold sink-threshold use-threshold trans-threshold
+	   rv-max-states downscaling-factor sink-type use-type benefit-type result-type]
+    :or {result-type :closure-map}}]
+  ;; This version of SPAN only works for grid-based observations (i.e. raster maps).
+  {:pre [(grid-extent? observation)]}
+  (let [rows         (grid-rows    observation)
+	cols         (grid-columns observation)
+	flow-model   (.getLocalName (get-observable-class observation))
+	source-layer (layer-from-observation     observation source-concept rows cols)
+	sink-layer   (layer-from-observation     observation sink-concept   rows cols)
+	use-layer    (layer-from-observation     observation use-concept    rows cols)
+	flow-layers  (layer-map-from-observation observation flow-concept   rows cols)]
+    (run-span (remove-nil-val-entries
+	       {:source-layer       source-layer
+		:source-threshold   source-threshold
+		:sink-layer         sink-layer
+		:sink-threshold     sink-threshold
+		:use-layer          use-layer
+		:use-threshold      use-threshold
+		:flow-layers        flow-layers
+		:trans-threshold    trans-threshold
+		:rv-max-states      rv-max-states
+		:downscaling-factor downscaling-factor
+		:sink-type          sink-type
+		:use-type           use-type
+		:benefit-type       benefit-type
+		:flow-model         flow-model
+		:result-type        result-type}))))

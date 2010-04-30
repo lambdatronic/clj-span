@@ -74,6 +74,10 @@
 	(recur (rest keyvals)
 	       (doto out-map (.put (keyfn key) (valfn val))))))))
 
+(defn remove-nil-val-entries
+  [amap]
+  (into {} (remove (comp nil? val) amap)))
+
 (defn key-by-val
   "Returns the key from a map m whose corresponding value field is a
    sequence containing v."

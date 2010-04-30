@@ -29,7 +29,14 @@
 	[clj-span.interface     :only (show-span-results-menu provide-results)]
 	[clj-span.route-caching :only (cache-all-actual-routes!)]
 	[clj-misc.randvars      :only (rv-mean rv-zero rv-average)]
-	[clj-misc.matrix-ops    :only (map-matrix downsample-matrix print-matrix get-rows get-cols get-neighbors grids-align?)])
+	[clj-misc.matrix-ops    :only (map-matrix
+				       downsample-matrix
+				       print-matrix
+				       get-rows
+				       get-cols
+				       get-neighbors
+				       grids-align?
+				       is-matrix?)])
   (:require clj-span.water-model
 	    clj-span.carbon-model
 	    clj-span.proximity-model
@@ -43,7 +50,7 @@
 
 (defstruct location :id :neighbors :source :sink :use :flow-features :carrier-cache)
 
-(defn make-location-map
+(defn- make-location-map
   "Returns a map of ids to location objects, one per location in the
    data layers."
   [source-layer sink-layer use-layer flow-layers]
@@ -69,12 +76,34 @@
    simulation completes, a sequence of the locations in the network is
    returned."
   [flow-model source-layer sink-layer use-layer flow-layers]
-  {:pre [(#{"LineOfSight" "Proximity" "Carbon" "Hydrosheds"} flow-model)]}
   (let [location-map (make-location-map source-layer sink-layer use-layer flow-layers)
 	locations    (vals location-map)]
     (distribute-flow! flow-model location-map (get-rows source-layer) (get-cols source-layer))
     (cache-all-actual-routes! locations flow-model)
     locations))
+
+(defn- all-params-validate?
+  [{:keys [source-layer  source-threshold
+	   sink-layer    sink-threshold
+	   use-layer     use-threshold
+	   flow-layers   trans-threshold
+	   rv-max-states downscaling-factor
+	   sink-type     use-type
+	   benefit-type  flow-model
+	   result-type]}]
+  (let [nil-or-double>0? #(or (nil? %) (and (float? %) (pos? %)))
+	nil-or-int>=1?   #(or (nil? %) (and (int %) (>= % 1)))
+	nil-or-matrix?   #(or (nil? %) (is-matrix? %))]
+    (and
+     (every? is-matrix?       [source-layer use-layer])
+     (every? nil-or-matrix?   (cons sink-layer (vals flow-layers)))
+     (apply grids-align?      (remove nil? [source-layer sink-layer use-layer (vals flow-layers)]))
+     (every? nil-or-double>0? [source-threshold sink-threshold use-threshold trans-threshold])
+     (every? nil-or-int>=1?   [rv-max-states downscaling-factor])
+     (every? #{:absolute :relative} [sink-type use-type])
+     (#{:rival :non-rival} benefit-type)
+     (#{"LineOfSight" "Proximity" "Carbon" "Hydrosheds"} flow-model)
+     (#{:cli-menu :closure-map :matrix-list :raw-locations} result-type))))
 
 (defn run-span
   [{:keys [source-layer  source-threshold
@@ -84,10 +113,15 @@
 	   rv-max-states downscaling-factor
 	   sink-type     use-type
 	   benefit-type  flow-model
-	   result-type]}]
-  ;; Make sure all layers have the same number of rows and columns
-  {:pre [(apply grids-align? source-layer sink-layer use-layer (vals flow-layers))
-	 (#{:cli-menu :closure-map :matrix-list :raw-locations} result-type)]}
+	   result-type]
+    :as input-params
+    :or {source-threshold   0.0
+	 sink-threshold     0.0
+	 use-threshold      0.0
+	 trans-threshold    0.01
+	 rv-max-states      10
+	 downscaling-factor 1}}]
+  {:pre [(all-params-validate? input-params)]}
   ;; Initialize global parameters
   (set-global-params! {:rv-max-states      rv-max-states
 		       :trans-threshold    trans-threshold
@@ -97,7 +131,7 @@
   ;; Preprocess data layers (downsampling and zeroing below their thresholds)
   (let [rows             (get-rows source-layer)
 	cols             (get-cols source-layer)
-	preprocess-layer (fn [[l t]] (zero-layer-below-threshold t (downsample-matrix downscaling-factor rv-average l)))
+	preprocess-layer (fn [[l t]] (if l (zero-layer-below-threshold t (downsample-matrix downscaling-factor rv-average l))))
 	[source-layer sink-layer use-layer] (map preprocess-layer
 						 {source-layer source-threshold,
 						  sink-layer   sink-threshold,
@@ -105,7 +139,7 @@
 	flow-layers (mapmap identity #(downsample-matrix downscaling-factor rv-average %) flow-layers)]
     ;; Display layers
     (newline)
-    (apply print-matrix source-layer sink-layer use-layer (vals flow-layers))
+    (apply print-matrix (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers))))
     (newline)
     ;; Run flow model and return the results
     (let [locations (simulate-service-flows flow-model source-layer sink-layer use-layer flow-layers)]
