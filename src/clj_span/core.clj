@@ -110,7 +110,7 @@
 	 (every? #{:absolute :relative} [sink-type use-type])
 	 (#{:rival :non-rival} benefit-type)
 	 (#{"LineOfSight" "Proximity" "Carbon" "Hydrosheds"} flow-model)
-	 (#{:cli-menu :closure-map :matrix-list :raw-locations} result-type)]}
+	 (#{:cli-menu :closure-map :matrix-list} result-type)]}
   ;; Initialize global parameters
   (set-global-params! {:rv-max-states      rv-max-states
 		       :trans-threshold    trans-threshold
@@ -146,11 +146,6 @@
 					rows cols
 					downscaling-factor)
 	:matrix-list   (provide-results :matrix-list
-					flow-model
-					locations
-					rows cols
-					downscaling-factor)
-	:raw-locations (provide-results :raw-locations
 					flow-model
 					locations
 					rows cols

@@ -110,8 +110,7 @@
    state values in the observation."
   [observation concept rows cols]
   (when concept
-    (let [states (unpack-datasource (find-state observation concept) rows cols)]
-      (seq2matrix rows cols states))))
+    (seq2matrix rows cols (unpack-datasource (find-state observation concept) rows cols))))
 
 (defn- layer-map-from-observation
   "Builds a map of {concept-names -> matrices}, where each concept's
@@ -119,17 +118,16 @@
    values in the observation."
   [observation concept rows cols]
   (when concept
-    (let [state-map (mapmap (memfn getLocalName)
-			    #(unpack-datasource % rows cols)
-			    (get-state-map (find-observation observation concept)))]
-      (mapmap identity (partial seq2matrix rows cols) state-map))))
+    (mapmap (memfn getLocalName)
+	    #(seq2matrix rows cols (unpack-datasource % rows cols))
+	    (get-state-map (find-observation observation concept)))))
 
 (defn span-driver
   "Takes the source, sink, use, and flow concepts along with the
    flow-params map and an observation containing the concepts'
    dependent features, calculates the SPAN flows, and returns the
    results using one of the following result-types: :cli-menu
-   :closure-map :matrix-list :raw-locations"
+   :closure-map :matrix-list"
   [observation source-concept use-concept sink-concept flow-concept
    {:keys [source-threshold sink-threshold use-threshold trans-threshold
 	   rv-max-states downscaling-factor sink-type use-type benefit-type result-type]

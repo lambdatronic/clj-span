@@ -226,7 +226,3 @@
 	(actual-source       locations flow-model)
 	(actual-sink         locations flow-model)
 	(actual-use          locations flow-model)]))
-
-(defmethod provide-results :raw-locations
-  [_ _ locations _ _ _]
-  locations)
