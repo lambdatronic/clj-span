@@ -23,7 +23,7 @@
 ;;; from the observation and passes everything on to
 ;;; clj-span.core/run-span.
 
-(ns span.aries-span-bridge
+(ns clj-span.aries-span-bridge
   (:use [clj-span.core       :only (run-span)]
 	[clj-misc.utils      :only (mapmap remove-nil-val-entries)]
 	[clj-misc.matrix-ops :only (seq2matrix)]

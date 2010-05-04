@@ -40,6 +40,11 @@
 	 (vec (for [_ (range cols)]
 		(val-fn))))))
 
+(defn filter-matrix-for-coords
+  [pred? matrix]
+  (filter (fn [id] (pred? (get-in matrix id)))
+	  (for [i (range (get-rows matrix)) j (range (get-cols matrix))] [i j])))
+
 (defn seq2matrix
   "Creates a rows x cols vector of vectors whose states are
    the successive elements of aseq."

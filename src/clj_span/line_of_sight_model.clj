@@ -16,20 +16,25 @@
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
 
 (ns clj-span.line-of-sight-model
-  (:use [clj-misc.randvars  :only (rv-zero-above-scalar
-				   rv-add
-				   rv-subtract
-				   rv-scale
-				   rv-scalar-divide
-				   rv-scalar-multiply
-				   rv-lt
-				   rv-mean)]
-	[clj-span.model-api :only (distribute-flow!
-				   decay
-				   undecay
-				   service-carrier)]
-	[clj-span.analyzer  :only (source-loc? sink-loc? use-loc?)]
-	[clj-span.params    :only (*trans-threshold*)]))
+  (:use [clj-misc.randvars   :only (rv-zero-above-scalar
+				    rv-add
+				    rv-subtract
+				    rv-scale
+				    rv-scalar-divide
+				    rv-scalar-multiply
+				    rv-lt
+				    rv-mean)]
+	[clj-misc.matrix-ops :only (make-matrix
+				    get-rows
+				    get-cols
+				    filter-matrix-for-coords)]
+	[clj-span.model-api  :only (distribute-flow!
+				    distribute-flow
+				    decay
+				    undecay
+				    service-carrier)]
+	[clj-span.analyzer   :only (source-loc? sink-loc? use-loc?)]
+	[clj-span.params     :only (*trans-threshold*)]))
 
 (def #^{:private true} elev-concept "Altitude")
 
@@ -43,10 +48,8 @@
    each path will be the provider id, and the last will be the
    beneficiary id.  If provider=beneficiary, the path will contain
    only this one point."
-  [provider beneficiary]
-  (let [[pi pj] (:id provider)
-	[bi bj] (:id beneficiary)
-	m (if (not= pj bj) (/ (- bi pi) (- bj pj)))
+  [[pi pj] [bi bj]]
+  (let [m (if (not= pj bj) (/ (- bi pi) (- bj pj)))
 	b (if m (- pi (* m pj)))
 	f (fn [x] (+ (* m x) b))]
     (cond (nil? m) (map (fn [i] [i pj])
@@ -103,7 +106,7 @@
   (if (= provider beneficiary)
     (swap! (:carrier-cache provider) conj
 	   (struct service-carrier (:source provider) [provider]))
-    (let [path        (map location-map (find-viewpath provider beneficiary))
+    (let [path        (map location-map (find-viewpath (:id provider) (:id beneficiary)))
 	  steps       (dec (count path))
 	  source-val  (:source provider)]
       (when (or (== steps 1)
@@ -150,7 +153,7 @@
       (println "In Situ Usage")
       (swap! (:carrier-cache provider) conj
 	     (struct service-carrier (:source provider) [provider])))
-    (let [viewpath    (find-viewpath provider beneficiary)
+    (let [viewpath    (find-viewpath (:id provider) (:id beneficiary))
 	  path        (map location-map viewpath)
 	  steps       (dec (count path))
 	  source-val  (:source provider)]
@@ -233,3 +236,18 @@
     (println "Num Uses:"    (count uses))
     (println "Num Pairs:"   (count pbs))
     (dorun (map (partial distribute-raycast-debug! flow-model location-map) pbs))))
+
+(defn- raycast!
+  [route-layer source-layer sink-layer use-layer elev-layer source-point use-point]
+  (if (= source-point use-point)
+    (swap! (route-layer use-point) conj
+	   (struct service-carrier (source-layer source-point) (list source-point)))
+    ...))
+
+(defmethod distribute-flow "LineOfSight"
+  [flow-model source-layer sink-layer use-layer {elev-layer "Altitude"}]
+  (let [route-layer   (make-matrix (get-rows source-layer) (get-cols source-layer) #(atom ()))
+	source-points (filter-matrix-for-coords source-loc? source-layer)
+	use-points    (filter-matrix-for-coords use-loc?    use-layer)]
+    (dorun (pmap (partial raycast! route-layer source-layer sink-layer use-layer elev-layer) source-points use-points))
+    route-layer))

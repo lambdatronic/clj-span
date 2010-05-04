@@ -33,6 +33,14 @@
   [flow-model _ _ _]
   (throw (Exception. (str "distribute-flow! is undefined for flow type: " flow-model))))
 
+(defmulti distribute-flow
+  "Service-specific flow distribution functions."
+  (fn [flow-model source-layer sink-layer use-layer flow-layers] flow-model))
+
+(defmethod distribute-flow :default
+  [flow-model _ _ _ _]
+  (throw (Exception. (str "distribute-flow is undefined for flow type: " flow-model))))
+
 (defmulti decay
   "Service-specific decay functions."
   (fn [flow-model weight steps] flow-model))

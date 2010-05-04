@@ -24,7 +24,7 @@
 
 (ns clj-span.core
   (:use [clj-misc.utils         :only (mapmap)]
-	[clj-span.model-api     :only (distribute-flow!)]
+	[clj-span.model-api     :only (distribute-flow! distribute-flow)]
 	[clj-span.params        :only (set-global-params!)]
 	[clj-span.interface     :only (show-span-results-menu provide-results)]
 	[clj-span.route-caching :only (cache-all-actual-routes!)]
@@ -41,12 +41,6 @@
 	    clj-span.carbon-model
 	    clj-span.proximity-model
 	    clj-span.line-of-sight-model))
-
-(defn- zero-layer-below-threshold
-  "Takes a two dimensional array of RVs and replaces all values whose
-   means are less than the threshold with rv-zero."
-  [threshold layer]
-  (map-matrix #(if (< (rv-mean %) threshold) rv-zero %) layer))
 
 (defstruct location :id :neighbors :source :sink :use :flow-features :carrier-cache)
 
@@ -82,9 +76,33 @@
     (cache-all-actual-routes! locations flow-model)
     locations))
 
+(defn- simulate-service-flows-over-grid
+  "Creates a network of interconnected locations, and starts a
+   service-carrier propagating in every location whose source value is
+   greater than 0.  These carriers propagate child carriers through
+   the network which collect information about the routes traveled and
+   the service weight transmitted along these routes.  When the
+   simulation completes, a sequence of the locations in the network is
+   returned."
+  [flow-model source-layer sink-layer use-layer flow-layers]
+  (let [route-layer (distribute-flow flow-model
+				     source-layer
+				     sink-layer
+				     use-layer
+				     flow-layers)]
+    (comment ...)))
+  ;;(cache-all-actual-routes! locations flow-model)
+  ;;locations)
+
 (def #^{:private true} nil-or-double>0? #(or (nil? %) (and (float? %) (pos? %))))
 (def #^{:private true} nil-or-int>=1?   #(or (nil? %) (and (int %) (>= % 1))))
 (def #^{:private true} nil-or-matrix?   #(or (nil? %) (is-matrix? %)))
+
+(defn- zero-layer-below-threshold
+  "Takes a two dimensional array of RVs and replaces all values whose
+   means are less than the threshold with rv-zero."
+  [threshold layer]
+  (map-matrix #(if (< (rv-mean %) threshold) rv-zero %) layer))
 
 (defn run-span
   [{:keys [source-layer  source-threshold
