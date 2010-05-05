@@ -87,13 +87,13 @@
 		 (struct-map service-carrier
 		   :weight (if (= source-type :sinks) (rv-scalar-multiply source-utility -1) source-utility)
 		   :route  (bitpack-route sight-line)))))]
-    (dosync (alter (get-in route-layer use-point) conj carrier))))
+    (swap! (get-in route-layer use-point) conj carrier)))
 
 ;; Detects all sources and sinks visible from the use-point and stores
 ;; their utility contributions in the route-layer."
 (defmethod distribute-flow "LineOfSight"
   [flow-model source-layer sink-layer use-layer {elev-layer "Altitude"}]
-  (let [route-layer   (make-matrix (get-rows source-layer) (get-cols source-layer) #(ref ()))
+  (let [route-layer   (make-matrix (get-rows source-layer) (get-cols source-layer) #(atom ()))
 	source-points (filter-matrix-for-coords #(not= rv-zero %) source-layer)
 	sink-points   (filter-matrix-for-coords #(not= rv-zero %) sink-layer)
 	use-points    (filter-matrix-for-coords #(not= rv-zero %) use-layer)]

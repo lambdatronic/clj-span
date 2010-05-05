@@ -34,7 +34,13 @@
   (throw (Exception. (str "distribute-flow! is undefined for flow type: " flow-model))))
 
 (defmulti distribute-flow
-  "Service-specific flow distribution functions."
+  "Creates a network of interconnected locations, and starts a
+   service-carrier propagating in every location whose source value is
+   greater than 0.  These carriers propagate child carriers through
+   the network which collect information about the routes traveled and
+   the service weight transmitted along these routes.  When the
+   simulation completes, a sequence of the locations in the network is
+   returned."
   (fn [flow-model source-layer sink-layer use-layer flow-layers] flow-model))
 
 (defmethod distribute-flow :default

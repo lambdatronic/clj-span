@@ -76,22 +76,6 @@
     (cache-all-actual-routes! locations flow-model)
     locations))
 
-(defn- simulate-service-flows-over-grid
-  "Creates a network of interconnected locations, and starts a
-   service-carrier propagating in every location whose source value is
-   greater than 0.  These carriers propagate child carriers through
-   the network which collect information about the routes traveled and
-   the service weight transmitted along these routes.  When the
-   simulation completes, a sequence of the locations in the network is
-   returned."
-  [flow-model source-layer sink-layer use-layer flow-layers]
-  (let [route-layer (distribute-flow flow-model
-				     source-layer
-				     sink-layer
-				     use-layer
-				     flow-layers)]
-    route-layer))
-
 (def #^{:private true} nil-or-double>0? #(or (nil? %) (and (float? %) (pos? %))))
 (def #^{:private true} nil-or-int>=1?   #(or (nil? %) (and (int %) (>= % 1))))
 (def #^{:private true} nil-or-matrix?   #(or (nil? %) (is-matrix? %)))
@@ -149,7 +133,7 @@
     ;;(remove nil? (list* source-layer sink-layer use-layer (vals flow-layers)))))
     ;;(newline)
     ;; Run flow model and return the results
-    (let [route-layer (simulate-service-flows-over-grid flow-model source-layer sink-layer use-layer flow-layers)]
+    (let [route-layer (distribute-flow flow-model source-layer sink-layer use-layer flow-layers)]
       (newline)
       (print-matrix (map-matrix #(let [weights (map (comp key first :weight) (deref %))]
 				   [(count (filter pos? weights))

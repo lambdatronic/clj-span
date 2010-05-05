@@ -16,26 +16,29 @@
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
 
 (ns clj-span.carbon-model
-  (:use [clj-misc.utils     :only (seq2map)]
-	[clj-misc.randvars  :only (rv-add rv-divide rv-multiply)]
-	[clj-span.model-api :only (distribute-flow! service-carrier)]
-	[clj-span.analyzer  :only (source-loc? use-loc?)]))
+  (:use [clj-span.model-api  :only (distribute-flow service-carrier)]
+	[clj-misc.randvars   :only (rv-zero rv-add rv-divide rv-multiply)]
+	[clj-misc.matrix-ops :only (filter-matrix-for-coords make-matrix get-rows get-cols bitpack-route find-line-between)]))
 
-(defmethod distribute-flow! "Carbon"
-  [_ location-map _ _]
+(defmethod distribute-flow "Carbon"
+  [_ source-layer _ use-layer _]
   "The amount of carbon sequestration produced is distributed among
    the consumers (carbon emitters) according to their relative :use
    values."
-  (let [locations         (vals location-map)
-	source-locations  (filter source-loc? locations)
-	use-locations     (filter use-loc?    locations)
-	total-consumption (reduce rv-add (map :use use-locations))
-	percent-consumed  (seq2map use-locations #(vector % (rv-divide (:use %) total-consumption)))]
+  (let [source-points     (filter-matrix-for-coords #(not= rv-zero %) source-layer)
+	use-points        (filter-matrix-for-coords #(not= rv-zero %) use-layer)
+	use-values        (map #(get-in use-layer %) use-points)
+	total-consumption (reduce rv-add rv-zero use-values)
+	percent-consumed  (zipmap use-points (map #(rv-divide % total-consumption) use-values))
+	route-layer       (make-matrix (get-rows source-layer) (get-cols source-layer) #(atom ()))]
+    (println "Source points:" (count source-points))
+    (println "Use points:   " (count use-points))
     (dorun (pmap
-	    (fn [c]
-	      (reset! (:carrier-cache c)
-		      (for [p source-locations]
-			(struct service-carrier
-				(rv-multiply (:source p) (percent-consumed c))
-				[p c]))))
-	    use-locations))))
+	    (fn [uid]
+	      (reset! (get-in route-layer uid)
+		      (for [sid source-points]
+			(struct-map service-carrier
+			  :weight (rv-multiply (get-in source-layer sid) (percent-consumed uid))
+			  :route  (bitpack-route (find-line-between sid uid))))))
+	    use-points))
+    route-layer))
