@@ -122,7 +122,7 @@
   ([matrix]
      (dotimes [i (get-rows matrix)]
        (dotimes [j (get-cols matrix)]
-	 (print (get-in matrix [i j])))
+	 (print (get-in matrix [i j]) ""))
        (newline)))
   ([matrix & matrices]
      (print-matrix matrix)

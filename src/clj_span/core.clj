@@ -143,14 +143,20 @@
 						  use-layer    use-threshold})
 	flow-layers (mapmap identity #(downsample-matrix downscaling-factor rv-average %) flow-layers)]
     ;; Display layers
-    (newline)
-    (apply print-matrix
-	   (map #(map-matrix (fn [rv] (mapmap double identity rv)) %)
-		(remove nil? (list* source-layer sink-layer use-layer (vals flow-layers)))))
-    (newline)
+    ;;(newline)
+    ;;(apply print-matrix
+    ;;(map #(map-matrix (fn [rv] (mapmap double identity rv)) %)
+    ;;(remove nil? (list* source-layer sink-layer use-layer (vals flow-layers)))))
+    ;;(newline)
     ;; Run flow model and return the results
     (let [route-layer (simulate-service-flows-over-grid flow-model source-layer sink-layer use-layer flow-layers)]
-      (print-matrix (map-matrix deref route-layer)))))
+      (newline)
+      (print-matrix (map-matrix #(let [weights (map (comp key first :weight) (deref %))]
+				   [(count (filter pos? weights))
+				    (count (filter neg? weights))])
+				route-layer))
+      (newline)
+      (println "That's all folks."))))
 
 #_(let [locations (simulate-service-flows flow-model source-layer sink-layer use-layer flow-layers)]
     (condp = result-type

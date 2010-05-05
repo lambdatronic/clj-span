@@ -124,4 +124,5 @@
       (when (valid-params? input-params)
 	(println "\nAll inputs are valid.\n")
 	(doseq [[key _ _] param-tests] (println (find input-params key)))
+	(newline)
 	(run-span (assoc (strings-to-better-types input-params) :result-type :cli-menu))))))

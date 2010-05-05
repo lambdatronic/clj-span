@@ -56,7 +56,7 @@
    decay function is applied to the results to compute the visual
    utility originating from the source point."
   [flow-model source-type route-layer source-layer use-layer elev-layer [source-point use-point]]
-  (println "Projecting from" source-point "->" use-point)
+  ;;(println "Projecting from" source-point "->" use-point)
   (if-let [carrier
 	   (when (not= source-point use-point) ;; no in-situ use
 	     (let [sight-line     (vec (find-line-between use-point source-point))
@@ -87,8 +87,7 @@
 		 (struct-map service-carrier
 		   :weight (if (= source-type :sinks) (rv-scalar-multiply source-utility -1) source-utility)
 		   :route  (bitpack-route sight-line)))))]
-    (do (println "Conjing a carrier!")
-	(alter (get-in route-layer use-point) conj carrier))))
+    (dosync (alter (get-in route-layer use-point) conj carrier))))
 
 ;; Detects all sources and sinks visible from the use-point and stores
 ;; their utility contributions in the route-layer."
