@@ -49,11 +49,6 @@
   "Returns a new random variable with <=*rv-max-states* states sampled from X."
   type)
 
-(defn- my-partition
-  [size coll]
-  (when (seq coll)
-    (lazy-seq (cons (take size coll) (my-partition size (drop size coll))))))
-
 (defmethod rv-resample ::discrete-distribution
   [X]
   (if-not (> (count X) *rv-max-states*)
@@ -63,8 +58,7 @@
 	(into {}
 	      (map #(vector (/ (apply + (keys %)) (count %))
 			    (apply + (vals %)))
-		   ;;(partition partition-size partition-size [] (sort X))))
-		   (my-partition partition-size (sort X))))
+		   (partition partition-size partition-size [] (sort X))))
 	(meta X)))))
 
 (defmethod rv-resample ::continuous-distribution
@@ -212,6 +206,14 @@
 (defn rv-gt
   [X Y]
   (get (rv-convolute > X Y) true 0))
+
+(defn rv-max
+  [X Y]
+  (if (> (rv-mean X) (rv-mean Y)) X Y))
+
+(defn rv-min
+  [X Y]
+  (if (< (rv-mean X) (rv-mean Y)) X Y))
 
 (defn- rv-map
   "Returns the distribution of the random variable X with f applied to its range values."

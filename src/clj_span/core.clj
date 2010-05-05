@@ -90,9 +90,7 @@
 				     sink-layer
 				     use-layer
 				     flow-layers)]
-    (comment ...)))
-  ;;(cache-all-actual-routes! locations flow-model)
-  ;;locations)
+    route-layer))
 
 (def #^{:private true} nil-or-double>0? #(or (nil? %) (and (float? %) (pos? %))))
 (def #^{:private true} nil-or-int>=1?   #(or (nil? %) (and (int %) (>= % 1))))
@@ -146,25 +144,30 @@
 	flow-layers (mapmap identity #(downsample-matrix downscaling-factor rv-average %) flow-layers)]
     ;; Display layers
     (newline)
-    (apply print-matrix (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers))))
+    (apply print-matrix
+	   (map #(map-matrix (fn [rv] (mapmap double identity rv)) %)
+		(remove nil? (list* source-layer sink-layer use-layer (vals flow-layers)))))
     (newline)
     ;; Run flow model and return the results
-    (let [locations (simulate-service-flows flow-model source-layer sink-layer use-layer flow-layers)]
-      (condp = result-type
-	:cli-menu      (show-span-results-menu flow-model
-					       source-layer
-					       sink-layer
-					       use-layer
-					       flow-layers
-					       locations
-					       downscaling-factor)
-	:closure-map   (provide-results :closure-map
-					flow-model
-					locations
-					rows cols
-					downscaling-factor)
-	:matrix-list   (provide-results :matrix-list
-					flow-model
-					locations
-					rows cols
-					downscaling-factor)))))
+    (let [route-layer (simulate-service-flows-over-grid flow-model source-layer sink-layer use-layer flow-layers)]
+      (print-matrix (map-matrix deref route-layer)))))
+
+#_(let [locations (simulate-service-flows flow-model source-layer sink-layer use-layer flow-layers)]
+    (condp = result-type
+      :cli-menu      (show-span-results-menu flow-model
+					     source-layer
+					     sink-layer
+					     use-layer
+					     flow-layers
+					     locations
+					     downscaling-factor)
+      :closure-map   (provide-results :closure-map
+				      flow-model
+				      locations
+				      rows cols
+				      downscaling-factor)
+      :matrix-list   (provide-results :matrix-list
+				      flow-model
+				      locations
+				      rows cols
+				      downscaling-factor)))

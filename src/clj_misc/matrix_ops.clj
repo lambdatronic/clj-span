@@ -45,6 +45,23 @@
   (filter (fn [id] (pred? (get-in matrix id)))
 	  (for [i (range (get-rows matrix)) j (range (get-cols matrix))] [i j])))
 
+(defn subtract-ids
+  [[a b] [c d]]
+  [(- a c) (- b d)])
+
+(def #^{:private true} delta-codes {[ 0  1] (byte 1)
+				    [ 1  1] (byte 2)
+				    [ 1  0] (byte 4)
+				    [ 1 -1] (byte 8)
+				    [ 0 -1] (byte 16)
+				    [-1 -1] (byte 32)
+				    [-1  0] (byte 64)
+				    [-1  1] (byte 128)})
+
+(defn bitpack-route
+  [id-seq]
+  (byte-array (map (comp delta-codes subtract-ids) (rest id-seq) id-seq)))
+
 (defn seq2matrix
   "Creates a rows x cols vector of vectors whose states are
    the successive elements of aseq."
@@ -141,3 +158,52 @@
     (if (zero? max-val)
       matrix
       (map-matrix #(/ % max-val) matrix))))
+
+(defn find-line-between
+  "Returns the sequence of all points [i j] intersected by the line
+   from provider to beneficiary.  Since this is calculated over a
+   regular integer-indexed grid, diagonal lines will be approximated
+   by lines bending at right angles along the p-to-b line.  This
+   calculation imagines the indeces of each point to be located at the
+   center of a square of side length 1.  Note that the first point in
+   each path will be the provider id, and the last will be the
+   beneficiary id.  If provider=beneficiary, the path will contain
+   only this one point."
+  [[pi pj] [bi bj]]
+  (let [m (if (not= pj bj) (/ (- bi pi) (- bj pj)))
+	b (if m (- pi (* m pj)))
+	f (fn [x] (+ (* m x) b))]
+    (cond (nil? m) (map (fn [i] [i pj])
+			(if (< pi bi)
+			  (range pi (inc bi))
+			  (range pi (dec bi) -1)))
+
+	  (== m 0) (map (fn [j] [pi j])
+			(if (< pj bj)
+			  (range pj (inc bj))
+			  (range pj (dec bj) -1)))
+
+	  :otherwise (let [get-i-range
+			   (cond (and (< pi bi) (< pj bj))
+				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j pj) 0.0 0.5)))))
+					       right-i (int (Math/round (f (+ j (if (== j bj) 0.0 0.5)))))]
+					   (range left-i (inc right-i))))
+					       
+				 (and (< pi bi) (> pj bj))
+				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j bj) 0.0 0.5)))))
+					       right-i (int (Math/round (f (+ j (if (== j pj) 0.0 0.5)))))]
+					   (range right-i (inc left-i))))
+					       
+				 (and (> pi bi) (< pj bj))
+				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j pj) 0.0 0.5)))))
+					       right-i (int (Math/round (f (+ j (if (== j bj) 0.0 0.5)))))]
+					   (range left-i  (dec right-i) -1)))
+					       
+				 (and (> pi bi) (> pj bj))
+				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j bj) 0.0 0.5)))))
+					       right-i (int (Math/round (f (+ j (if (== j pj) 0.0 0.5)))))]
+					   (range right-i (dec left-i)  -1))))
+			   j-range (if (< pj bj)
+				     (range pj (inc bj))
+				     (range pj (dec bj) -1))]
+		       (for [j j-range i (get-i-range j)] [i j])))))
