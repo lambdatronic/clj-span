@@ -41,11 +41,11 @@
 
 ;; FIXME convert step to distance metric based on map resolution and make this gaussian to 1/2 mile
 (defmethod decay "LineOfSight"
-  [_ weight step] (rv-scalar-divide weight (* step step)))
+  [_ weight step] (if (> step 1) (rv-scalar-divide weight (* step step)) weight))
 
 ;; FIXME convert step to distance metric based on map resolution and make this gaussian to 1/2 mile
 (defmethod undecay "LineOfSight"
-  [_ weight step] (rv-scalar-multiply weight (* step step)))
+  [_ weight step] (if (> step 1) (rv-scalar-multiply weight (* step step)) weight))
 
 ;; sink decay = slow decay to 1/2 mile, fast decay to 1 mile, gone after 1 mile
 
@@ -56,7 +56,7 @@
    decay function is applied to the results to compute the visual
    utility originating from the source point."
   [flow-model source-type route-layer source-layer use-layer elev-layer [source-point use-point]]
-  ;;(println "Projecting from" source-point "->" use-point)
+  ;;(println "Projecting from" use-point "->" source-point)
   (if-let [carrier
 	   (when (not= source-point use-point) ;; no in-situ use
 	     (let [sight-line     (vec (find-line-between use-point source-point))
@@ -76,7 +76,9 @@
 								     (rv-subtract (get-in elev-layer (sight-line %)) use-elev)
 								     %)
 								   (range 1 (dec (count sight-line)))))
-					  projected-source-elev (rv-add use-elev (rv-scalar-multiply sight-slope (dec (count sight-line))))
+					  projected-source-elev (rv-zero-below-scalar
+								 (rv-add use-elev (rv-scalar-multiply sight-slope (dec (count sight-line))))
+								 0)
 					  visible-source-fraction (rv-zero-below-scalar
 								   (scalar-rv-subtract 1 (rv-divide projected-source-elev source-elev))
 								   0)]
@@ -86,7 +88,7 @@
 	       (when (> (rv-mean source-utility) *trans-threshold*)
 		 (struct-map service-carrier
 		   :weight (if (= source-type :sinks) (rv-scalar-multiply source-utility -1) source-utility)
-		   :route  (bitpack-route sight-line)))))]
+		   :route  (bitpack-route (rseq sight-line))))))]
     (swap! (get-in route-layer use-point) conj carrier)))
 
 ;; Detects all sources and sinks visible from the use-point and stores

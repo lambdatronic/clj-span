@@ -16,80 +16,86 @@
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
 
 (ns clj-span.proximity-model
-  (:use [clj-misc.matrix-ops :only (get-neighbors)]
-	[clj-misc.randvars   :only (scalar-rv-subtract rv-multiply rv-scalar-multiply rv-scalar-divide rv-mean)]
-	[clj-span.model-api  :only (distribute-flow! decay undecay service-carrier)]
-	[clj-span.analyzer   :only (source-loc? sink-loc? use-loc?)]
-	[clj-span.params     :only (*trans-threshold*)]))
-
-(defn- expand-box
-  "Returns a new list of points which completely bounds the
-   rectangular region defined by points and remains within the bounds
-   [0-rows],[0-cols]."
-  [points rows cols]
-  (when (seq points)
-    (let [row-coords (map first  points)
-	  col-coords (map second points)
-	  min-i (apply min row-coords)
-	  min-j (apply min col-coords)
-	  max-i (apply max row-coords)
-	  max-j (apply max col-coords)
-	  bottom (dec min-i)
-	  top    (inc max-i)
-	  left   (dec min-j)
-	  right  (inc max-j)]
-      (concat
-       (when (>= left   0)    (for [i (range min-i top) j [left]]     [i j]))
-       (when (<  right  cols) (for [i (range min-i top) j [right]]    [i j]))
-       (when (>= bottom 0)    (for [i [bottom] j (range min-j right)] [i j]))
-       (when (<  top    rows) (for [i [top]    j (range min-j right)] [i j]))
-       (when (and (>= left 0)     (<  top rows)) (list [top left]))
-       (when (and (>= left 0)     (>= bottom 0)) (list [bottom left]))
-       (when (and (<  right cols) (<  top rows)) (list [top right]))
-       (when (and (<  right cols) (>= bottom 0)) (list [bottom right]))))))
+  (:use [clj-span.params     :only (*trans-threshold*)]
+	[clj-span.model-api  :only (distribute-flow decay undecay service-carrier)]
+	[clj-misc.randvars   :only (rv-zero rv-zero-below-scalar rv-subtract rv-scalar-multiply rv-scalar-divide rv-mean)]
+	[clj-misc.matrix-ops :only (get-neighbors make-matrix get-rows get-cols filter-matrix-for-coords bitpack-route find-bounding-box)]))
 
 ;; FIXME convert step to distance metric based on map resolution and make this gaussian to 1/2 mile
 (defmethod decay "Proximity"
-  [_ weight step] (rv-scalar-divide weight (* step step)))
+  [_ weight step] (if (> step 1) (rv-scalar-divide weight (* step step)) weight))
 
 ;; FIXME convert step to distance metric based on map resolution and make this gaussian to 1/2 mile
 (defmethod undecay "Proximity"
-  [_ weight step] (rv-scalar-multiply weight (* step step)))
+  [_ weight step] (if (> step 1) (rv-scalar-multiply weight (* step step)) weight))
 
-(defn- make-frontier-element
-  [location-map location-id decayed-weight [sunk-weight route delayed-ops]]
-  (let [location      (location-map location-id)
-	sunk-weight   (if (sink-loc? location)
-			(rv-multiply sunk-weight (scalar-rv-subtract 1.0 (:sink location)))
-			sunk-weight)
-	new-route     (conj route location)
-	delayed-ops   (cond (use-loc? location)  (do (doseq [op delayed-ops] (op))
-						     (swap! (:carrier-cache location) conj
-							    (struct service-carrier decayed-weight new-route))
-						     [])
-			    (sink-loc? location) (conj delayed-ops
-						       #(swap! (:carrier-cache location) conj
-							       (struct service-carrier decayed-weight new-route)))
-			    :otherwise           delayed-ops)]
-    [location-id [sunk-weight new-route delayed-ops]]))
+(defn- make-frontier-element!
+  "If the location is a sink, its id is saved on the sinks-encountered
+   list and its sink-value is subtracted from the current utility
+   along this path.  If the location is a use point, negative utility
+   carriers are stored on it from each of the previously encountered
+   sinks as well as a positive utility carrier from the original
+   source point. This function returns a pair of [location-id
+   [outgoing-utility route-including-location-id sinks-encountered]]."
+  [location-id flow-model route-layer source-layer sink-layer
+   use-layer [incoming-utility exclusive-route sinks-encountered]]
+  (let [sink-value        (get-in sink-layer location-id)
+	use-value         (get-in use-layer  location-id)
+	inclusive-route   (conj exclusive-route location-id)
+	outgoing-utility  (if (not= rv-zero sink-value) ; sink-location?
+			    (rv-zero-below-scalar (rv-subtract incoming-utility sink-value) 0)
+			    incoming-utility)
+	sinks-encountered (if (not= rv-zero sink-value) ; sink location?
+			    (conj sinks-encountered location-id)
+			    sinks-encountered)]
+    (when (not= rv-zero use-value)	; use location?
+      (let [carrier-cache (get-in route-layer location-id)]
+	(loop [remaining-sinks sinks-encountered
+	       remaining-route inclusive-route]
+	  (when (seq remaining-sinks)
+	    (let [sink-id         (first remaining-sinks)
+		  route-from-sink (drop-while #(not= sink-id %) remaining-route)
+		  sink-utility    (decay flow-model (get-in sink-layer sink-id) (dec (count route-from-sink)))]
+	      (swap! carrier-cache conj
+		     (struct-map service-carrier
+		       :weight (rv-scalar-multiply sink-utility -1)
+		       :route  (bitpack-route route-from-sink)))
+	      (recur (rest remaining-sinks) route-from-sink))))
+	(swap! carrier-cache conj
+	       (struct-map service-carrier
+		 :weight (decay flow-model (get-in source-layer (first inclusive-route)) (dec (count inclusive-route)))
+		 :route  (bitpack-route inclusive-route)))))
+    [location-id [outgoing-utility inclusive-route sinks-encountered]]))
 
 (defn- distribute-gaussian!
-  [location-map rows cols source-location source-weight]
-  (loop [decayed-sources (map #(decay source-weight %) (iterate inc 1))
-	 frontier        (into {} (make-frontier-element location-map (:id source-location) source-weight [source-weight [] []]))]
+  [flow-model route-layer source-layer sink-layer use-layer rows cols source-id source-weight]
+  (loop [frontier (into {} (list (make-frontier-element! source-id
+							 flow-model
+							 route-layer
+							 source-layer
+							 sink-layer
+							 use-layer
+							 [source-weight [] []])))]
     (when (seq frontier)
-      (let [decayed-weight (first decayed-sources)]
-	(if (> (rv-mean decayed-weight) *trans-threshold*)
-	  (recur (rest decayed-sources)
-		 (into {}
-		       (remove nil?
-			       (for [boundary-id (expand-box (keys frontier) rows cols)]
-				 (when-let [frontier-options (remove nil? (map frontier (get-neighbors boundary-id rows cols)))]
-				   (make-frontier-element location-map boundary-id decayed-weight
-							  (apply max-key (fn [[s r d]] (rv-mean s)) frontier-options))))))))))))
+      (recur (into {}
+		   (remove #(or (nil? %)
+				(let [[_ [u r _]] %]
+				  (< (rv-mean (decay flow-model u (dec (count r))))
+				     *trans-threshold*)))
+			   (for [boundary-id (find-bounding-box (keys frontier) rows cols)]
+			     (when-let [frontier-options (seq (remove nil? (map frontier (get-neighbors boundary-id rows cols))))]
+			       (make-frontier-element! boundary-id flow-model route-layer source-layer sink-layer use-layer
+						     (apply max-key (fn [[u r s]] (rv-mean u)) frontier-options))))))))))
 
-(defmethod distribute-flow! "Proximity"
-  [_ location-map rows cols]
-  (dorun (pmap
-	  (fn [source-location] (distribute-gaussian! location-map rows cols source-location (:source source-location)))
-	  (filter source-loc? (vals location-map)))))
+(defmethod distribute-flow "Proximity"
+  [flow-model source-layer sink-layer use-layer _]
+  (let [rows          (get-rows source-layer)
+	cols          (get-cols source-layer)
+	route-layer   (make-matrix rows cols #(atom ()))
+	source-points (filter-matrix-for-coords #(not= rv-zero %) source-layer)]
+    (println "Source points:" (count source-points))
+    (dorun (map
+	    (partial distribute-gaussian! flow-model route-layer source-layer sink-layer use-layer rows cols)
+	    source-points
+	    (map #(get-in source-layer %) source-points)))
+    route-layer))

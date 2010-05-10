@@ -207,3 +207,29 @@
 				     (range pj (inc bj))
 				     (range pj (dec bj) -1))]
 		       (for [j j-range i (get-i-range j)] [i j])))))
+
+(defn find-bounding-box
+  "Returns a new list of points which completely bounds the
+   rectangular region defined by points and remains within the bounds
+   [0-rows],[0-cols]."
+  [points rows cols]
+  (when (seq points)
+    (let [row-coords (map first  points)
+	  col-coords (map second points)
+	  min-i (apply min row-coords)
+	  min-j (apply min col-coords)
+	  max-i (apply max row-coords)
+	  max-j (apply max col-coords)
+	  bottom (dec min-i)
+	  top    (inc max-i)
+	  left   (dec min-j)
+	  right  (inc max-j)]
+      (concat
+       (when (>= left   0)    (for [i (range min-i top) j [left]]     [i j]))
+       (when (<  right  cols) (for [i (range min-i top) j [right]]    [i j]))
+       (when (>= bottom 0)    (for [i [bottom] j (range min-j right)] [i j]))
+       (when (<  top    rows) (for [i [top]    j (range min-j right)] [i j]))
+       (when (and (>= left 0)     (<  top rows)) (list [top left]))
+       (when (and (>= left 0)     (>= bottom 0)) (list [bottom left]))
+       (when (and (<  right cols) (<  top rows)) (list [top right]))
+       (when (and (<  right cols) (>= bottom 0)) (list [bottom right]))))))
