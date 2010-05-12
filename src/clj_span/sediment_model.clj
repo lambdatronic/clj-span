@@ -41,22 +41,24 @@
 				       rv-scalar-multiply
 				       rv-scalar-divide)]))
 
-(def #^{:private true} hydrosheds-delta-codes {{  1 1} [ 0  1]   ; e
-					       {  2 1} [-1  1]   ; se
-					       {  4 1} [-1  0]   ; s
-					       {  8 1} [-1 -1]   ; sw
-					       { 16 1} [ 0 -1]   ; w
-					       { 32 1} [ 1 -1]   ; nw
-					       { 64 1} [ 1  0]   ; n
-					       {128 1} [ 1  1]}) ; ne
+(def #^{:private false} hydrosheds-delta-codes {{  1 1} [ 0  1]	 ; e
+						{  2 1} [-1  1]	 ; se
+						{  4 1} [-1  0]	 ; s
+						{  8 1} [-1 -1]	 ; sw
+						{ 16 1} [ 0 -1]	 ; w
+						{ 32 1} [ 1 -1]	 ; nw
+						{ 64 1} [ 1  0]	 ; n
+						{128 1} [ 1  1]}) ; ne
 
 (defn aggregate-flow-dirs
   [hydrocodes]
-  (let [vector-direction  (reduce (partial map +) (map hydrosheds-delta-codes hydrocodes))
-	vector-magnitude  (euclidean-distance [0 0] vector-direction)
-	unit-vector       (map #(/ % vector-magnitude) vector-direction)
-	distances-to-dirs (seq2map (vals hydrosheds-delta-codes) #(vector (euclidean-distance unit-vector %) %))]
-    (distances-to-dirs (apply min (keys distances-to-dirs)))))
+  (if-let [exit-code (some #{{-1 1} {0 1}} hydrocodes)]
+    exit-code
+    (let [vector-direction  (reduce (partial map +) (map hydrosheds-delta-codes hydrocodes))
+	  vector-magnitude  (euclidean-distance [0 0] vector-direction)
+	  unit-vector       (map #(/ % vector-magnitude) vector-direction)
+	  distances-to-dirs (seq2map hydrosheds-delta-codes (fn [[code v]] [(euclidean-distance unit-vector v) code]))]
+      (distances-to-dirs (apply min (keys distances-to-dirs))))))
 
 (def *absorption-threshold* 0.1) ; this is just a hack - make it meaningful
 
