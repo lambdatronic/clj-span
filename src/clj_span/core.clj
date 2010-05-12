@@ -23,22 +23,24 @@
 ;;; options specifying the form of its results.
 
 (ns clj-span.core
-  (:use [clj-misc.utils         :only (mapmap)]
-	[clj-span.model-api     :only (distribute-flow! distribute-flow)]
-	[clj-span.params        :only (set-global-params!)]
-	[clj-span.interface     :only (show-span-results-menu provide-results)]
-	[clj-span.route-caching :only (cache-all-actual-routes!)]
-	[clj-misc.randvars      :only (rv-mean rv-zero rv-average)]
-	[clj-misc.matrix-ops    :only (map-matrix
-				       downsample-matrix
-				       print-matrix
-				       get-rows
-				       get-cols
-				       get-neighbors
-				       grids-align?
-				       is-matrix?)])
+  (:use [clj-misc.utils          :only (seq2map mapmap)]
+	[clj-span.model-api      :only (distribute-flow! distribute-flow)]
+	[clj-span.params         :only (set-global-params!)]
+	[clj-span.interface      :only (show-span-results-menu provide-results)]
+	[clj-span.route-caching  :only (cache-all-actual-routes!)]
+	[clj-misc.randvars       :only (rv-mean rv-zero rv-average)]
+	[clj-span.sediment-model :only (aggregate-flow-dirs)]
+	[clj-misc.matrix-ops     :only (map-matrix
+					downsample-matrix
+					print-matrix
+					get-rows
+					get-cols
+					get-neighbors
+					grids-align?
+					is-matrix?)])
   (:require clj-span.water-model
 	    clj-span.carbon-model
+	    clj-span.sediment-model
 	    clj-span.proximity-model
 	    clj-span.line-of-sight-model))
 
@@ -76,9 +78,10 @@
     (cache-all-actual-routes! locations flow-model)
     locations))
 
-(def #^{:private true} nil-or-double>0? #(or (nil? %) (and (float? %) (pos? %))))
-(def #^{:private true} nil-or-int>=1?   #(or (nil? %) (and (int %) (>= % 1))))
-(def #^{:private true} nil-or-matrix?   #(or (nil? %) (is-matrix? %)))
+(def #^{:private true} nil-or-double>0?   #(or (nil? %) (and (float? %)   (pos? %))))
+(def #^{:private true} nil-or-integer>=1? #(or (nil? %) (and (integer? %) (>= % 1))))
+(def #^{:private true} nil-or-number>=1?  #(or (nil? %) (and (number? %)  (>= % 1))))
+(def #^{:private true} nil-or-matrix?     #(or (nil? %) (is-matrix? %)))
 
 (defn- zero-layer-below-threshold
   "Takes a two dimensional array of RVs and replaces all values whose
@@ -104,12 +107,13 @@
 	 downscaling-factor 1}}]
   {:pre [(every? is-matrix?       [source-layer use-layer])
 	 (every? nil-or-matrix?   (cons sink-layer (vals flow-layers)))
-	 (apply grids-align?      (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers))))
+	 (apply  grids-align?     (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers))))
 	 (every? nil-or-double>0? [source-threshold sink-threshold use-threshold trans-threshold])
-	 (every? nil-or-int>=1?   [rv-max-states downscaling-factor])
+	 (nil-or-integer>=1?      rv-max-states)
+	 (nil-or-number>=1?       downscaling-factor)
 	 (every? #{:absolute :relative} [sink-type use-type])
 	 (#{:rival :non-rival} benefit-type)
-	 (#{"LineOfSight" "Proximity" "Carbon" "Hydrosheds"} flow-model)
+	 (#{"LineOfSight" "Proximity" "Carbon" "Sediment"} flow-model)
 	 (#{:cli-menu :closure-map :matrix-list} result-type)]}
   ;; Initialize global parameters
   (set-global-params! {:rv-max-states      rv-max-states
@@ -125,7 +129,12 @@
 						 {source-layer source-threshold,
 						  sink-layer   sink-threshold,
 						  use-layer    use-threshold})
-	flow-layers (mapmap identity #(downsample-matrix downscaling-factor rv-average %) flow-layers)]
+	flow-layers (seq2map flow-layers (fn [[name matrix]]
+					   [name (partial downsample-matrix
+							  downscaling-factor
+							  #(if (= name "Hydrosheds")
+							     aggregate-flow-dirs
+							     rv-average))]))]
     ;; Display layers
     ;;(newline)
     ;;(apply print-matrix

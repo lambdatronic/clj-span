@@ -14,119 +14,162 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines the sediment model.
+;;;
+;;; Outstanding tasks:
+;;; 7) Rebuild analyzer functions.
+;;; 8) Attempt integration with ARIES.
+;;; 9) Email Ferd with hangups.
 
 (ns clj-span.sediment-model
-  (:use [clj-misc.utils     :only (memoize-by-first-arg depth-first-tree-search)]
-	[clj-misc.randvars  :only (rv-lt rv-scale rv-scalar-divide rv-zero-below-scalar rv-mean)]
-	[clj-span.model-api :only (distribute-flow! service-carrier)]
-	[clj-span.analyzer  :only (source-loc? sink-loc? use-loc?)]
-	[clj-span.params    :only (*trans-threshold*)]))
+  (:use [clj-span.params        :only (*trans-threshold*)]
+	[clj-span.model-api     :only (distribute-flow service-carrier)]
+	[clj-misc.utils         :only (seq2map seq2redundant-map euclidean-distance)]
+	[clj-misc.matrix-ops    :only (get-rows get-cols make-matrix filter-matrix-for-coords in-bounds? find-line-between)]
+	[clj-misc.randvars      :only (rv-zero
+				       rv-zero-below-scalar
+				       rv-min
+				       rv-mean
+				       rv-add
+				       rv-subtract
+				       rv-multiply
+				       rv-divide
+				       rv-scalar-add
+				       rv-scalar-multiply
+				       rv-scalar-divide)]))
 
-(def #^{:private true} elev-concept "Altitude")
+(def #^{:private true} hydrosheds-delta-codes {{  1 1} [ 0  1]   ; e
+					       {  2 1} [-1  1]   ; se
+					       {  4 1} [-1  0]   ; s
+					       {  8 1} [-1 -1]   ; sw
+					       { 16 1} [ 0 -1]   ; w
+					       { 32 1} [ 1 -1]   ; nw
+					       { 64 1} [ 1  0]   ; n
+					       {128 1} [ 1  1]}) ; ne
 
-(defn- most-downhill-neighbors
-  [location location-map]
-  (let [neighbors      (map location-map (:neighbors location))
-	neighbor-elevs (map #(rv-mean (get-in % [:flow-features elev-concept])) neighbors)
-	local-elev     (rv-mean (get-in location [:flow-features elev-concept]))
-	min-elev       (apply min local-elev neighbor-elevs)]
-    (remove nil?
-	    (map (fn [n elev] (if (== elev min-elev) n))
-		 neighbors neighbor-elevs))))
-(def most-downhill-neighbors (memoize-by-first-arg most-downhill-neighbors))
+(defn aggregate-flow-dirs
+  [hydrocodes]
+  (let [vector-direction  (reduce (partial map +) (map hydrosheds-delta-codes hydrocodes))
+	vector-magnitude  (euclidean-distance [0 0] vector-direction)
+	unit-vector       (map #(/ % vector-magnitude) vector-direction)
+	distances-to-dirs (seq2map (vals hydrosheds-delta-codes) #(vector (euclidean-distance unit-vector %) %))]
+    (distances-to-dirs (apply min (keys distances-to-dirs)))))
 
-;; FIXME this doesn't work if more than one location is lowest
-;; simultaneously.  The weight is also not being divided among the
-;; directions, which is foobared.
-(defn- transition-probabilities
-  [location neighbors]
-  (let [local-elev        (get-in location [:flow-features elev-concept])
-	neighbor-elevs    (vec (map #(get-in % [:flow-features elev-concept]) neighbors))
-	neighbors-lower?  (vec (map #(rv-lt % local-elev) neighbor-elevs))
-	local-lowest?     (reduce (fn [a b] (* (- 1 a) (- 1 b))) neighbors-lower?)
-        neighbors-lowest? (loop [i   (dec (count neighbor-elevs))
-				 j   0
-				 i<j neighbors-lower?]
-			    (if (== i 0)
-			      i<j
-			      (if (== j i)
-				(recur (dec i) 0 i<j)
-				(recur i (inc j) 
-				       (let [lt-prob (rv-lt (neighbor-elevs i) (neighbor-elevs j))]
-					 (-> i<j
-					     (assoc i (* (i<j i) lt-prob))
-					     (assoc j (* (i<j j) (- 1 lt-prob)))))))))]
-    (cons local-lowest? neighbors-lowest?)))
-(def transition-probabilities (memoize-by-first-arg transition-probabilities))
+(def *absorption-threshold* 0.1) ; this is just a hack - make it meaningful
 
-(defn- deterministic-successors
-  [[weight route] location-map]
-  (when-let [downhill-neighbors (most-downhill-neighbors (peek route) location-map)]
-    (let [downhill-weight (rv-scalar-divide weight (count downhill-neighbors))]
-      (if (> (rv-mean downhill-weight) *trans-threshold*)
-	(let [zeroed-downhill-weight (rv-zero-below-scalar downhill-weight *trans-threshold*)]
-	  (map #(vector zeroed-downhill-weight (conj route %)) downhill-neighbors))))))
+(defn- step-downstream!
+  [route-layer hydrosheds-layer sink-map use-map scaled-sinks
+   rows cols [current-id source-ids incoming-utilities sink-effects]]
+  (let [flow-delta (hydrosheds-delta-codes (get-in hydrosheds-layer current-id))]
+    (when flow-delta ; if nil, we've hit 0 (ocean) or -1 (inland sink)
+      (let [new-id (map + current-id flow-delta)]
+	(when (in-bounds? rows cols new-id) ; otherwise, we've gone off the map
+	  (let [affected-sinks     (filter #(> (rv-mean @(scaled-sinks %)) *absorption-threshold*) (sink-map new-id))
+		affected-users     (use-map  new-id)
+		total-incoming     (reduce rv-add incoming-utilities)
+		sink-effects       (if (seq affected-sinks) ; sinks encountered
+				     (merge sink-effects
+					    (let [total-sink-cap (reduce rv-add (map (comp deref scaled-sinks) affected-sinks))
+						  sink-fraction  (rv-divide total-incoming total-sink-cap)]
+					      (seq2map affected-sinks
+						       #(let [sink-cap @(scaled-sinks %)]
+							  [% (rv-scalar-multiply
+							      (rv-min sink-cap (rv-multiply sink-cap sink-fraction))
+							      -1)]))))
+				     sink-effects)
+		outgoing-utilities (if (seq affected-sinks) ; sinks encountered
+				     (do
+				       (doseq [sink-id affected-sinks]
+					 (swap! (scaled-sinks sink-id) rv-add (sink-effects sink-id)))
+				       (let [total-sunk   (reduce rv-add (map sink-effects affected-sinks))
+					     out-fraction (rv-scalar-add (rv-divide total-sunk total-incoming) 1)]
+					 (map #(rv-multiply % out-fraction) incoming-utilities)))
+				     incoming-utilities)]
+	    (when (seq affected-users)	; users encountered
+	      (let [carrier-caches  (map #(get-in route-layer %) affected-users)
+		    source-carriers (map #(struct-map service-carrier :weight %1 :route %2)
+					 incoming-utilities ; might need to be the original source-value
+					 source-ids)
+		    sink-carriers   (map (fn [[id w]] (struct-map service-carrier :weight w :route id))
+					 sink-effects)]
+		(doseq [cache carrier-caches]
+		  (swap! cache concat source-carriers sink-carriers))))
+	    (when (> (reduce + (map rv-mean outgoing-utilities)) *trans-threshold*)
+	      [new-id source-ids outgoing-utilities sink-effects])))))))
 
-(defn- probabilistic-successors
-  [[weight route] location-map]
-  (let [current-loc (peek route)
-	neighbors   (map location-map (:neighbors current-loc))
-	trans-probs (transition-probabilities current-loc neighbors)]
-    (when (< (first trans-probs) 0.9) ;; FIXME add this to flow-params
-      (filter (fn [[w _]] (> (rv-mean w) *trans-threshold*))
-	      (map (fn [l p] [(rv-scale weight p) (conj route l)]) neighbors (rest trans-probs))))))
+(defn- move-points-into-stream-channel
+  "Returns a map of in-stream-ids to lists of the out-of-stream-ids
+   that were shifted into this position."
+  [hydrosheds-layer stream-layer data-points]
+  (seq2redundant-map data-points
+		     #(loop [id %]
+			(if (not= rv-zero (get-in stream-layer id))
+			  ;; in-stream
+			  [(vec id) %]
+			  ;; not in-stream
+			  (let [flow-delta (hydrosheds-delta-codes (get-in hydrosheds-layer id))]
+			    (recur (map + id flow-delta)))))
+		     conj))
 
-;; FIXME make this function only store carriers on sinks if a use
-;; location is found along its path
-(defn- distribute-downhill!
-  "Depth-first search with successors = downhill neighbors.
-   Stop when no successors.  No decay-rate, but branching-factor is
-   possible, so check for weight below trans-threshold."
-  [location-map source-location]
-  (let [goal? (fn [[weight route]]
-		(let [current-loc (peek route)]
-		  (when (or (sink-loc? current-loc) (use-loc? current-loc))
-		    (swap! (:carrier-cache current-loc) conj (struct service-carrier weight route)))
-		  false))]
-    (loop [open-list (list [(:source source-location) [source-location]])]
-      (when-first [this-node open-list]
-	(if (goal? this-node)
-	  this-node
-	  (recur (concat (deterministic-successors this-node location-map) (rest open-list))))))))
-
-(defmethod distribute-flow! "Water"
-  [_ location-map _ _]
-  (dorun (pmap
-	  (fn [source-location] (distribute-downhill! location-map source-location))
-	  (filter source-loc? (vals location-map)))))
+(defn- scale-by-stream-proximity
+  [floodplain-layer elevation-layer in-stream-map data-layer]
+  (into {}
+	(remove nil?
+		(for [in-stream-id (keys in-stream-map) data-id (in-stream-map in-stream-id)]
+		  (if (= in-stream-id data-id)
+		    ;; location is already in-stream, activation is 100%
+		    [data-id (atom (get-in data-layer data-id))]
+		    ;; location is out-of-stream, activation is scaled by the
+		    ;; relative elevation difference between this location,
+		    ;; the in-stream proxy location, and the nearest
+		    ;; floodplain boundary
+		    (let [loc-delta       (map - data-id in-stream-id)
+			  outside-id      (first (drop-while #(not= rv-zero (get-in floodplain-layer %))
+							     (rest (iterate #(map + loc-delta %) data-id))))
+			  inside-id       (map - outside-id loc-delta)
+			  boundary-id     (first (drop-while #(not= rv-zero (get-in floodplain-layer %))
+							     (find-line-between inside-id outside-id)))
+			  rise            (rv-subtract (get-in elevation-layer boundary-id)
+						       (get-in elevation-layer in-stream-id))
+			  run-to-boundary (Math/sqrt (#(+ (* %1 %1) (* %2 %2)) (map - boundary-id in-stream-id)))
+			  run-to-data     (Math/sqrt (#(+ (* %1 %1) (* %2 %2)) (map - data-id in-stream-id)))
+			  slope           (rv-scalar-divide rise run-to-boundary)
+			  elev-limit      (rv-add (rv-scalar-multiply slope run-to-data) (get-in elevation-layer in-stream-id))]
+		      (if (< (rv-mean (get-in elevation-layer data-id)) (rv-mean elev-limit))
+			(let [activation-factor (- 1 (/ run-to-data run-to-boundary))]
+			  [data-id (atom (rv-scalar-multiply (get-in data-layer data-id) activation-factor))]))))))))
 
 (defmethod distribute-flow "Sediment"
-  [flow-model source-layer sink-layer use-layer {elev-layer "Altitude"}]
-  (let [rows          (get-rows source-layer)
-	cols          (get-cols source-layer)
-	route-layer   (make-matrix rows cols #(atom ()))
-	source-points (filter-matrix-for-coords #(not= rv-zero %) source-layer)]
-    (println "Source points:" (count source-points))
-    (dorun (map
-	    (partial distribute-downhill! flow-model route-layer source-layer sink-layer use-layer rows cols)
-	    source-points
-	    (map #(get-in source-layer %) source-points)))
-    route-layer))
-
-;; ideas for models
-;;
-;;So, I could try the following:
-;;
-;;1) Grab the hydrosheds layer according to Ferd's email
-;;2) Start a carrier at each source point
-;;3) Follow the hydrosheds path until it
-;;   a) stops (gets stuck)
-;;   b) goes off the map
-;;   c) we run out of sediment (or it gets below the trans-threshold)
-;;4) When we encounter sinks, subtract the sink rate (which is naive) from the weight.
-;;   Append the sink to the sinks-encountered list.
-;;
-;;5) When we encounter use points, store the carrier route and the
-;;   amount of sediment from the path's source as well as negative
-;;   sediment affects of each of the sinks-encountered (like the
-;;   proximity model).
+  [_ source-layer sink-layer use-layer
+   {hydrosheds-layer "Hydrosheds", stream-layer "RiverStream",
+    floodplain-layer "FloodPlainPresence", elevation-layer "Altitude"}]
+  (let [rows           (get-rows source-layer)
+	cols           (get-cols source-layer)
+	route-layer    (make-matrix rows cols #(atom ()))
+	[source-map sink-map use-map] (map (comp
+					    (partial move-points-into-stream-channel hydrosheds-layer stream-layer)
+					    (partial filter-matrix-for-coords #(not= rv-zero %)))
+					   [source-layer sink-layer use-layer])
+	[scaled-sources scaled-sinks] (map (partial scale-by-stream-proximity floodplain-layer elevation-layer)
+					   [source-map   sink-map]
+					   [source-layer sink-layer])]
+    (println "Source points:" (count (concat (vals source-map))))
+    (println "Sink points:  " (count (concat (vals sink-map))))
+    (println "Use points:   " (count (concat (vals use-map))))
+    (loop [sediment-carriers (for [in-stream-id (keys source-map)]
+			       (let [source-ids (source-map in-stream-id)]
+				 [in-stream-id source-ids (map (comp deref scaled-sources) source-ids) {}]))]
+      (if (empty? sediment-carriers)
+	route-layer
+	(recur (remove nil?
+		       (pmap (partial step-downstream!
+				      route-layer
+				      hydrosheds-layer
+				      sink-map
+				      use-map
+				      scaled-sinks
+				      rows cols)
+			     sediment-carriers)))))))

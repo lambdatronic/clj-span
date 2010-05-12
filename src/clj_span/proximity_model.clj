@@ -14,6 +14,16 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines the proximity model.
+;;;
+;;; * Routes run from Source to Use and Sink to Use
+;;; * Contain positive and negative utility values (total source +
+;;;   sink values)
+;;; * Searches outward from Source points until decay and sink effects
+;;;   block the frontier's progress
 
 (ns clj-span.proximity-model
   (:use [clj-span.params     :only (*trans-threshold*)]

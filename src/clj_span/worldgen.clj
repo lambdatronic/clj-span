@@ -43,11 +43,14 @@
 
 (defn make-random-layer-map
   [rows cols name-to-type-map]
-  {:pre [(every? #{:discrete :continuous} (vals name-to-type-map))]}
+  {:pre [(every? #(or (fn? %) (#{:discrete :continuous} %)) (vals name-to-type-map))]}
   (into {}
 	(for [[name type] name-to-type-map]
-	  [name (let [meta (if (= type :discrete) disc-type cont-type)]
-		  (make-matrix rows cols #(with-meta {(rationalize (rand 100.0)) 1} meta)))])))
+	  [name (make-matrix rows cols
+			     (if (fn? type)
+			       type
+			       (let [meta (if (= type :discrete) disc-type cont-type)]
+				 #(with-meta {(rationalize (rand 100.0)) 1} meta))))])))
 
 (defn make-layer-from-ascii-grid
   [filename]

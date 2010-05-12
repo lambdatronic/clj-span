@@ -14,6 +14,18 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines the line-of-sight model.
+;;;
+;;; * Routes run from Source to Use
+;;; * Contain positive and negative utility values (total decayed
+;;;   source and sink values)
+;;; * Projects a line of sight from each user to source point
+;;; * Weights utility by amount of visible height of source above view
+;;;   line
+;;; * Sinks are counted independently of source sight lines
 
 (ns clj-span.line-of-sight-model
   (:use [clj-span.params     :only (*trans-threshold*)]

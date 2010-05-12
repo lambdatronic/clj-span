@@ -24,31 +24,40 @@
 ;;; clj-span.core/run-span.
 
 (ns clj-span.aries-span-bridge
-  (:use [clj-span.core       :only (run-span)]
-	[clj-misc.utils      :only (mapmap remove-nil-val-entries)]
-	[clj-misc.matrix-ops :only (seq2matrix)]
-	[clj-misc.randvars   :only (cont-type disc-type successive-sums)]))
+  (:use [clj-span.core           :only (run-span)]
+	[clj-span.sediment-model :only (aggregate-flow-dirs)]
+	[clj-misc.matrix-ops     :only (seq2matrix downsample-matrix)]
+	[clj-misc.utils          :only (mapmap remove-nil-val-entries)]
+	[clj-misc.randvars       :only (cont-type disc-type successive-sums)]))
+
+#_(refer 'thinklab :only '(conc))
 
 #_(refer 'geospace :only '(grid-rows
-			 grid-columns
-			 grid-extent?))
+			   grid-columns
+			   grid-extent?
+			   get-shape
+			   get-spatial-extent))
 
 #_(refer 'corescience :only '(find-state
-			    find-observation
-			    get-state-map
-			    get-observable-class))
+			      find-observation
+			      get-state-map
+			      get-observable-class))
 
 #_(refer 'modelling   :only '(probabilistic?
-			    binary?
-			    encodes-continuous-distribution?
-			    get-dist-breakpoints
-			    get-possible-states
-			    get-probabilities
-			    get-data))
+			      binary?
+			      encodes-continuous-distribution?
+			      get-dist-breakpoints
+			      get-possible-states
+			      get-probabilities
+			      get-data
+			      run-at-shape))
 
-(declare grid-rows
+(declare conc
+	 grid-rows
 	 grid-columns
 	 grid-extent?
+	 get-shape
+	 get-spatial-extent
 	 find-state
 	 find-observation
 	 get-state-map
@@ -59,16 +68,14 @@
 	 get-dist-breakpoints
 	 get-possible-states
 	 get-probabilities
-	 get-data)
+	 get-data
+	 run-at-shape)
 
 (defn- unpack-datasource
   "Returns a seq of length n of the values in ds,
    represented as probability distributions.  All values and
    probabilities are represented as rationals."
   [ds rows cols]
-  (println "DS:           " ds)
-  (println "PROBABILISTIC?" (probabilistic? ds))
-  (println "ENCODES?      " (encodes-continuous-distribution? ds))
   (let [n            (* rows cols)
 	to-rationals (partial map #(if (Double/isNaN %) 0 (rationalize %)))]
     (if (and (probabilistic? ds) (not (binary? ds)))
@@ -77,9 +84,6 @@
 	(let [bounds                (get-dist-breakpoints ds)
 	      unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
 	      unbounded-from-above? (== Double/POSITIVE_INFINITY (last bounds))]
-	  (println "BREAKPOINTS:    " bounds)
-	  (println "UNBOUNDED-BELOW?" unbounded-from-below?)
-	  (println "UNBOUNDED-ABOVE?" unbounded-from-above?)
 	  (let [prob-dist             (apply create-struct (to-rationals
 							    (if unbounded-from-below?
 							      (if unbounded-from-above?
@@ -101,7 +105,7 @@
 	(let [prob-dist (apply create-struct (get-possible-states ds))]
 	  (for [idx (range n)]
 	    (with-meta (apply struct prob-dist (to-rationals (get-probabilities ds idx))) disc-type))))
-      ;; binary distributions and deterministic values (FIXME: NaNs become 0s)
+      ;; binary distributions and deterministic values (FIXME: NaNs become 0s currently. Is this good?)
       (for [value (to-rationals (get-data ds))]
 	(with-meta (array-map value 1) disc-type)))))
 
@@ -122,6 +126,19 @@
 	    #(seq2matrix rows cols (unpack-datasource % rows cols))
 	    (get-state-map (find-observation observation concept)))))
 
+(defn- get-hydrosheds-layer
+  [observation rows cols]
+  (let [hydrosheds-observation  (run-at-shape "aries/flood/flow-direction"
+					      (get-shape (get-spatial-extent observation)))
+	hydrosheds-rows-native  (grid-rows    hydrosheds-observation)
+	hydrosheds-cols-native  (grid-columns hydrosheds-observation)
+	hydrosheds-layer-native (layer-from-observation hydrosheds-observation
+							(conc 'geophysics:FlowDirection)
+							hydrosheds-rows-native
+							hydrosheds-cols-native)
+	downscaling-factor      (/ hydrosheds-rows-native rows)]
+    (downsample-matrix downscaling-factor aggregate-flow-dirs hydrosheds-layer-native)))
+
 (defn span-driver
   "Takes the source, sink, use, and flow concepts along with the
    flow-params map and an observation containing the concepts'
@@ -137,10 +154,13 @@
   (let [rows         (grid-rows    observation)
 	cols         (grid-columns observation)
 	flow-model   (.getLocalName (get-observable-class observation))
-	source-layer (layer-from-observation     observation source-concept rows cols)
-	sink-layer   (layer-from-observation     observation sink-concept   rows cols)
-	use-layer    (layer-from-observation     observation use-concept    rows cols)
-	flow-layers  (layer-map-from-observation observation flow-concept   rows cols)]
+	source-layer (layer-from-observation observation source-concept rows cols)
+	sink-layer   (layer-from-observation observation sink-concept   rows cols)
+	use-layer    (layer-from-observation observation use-concept    rows cols)
+	flow-layers  (let [layer-map (layer-map-from-observation observation flow-concept rows cols)]
+		       (if (= flow-model "Sediment")
+			 (assoc layer-map "Hydrosheds" (get-hydrosheds-layer observation rows cols))
+			 layer-map))]
     (run-span (remove-nil-val-entries
 	       {:source-layer       source-layer
 		:source-threshold   source-threshold

@@ -38,16 +38,16 @@
       "            -sink-layer         <filepath> \\ \n"
       "            -use-layer          <filepath> \\ \n"
       "            -flow-layers        <filepath> \\ \n"
-      "            -source-threshold   <double> \\ \n"
-      "            -sink-threshold     <double> \\ \n"
-      "            -use-threshold      <double> \\ \n"
-      "            -trans-threshold    <double> \\ \n"
-      "            -rv-max-states      <integer> \\ \n"
-      "            -downscaling-factor <integer> \\ \n"
+      "            -source-threshold   <double>   \\ \n"
+      "            -sink-threshold     <double>   \\ \n"
+      "            -use-threshold      <double>   \\ \n"
+      "            -trans-threshold    <double>   \\ \n"
+      "            -rv-max-states      <integer>  \\ \n"
+      "            -downscaling-factor <number>   \\ \n"
       "            -sink-type          <absolute|relative> \\ \n"
       "            -use-type           <absolute|relative> \\ \n"
-      "            -benefit-type       <rival|non-rival> \\ \n"
-      "            -flow-model         <line-of-sight|proximity|carbon|hydrosheds>\n"))
+      "            -benefit-type       <rival|non-rival>   \\ \n"
+      "            -flow-model         <line-of-sight|proximity|carbon|sediment>\n"))
 
 (defmulti #^{:private true} print-usage (fn [error-type extra-info] error-type))
 
@@ -63,17 +63,17 @@
       ["-sink-layer"         #(.exists (file-str %))     " is not a valid filepath."            ]
       ["-use-layer"          #(.exists (file-str %))     " is not a valid filepath."            ]
       ["-flow-layers"        #(.exists (file-str %))     " is not a valid filepath."            ]
-      ["-source-threshold"   #(float?   (read-string %)) " is not a double."                    ]
-      ["-sink-threshold"     #(float?   (read-string %)) " is not a double."                    ]
-      ["-use-threshold"      #(float?   (read-string %)) " is not a double."                    ]
-      ["-trans-threshold"    #(float?   (read-string %)) " is not a double."                    ]
-      ["-rv-max-states"      #(integer? (read-string %)) " is not an integer."                  ]
-      ["-downscaling-factor" #(integer? (read-string %)) " is not an integer."                  ]
+      ["-source-threshold"   #(float?  (read-string %))  " is not a double."                    ]
+      ["-sink-threshold"     #(float?  (read-string %))  " is not a double."                    ]
+      ["-use-threshold"      #(float?  (read-string %))  " is not a double."                    ]
+      ["-trans-threshold"    #(float?  (read-string %))  " is not a double."                    ]
+      ["-rv-max-states"      #(integer?(read-string %))  " is not an integer."                  ]
+      ["-downscaling-factor" #(number? (read-string %))  " is not an integer."                  ]
       ["-sink-type"          #{"absolute" "relative"}    " must be one of absolute or relative."]
       ["-use-type"           #{"absolute" "relative"}    " must be one of absolute or relative."]
       ["-benefit-type"       #{"rival" "non-rival"}      " must be one of rival or non-rival"   ]
-      ["-flow-model"         #{"line-of-sight" "proximity" "carbon" "hydrosheds"}
-                             " must be one of line-of-sight, proximity, carbon, or hydrosheds."]])
+      ["-flow-model"         #{"line-of-sight" "proximity" "carbon" "sediment"}
+                             " must be one of line-of-sight, proximity, carbon, or sediment."]])
 
 (defn- valid-params?
   [params]
@@ -109,7 +109,7 @@
       (assoc :sink-type          (keyword (input-params "-sink-type")))
       (assoc :use-type           (keyword (input-params "-use-type")))
       (assoc :benefit-type       (keyword (input-params "-benefit-type")))
-      (assoc :flow-model         ({"line-of-sight" "LineOfSight", "proximity" "Proximity", "carbon" "Carbon", "hydrosheds" "Hydrosheds"}
+      (assoc :flow-model         ({"line-of-sight" "LineOfSight", "proximity" "Proximity", "carbon" "Carbon", "sediment" "Sediment"}
 				  (input-params "-flow-model")))))
 
 (defn -main

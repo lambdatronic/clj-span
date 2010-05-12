@@ -49,14 +49,15 @@
   [[a b] [c d]]
   [(- a c) (- b d)])
 
-(def #^{:private true} delta-codes {[ 0  1] (byte 1)
-				    [ 1  1] (byte 2)
-				    [ 1  0] (byte 4)
-				    [ 1 -1] (byte 8)
-				    [ 0 -1] (byte 16)
-				    [-1 -1] (byte 32)
-				    [-1  0] (byte 64)
-				    [-1  1] (byte 128)})
+(def #^{:private true} delta-codes {[ 0  1] (byte 1)     ; e
+				    [-1  1] (byte 2)     ; se
+				    [-1  0] (byte 4)     ; s
+				    [-1 -1] (byte 8)     ; sw
+				    [ 0 -1] (byte 16)    ; w
+				    [ 1 -1] (byte 32)    ; nw
+				    [ 1  0] (byte 64)    ; n
+				    [ 1  1] (byte 128)}) ; ne
+				    
 
 (defn bitpack-route
   [id-seq]
@@ -92,8 +93,8 @@
   "Takes a vector of vectors and aggregates the values in grid chunks
    of size downscaling-factor x downscaling-factor by applying the
    aggregator-fn to each group of values.  If the size of the matrix
-   is not divisible by the downscaling-factor, the remaining cells
-   will be lost in the downsampled result."
+   is not evenly divisible by the downscaling-factor, the remaining
+   cells will be lost in the downsampled result."
   [downscaling-factor aggregator-fn matrix]
   {:pre [(>= downscaling-factor 1)]}
   (if (== downscaling-factor 1)
@@ -105,15 +106,21 @@
 	  offset-range (range downscaling-factor)]
       (vec (for [scaled-i (range scaled-rows)]
 	     (vec (for [scaled-j (range scaled-cols)]
-		    (let [i (* scaled-i downscaling-factor)
-			  j (* scaled-j downscaling-factor)]
+		    (let [i (int (* scaled-i downscaling-factor))
+			  j (int (* scaled-j downscaling-factor))]
 		      (aggregator-fn (for [i-offset offset-range j-offset offset-range]
 				       (get-in matrix [(+ i i-offset) (+ j j-offset)])))))))))))
+
+(defn in-bounds?
+  "Returns true if the point is within the map bounds defined by
+   [0 rows] and [0 cols], inclusive below and exclusive above."
+  [rows cols [i j]]
+  (and (>= i 0) (>= j 0) (< i rows) (< j cols)))
 
 (defn get-neighbors
   "Return a sequence of neighboring points within the map bounds."
   [[i j] rows cols]
-  (filter (fn [[i j]] (and (>= i 0) (>= j 0) (< i rows) (< j cols)))
+  (filter (partial in-bounds? rows cols)
 	  (map #(vector (+ i %1) (+ j %2))
 	       [-1 -1 -1  0 0  1 1 1]
 	       [-1  0  1 -1 1 -1 0 1])))

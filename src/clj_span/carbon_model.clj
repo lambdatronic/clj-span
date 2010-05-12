@@ -14,11 +14,20 @@
 ;;;
 ;;; You should have received a copy of the GNU General Public License
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines the carbon model.
+;;;
+;;; * Routes run from Source to Use (no Sinks in this model)
+;;; * Contain positive utility values only
+;;; * Divides all CO2 sequestration among users by relative
+;;;   consumption (i.e. Emissions)
 
 (ns clj-span.carbon-model
   (:use [clj-span.model-api  :only (distribute-flow service-carrier)]
 	[clj-misc.randvars   :only (rv-zero rv-add rv-divide rv-multiply)]
-	[clj-misc.matrix-ops :only (filter-matrix-for-coords make-matrix get-rows get-cols bitpack-route find-line-between)]))
+	[clj-misc.matrix-ops :only (filter-matrix-for-coords make-matrix get-rows get-cols)]))
 
 (defmethod distribute-flow "Carbon"
   [_ source-layer _ use-layer _]
@@ -39,6 +48,6 @@
 		      (for [sid source-points]
 			(struct-map service-carrier
 			  :weight (rv-multiply (get-in source-layer sid) (percent-consumed uid))
-			  :route  (bitpack-route (find-line-between sid uid))))))
+			  :route  sid))))
 	    use-points))
     route-layer))
