@@ -33,7 +33,7 @@
 
 (def #^{:private true} usage-message
      (str
-      "Usage: java -cp clj-span.jar:clojure.jar:clojure-contrib.jar clj_span.commandline \\ \n"
+      "Usage: java -cp clj-span.jar:clojure.jar:clojure-contrib.jar:debug-repl.jar clj_span.commandline \\ \n"
       "            -source-layer       <filepath> \\ \n"
       "            -sink-layer         <filepath> \\ \n"
       "            -use-layer          <filepath> \\ \n"
@@ -44,14 +44,15 @@
       "            -trans-threshold    <double>   \\ \n"
       "            -rv-max-states      <integer>  \\ \n"
       "            -downscaling-factor <number>   \\ \n"
-      "            -sink-type          <absolute|relative> \\ \n"
-      "            -use-type           <absolute|relative> \\ \n"
-      "            -benefit-type       <rival|non-rival>   \\ \n"
+      "            -source-type        <finite|infinite> \\ \n"
+      "            -sink-type          <finite|infinite> \\ \n"
+      "            -use-type           <finite|infinite> \\ \n"
+      "            -benefit-type       <rival|non-rival> \\ \n"
       "            -flow-model         <line-of-sight|proximity|carbon|sediment>\n"))
 
 (defmulti #^{:private true} print-usage (fn [error-type extra-info] error-type))
 
-(defmethod print-usage :args-not-even [_ extra-info]
+(defmethod print-usage :args-not-even [_ _]
   (println (str "\nError: The number of input arguments must be even.\n\n" usage-message)))
 
 (defmethod print-usage :param-errors [_ extra-info]
@@ -59,19 +60,20 @@
     (println (str "\nError: The parameter values that you entered are incorrect.\n\t" error-message "\n\n" usage-message))))
 
 (def #^{:private true} param-tests
-     [["-source-layer"       #(.exists (file-str %))     " is not a valid filepath."            ]
-      ["-sink-layer"         #(.exists (file-str %))     " is not a valid filepath."            ]
-      ["-use-layer"          #(.exists (file-str %))     " is not a valid filepath."            ]
-      ["-flow-layers"        #(.exists (file-str %))     " is not a valid filepath."            ]
-      ["-source-threshold"   #(float?  (read-string %))  " is not a double."                    ]
-      ["-sink-threshold"     #(float?  (read-string %))  " is not a double."                    ]
-      ["-use-threshold"      #(float?  (read-string %))  " is not a double."                    ]
-      ["-trans-threshold"    #(float?  (read-string %))  " is not a double."                    ]
-      ["-rv-max-states"      #(integer?(read-string %))  " is not an integer."                  ]
-      ["-downscaling-factor" #(number? (read-string %))  " is not an integer."                  ]
-      ["-sink-type"          #{"absolute" "relative"}    " must be one of absolute or relative."]
-      ["-use-type"           #{"absolute" "relative"}    " must be one of absolute or relative."]
-      ["-benefit-type"       #{"rival" "non-rival"}      " must be one of rival or non-rival"   ]
+     [["-source-layer"       #(.canRead (file-str %))    " is not readable."                  ]
+      ["-sink-layer"         #(.canRead (file-str %))    " is not readable."   	              ]
+      ["-use-layer"          #(.canRead (file-str %))    " is not readable."   	              ]
+      ["-flow-layers"        #(.canRead (file-str %))    " is not readable."   	              ]
+      ["-source-threshold"   #(float?  (read-string %))  " is not a double."                  ]
+      ["-sink-threshold"     #(float?  (read-string %))  " is not a double."                  ]
+      ["-use-threshold"      #(float?  (read-string %))  " is not a double."                  ]
+      ["-trans-threshold"    #(float?  (read-string %))  " is not a double."                  ]
+      ["-rv-max-states"      #(integer?(read-string %))  " is not an integer."                ]
+      ["-downscaling-factor" #(number? (read-string %))  " is not a number."                  ]
+      ["-source-type"        #{"finite" "infinite"}      " must be one of finite or infinite."]
+      ["-sink-type"          #{"finite" "infinite"}      " must be one of finite or infinite."]
+      ["-use-type"           #{"finite" "infinite"}      " must be one of finite or infinite."]
+      ["-benefit-type"       #{"rival" "non-rival"}      " must be one of rival or non-rival."]
       ["-flow-model"         #{"line-of-sight" "proximity" "carbon" "sediment"}
                              " must be one of line-of-sight, proximity, carbon, or sediment."]])
 
@@ -80,7 +82,7 @@
   (let [errors (remove nil?
 		       (map (fn [[key test? error-msg]]
 			      (if-let [val (params key)]
-				(if (not (test? val)) (str val error-msg))
+				(if-not (test? val) (str val error-msg))
 				(str "No value provided for " key)))
 			    param-tests))
 	input-keys   (set (keys params))
@@ -106,6 +108,7 @@
       (assoc :trans-threshold    (read-string (input-params "-trans-threshold")))
       (assoc :rv-max-states      (read-string (input-params "-rv-max-states")))
       (assoc :downscaling-factor (read-string (input-params "-downscaling-factor")))
+      (assoc :source-type        (keyword (input-params "-source-type")))
       (assoc :sink-type          (keyword (input-params "-sink-type")))
       (assoc :use-type           (keyword (input-params "-use-type")))
       (assoc :benefit-type       (keyword (input-params "-benefit-type")))

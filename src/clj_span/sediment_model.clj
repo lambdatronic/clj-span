@@ -27,7 +27,7 @@
 (ns clj-span.sediment-model
   (:use [clj-span.params        :only (*trans-threshold*)]
 	[clj-span.model-api     :only (distribute-flow service-carrier)]
-	[clj-misc.utils         :only (seq2map seq2redundant-map euclidean-distance)]
+	[clj-misc.utils         :only (seq2map seq2redundant-map euclidean-distance square-distance)]
 	[clj-misc.matrix-ops    :only (get-rows get-cols make-matrix filter-matrix-for-coords in-bounds? find-line-between)]
 	[clj-misc.randvars      :only (rv-zero
 				       rv-zero-below-scalar
@@ -50,15 +50,18 @@
 						{ 64 1} [ 1  0]	 ; n
 						{128 1} [ 1  1]}) ; ne
 
+;; try out (vecfoo (floor (/ (atan2 x y) 45))) or approximate by checking quadrant of vector-direction
 (defn aggregate-flow-dirs
   [hydrocodes]
   (if-let [exit-code (some #{{-1 1} {0 1}} hydrocodes)]
     exit-code
-    (let [vector-direction  (reduce (partial map +) (map hydrosheds-delta-codes hydrocodes))
-	  vector-magnitude  (euclidean-distance [0 0] vector-direction)
-	  unit-vector       (map #(/ % vector-magnitude) vector-direction)
-	  distances-to-dirs (seq2map hydrosheds-delta-codes (fn [[code v]] [(euclidean-distance unit-vector v) code]))]
-      (distances-to-dirs (apply min (keys distances-to-dirs))))))
+    (let [vector-direction (reduce (partial map +) (map hydrosheds-delta-codes hydrocodes))]
+      (if (= vector-direction [0 0])
+	{-1 1} ; since we don't know where to go, we'll just terminate this path by saying we hit an inland sink
+	(let [vector-magnitude  (euclidean-distance [0 0] vector-direction)
+	      unit-vector       (map #(/ % vector-magnitude) vector-direction)
+	      distances-to-dirs (seq2map hydrosheds-delta-codes (fn [[code v]] [(square-distance unit-vector v) code]))]
+	  (distances-to-dirs (apply min (keys distances-to-dirs))))))))
 
 (def *absorption-threshold* 0.1) ; this is just a hack - make it meaningful
 
@@ -150,7 +153,7 @@
     floodplain-layer "FloodPlainPresence", elevation-layer "Altitude"}]
   (let [rows           (get-rows source-layer)
 	cols           (get-cols source-layer)
-	route-layer    (make-matrix rows cols #(atom ()))
+	route-layer    (make-matrix rows cols (constantly (atom ())))
 	[source-map sink-map use-map] (map (comp
 					    (partial move-points-into-stream-channel hydrosheds-layer stream-layer)
 					    (partial filter-matrix-for-coords #(not= rv-zero %)))

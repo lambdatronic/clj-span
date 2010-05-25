@@ -26,7 +26,7 @@
 
 (ns clj-span.carbon-model
   (:use [clj-span.model-api  :only (distribute-flow service-carrier)]
-	[clj-misc.randvars   :only (rv-zero rv-add rv-divide rv-multiply)]
+	[clj-misc.randvars   :only (rv-zero rv-add rv-divide rv-multiply rv-min)]
 	[clj-misc.matrix-ops :only (filter-matrix-for-coords make-matrix get-rows get-cols)]))
 
 (defmethod distribute-flow "Carbon"
@@ -34,20 +34,28 @@
   "The amount of carbon sequestration produced is distributed among
    the consumers (carbon emitters) according to their relative :use
    values."
-  (let [source-points     (filter-matrix-for-coords #(not= rv-zero %) source-layer)
-	use-points        (filter-matrix-for-coords #(not= rv-zero %) use-layer)
-	use-values        (map #(get-in use-layer %) use-points)
-	total-consumption (reduce rv-add rv-zero use-values)
-	percent-consumed  (zipmap use-points (map #(rv-divide % total-consumption) use-values))
-	route-layer       (make-matrix (get-rows source-layer) (get-cols source-layer) #(atom ()))]
+  (let [route-layer       (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly (atom ())))
+	source-points     (filter-matrix-for-coords #(not= rv-zero %) source-layer)
+	use-points        (filter-matrix-for-coords #(not= rv-zero %) use-layer)]
     (println "Source points:" (count source-points))
     (println "Use points:   " (count use-points))
-    (dorun (pmap
-	    (fn [uid]
-	      (reset! (get-in route-layer uid)
-		      (for [sid source-points]
-			(struct-map service-carrier
-			  :weight (rv-multiply (get-in source-layer sid) (percent-consumed uid))
-			  :route  sid))))
-	    use-points))
+    (if (and (seq source-points) (seq use-points))
+      (let [source-values     (map #(get-in source-layer %) source-points)
+	    use-values        (map #(get-in use-layer    %) use-points)
+	    total-production  (reduce rv-add rv-zero source-values)
+	    total-consumption (reduce rv-add rv-zero use-values)
+	    percent-produced  (map #(rv-divide % total-production) source-values)
+	    source-use-ratio  (rv-divide total-production total-consumption)]
+	(dorun (pmap
+		(fn [uid use-cap]
+		  (let [amount-usable (rv-min use-cap (rv-multiply use-cap source-use-ratio))]
+		    (reset! (get-in route-layer uid)
+			    (map (fn [sid source-percent]
+				   (struct-map service-carrier
+				     :weight (rv-multiply source-percent amount-usable)
+				     :route  sid))
+				 source-points
+				 percent-produced))))
+		use-points
+		use-values))))
     route-layer))

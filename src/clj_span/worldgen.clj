@@ -24,7 +24,7 @@
 (ns clj-span.worldgen
   (:use [clj-misc.matrix-ops :only (make-matrix)]
 	[clj-misc.randvars   :only (cont-type disc-type)]
-	[clojure.contrib.duck-streams :only (spit file-str with-in-reader read-lines)]))
+	[clojure.contrib.duck-streams :only (file-str with-in-reader read-lines)]))
 
 (defn read-layer-from-file
   [filename]
@@ -39,18 +39,24 @@
   [rows cols type]
   {:pre [(#{:discrete :continuous} type)]}
   (let [meta (if (= type :discrete) disc-type cont-type)]
-    (make-matrix rows cols #(with-meta {(rationalize (rand 100.0)) 1} meta))))
+    (make-matrix rows cols (fn [_] (with-meta {(rationalize (rand 100.0)) 1} meta)))))
 
 (defn make-random-layer-map
   [rows cols name-to-type-map]
-  {:pre [(every? #(or (fn? %) (#{:discrete :continuous} %)) (vals name-to-type-map))]}
+  {:pre [(every? #(or (fn? %) (#{:discrete :continuous :hydrosheds} %)) (vals name-to-type-map))]}
   (into {}
 	(for [[name type] name-to-type-map]
 	  [name (make-matrix rows cols
-			     (if (fn? type)
-			       type
-			       (let [meta (if (= type :discrete) disc-type cont-type)]
-				 #(with-meta {(rationalize (rand 100.0)) 1} meta))))])))
+			     (cond (fn? type)           type
+				   (= type :hydrosheds) (fn [_] (with-meta
+								  {([-1 0 1 2 4 8 16 32 64 128] (rand-int 10)) 1}
+								  disc-type))
+				   :otherwise           (let [meta (if (= type :discrete)
+								     disc-type
+								     cont-type)]
+							  (fn [_] (with-meta
+								    {(rationalize (rand 100.0)) 1}
+								    meta)))))])))
 
 (defn make-layer-from-ascii-grid
   [filename]

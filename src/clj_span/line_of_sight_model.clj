@@ -100,24 +100,24 @@
 	       (when (> (rv-mean source-utility) *trans-threshold*)
 		 (struct-map service-carrier
 		   :weight (if (= source-type :sinks) (rv-scalar-multiply source-utility -1) source-utility)
-		   :route  (bitpack-route (rseq sight-line))))))]
+		   :route  [source-point (bitpack-route (rseq sight-line))]))))]
     (swap! (get-in route-layer use-point) conj carrier)))
 
 ;; Detects all sources and sinks visible from the use-point and stores
 ;; their utility contributions in the route-layer."
 (defmethod distribute-flow "LineOfSight"
   [flow-model source-layer sink-layer use-layer {elev-layer "Altitude"}]
-  (let [route-layer   (make-matrix (get-rows source-layer) (get-cols source-layer) #(atom ()))
+  (let [route-layer   (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly (atom ())))
 	source-points (filter-matrix-for-coords #(not= rv-zero %) source-layer)
 	sink-points   (filter-matrix-for-coords #(not= rv-zero %) sink-layer)
 	use-points    (filter-matrix-for-coords #(not= rv-zero %) use-layer)]
     (println "Source points:" (count source-points))
     (println "Sink points:  " (count sink-points))
     (println "Use points:   " (count use-points))
-    (dorun (map (partial raycast! flow-model :sources route-layer source-layer use-layer elev-layer)
-		(for [source-point source-points use-point use-points] [source-point use-point])))
+    (dorun (pmap (partial raycast! flow-model :sources route-layer source-layer use-layer elev-layer)
+		 (for [source-point source-points use-point use-points] [source-point use-point])))
     (println "All sources assessed.")
-    (dorun (map (partial raycast! flow-model :sinks   route-layer sink-layer   use-layer elev-layer)
-		(for [sink-point sink-points use-point use-points] [sink-point use-point])))
+    (dorun (pmap (partial raycast! flow-model :sinks   route-layer sink-layer   use-layer elev-layer)
+		 (for [sink-point sink-points use-point use-points] [sink-point use-point])))
     (println "All sinks assessed.")
     route-layer))

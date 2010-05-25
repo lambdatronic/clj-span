@@ -28,7 +28,7 @@
 (ns clj-span.proximity-model
   (:use [clj-span.params     :only (*trans-threshold*)]
 	[clj-span.model-api  :only (distribute-flow decay undecay service-carrier)]
-	[clj-misc.randvars   :only (rv-zero rv-zero-below-scalar rv-subtract rv-scalar-multiply rv-scalar-divide rv-mean)]
+	[clj-misc.randvars   :only (rv-zero rv-zero-below-scalar rv-subtract rv-scalar-multiply rv-scalar-divide rv-mean rv-gt)]
 	[clj-misc.matrix-ops :only (get-neighbors make-matrix get-rows get-cols filter-matrix-for-coords bitpack-route find-bounding-box)]))
 
 ;; FIXME convert step to distance metric based on map resolution and make this gaussian to 1/2 mile
@@ -59,22 +59,30 @@
 			    (conj sinks-encountered location-id)
 			    sinks-encountered)]
     (when (not= rv-zero use-value)	; use location?
-      (let [carrier-cache (get-in route-layer location-id)]
-	(loop [remaining-sinks sinks-encountered
-	       remaining-route inclusive-route]
-	  (when (seq remaining-sinks)
-	    (let [sink-id         (first remaining-sinks)
-		  route-from-sink (drop-while #(not= sink-id %) remaining-route)
-		  sink-utility    (decay flow-model (get-in sink-layer sink-id) (dec (count route-from-sink)))]
-	      (swap! carrier-cache conj
-		     (struct-map service-carrier
-		       :weight (rv-scalar-multiply sink-utility -1)
-		       :route  (bitpack-route route-from-sink)))
-	      (recur (rest remaining-sinks) route-from-sink))))
-	(swap! carrier-cache conj
-	       (struct-map service-carrier
-		 :weight (decay flow-model (get-in source-layer (first inclusive-route)) (dec (count inclusive-route)))
-		 :route  (bitpack-route inclusive-route)))))
+      (let [carrier-cache         (get-in route-layer location-id)
+	    source-id             (first inclusive-route)
+	    new-source-weight     (decay flow-model (get-in source-layer source-id) (dec (count inclusive-route)))
+	    current-source-weight (:weight (first (@carrier-cache source-id)))]
+	(if (or (nil? current-source-weight) (rv-gt new-source-weight current-source-weight))
+	  (swap! carrier-cache assoc source-id
+		 (cons
+		  (struct-map service-carrier
+		    :weight new-source-weight
+		    :route  [source-id (bitpack-route inclusive-route)])
+		  (loop [remaining-sinks sinks-encountered
+			 remaining-route inclusive-route
+			 sink-carriers   ()]
+		    (if (empty? remaining-sinks)
+		      sink-carriers
+		      (let [sink-id         (first remaining-sinks)
+			    route-from-sink (drop-while #(not= sink-id %) remaining-route)
+			    sink-utility    (decay flow-model (get-in sink-layer sink-id) (dec (count route-from-sink)))]
+			(recur (rest remaining-sinks)
+			       route-from-sink
+			       (conj sink-carriers
+				     (struct-map service-carrier
+				       :weight (rv-scalar-multiply sink-utility -1)
+				       :route  [sink-id (bitpack-route route-from-sink)])))))))))))
     [location-id [outgoing-utility inclusive-route sinks-encountered]]))
 
 (defn- distribute-gaussian!
@@ -101,11 +109,14 @@
   [flow-model source-layer sink-layer use-layer _]
   (let [rows          (get-rows source-layer)
 	cols          (get-cols source-layer)
-	route-layer   (make-matrix rows cols #(atom ()))
+	route-layer   (make-matrix rows cols (constantly (atom {})))
 	source-points (filter-matrix-for-coords #(not= rv-zero %) source-layer)]
     (println "Source points:" (count source-points))
-    (dorun (map
+    (dorun (pmap
 	    (partial distribute-gaussian! flow-model route-layer source-layer sink-layer use-layer rows cols)
 	    source-points
 	    (map #(get-in source-layer %) source-points)))
+    (doseq [i rows]
+      (doseq [j cols]
+	(swap! (get-in route-layer [i j]) #(apply concat (vals %)))))
     route-layer))

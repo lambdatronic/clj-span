@@ -26,23 +26,40 @@
   (:use [clj-misc.utils          :only (seq2map mapmap)]
 	[clj-span.model-api      :only (distribute-flow! distribute-flow)]
 	[clj-span.params         :only (set-global-params!)]
-	[clj-span.interface      :only (show-span-results-menu provide-results)]
-	[clj-span.route-caching  :only (cache-all-actual-routes!)]
+	[clj-span.interface      :only (provide-results)]
+;;	[clj-span.route-caching  :only (cache-all-actual-routes!)]
 	[clj-misc.randvars       :only (rv-mean rv-zero rv-average)]
 	[clj-span.sediment-model :only (aggregate-flow-dirs)]
 	[clj-misc.matrix-ops     :only (map-matrix
-					downsample-matrix
+					make-matrix
+					resample-matrix
 					print-matrix
 					get-rows
 					get-cols
 					get-neighbors
 					grids-align?
-					is-matrix?)])
-  (:require clj-span.water-model
-	    clj-span.carbon-model
+					is-matrix?
+					matrix2coord-map)]
+	[clj-span.analyzer       :only (theoretical-source
+					inaccessible-source
+					possible-source
+					blocked-source
+					actual-source
+					theoretical-sink
+					actual-sink
+					theoretical-use
+					inaccessible-use
+					possible-use
+					blocked-use
+					actual-use
+					possible-flow
+					blocked-flow
+					actual-flow)])
+  (:require clj-span.carbon-model
 	    clj-span.sediment-model
 	    clj-span.proximity-model
 	    clj-span.line-of-sight-model))
+;;clj-span.water-model
 
 (defstruct location :id :neighbors :source :sink :use :flow-features :carrier-cache)
 
@@ -63,25 +80,25 @@
 		  :flow-features (mapmap identity #(get-in % id) flow-layers)
 		  :carrier-cache (atom ()))]))))
 
-(defn- simulate-service-flows
-  "Creates a network of interconnected locations, and starts a
-   service-carrier propagating in every location whose source value is
-   greater than 0.  These carriers propagate child carriers through
-   the network which collect information about the routes traveled and
-   the service weight transmitted along these routes.  When the
-   simulation completes, a sequence of the locations in the network is
-   returned."
-  [flow-model source-layer sink-layer use-layer flow-layers]
-  (let [location-map (make-location-map source-layer sink-layer use-layer flow-layers)
-	locations    (vals location-map)]
-    (distribute-flow! flow-model location-map (get-rows source-layer) (get-cols source-layer))
-    (cache-all-actual-routes! locations flow-model)
-    locations))
+;;(defn- simulate-service-flows
+;;  "Creates a network of interconnected locations, and starts a
+;;   service-carrier propagating in every location whose source value is
+;;   greater than 0.  These carriers propagate child carriers through
+;;   the network which collect information about the routes traveled and
+;;   the service weight transmitted along these routes.  When the
+;;   simulation completes, a sequence of the locations in the network is
+;;   returned."
+;;  [flow-model source-layer sink-layer use-layer flow-layers]
+;;  (let [location-map (make-location-map source-layer sink-layer use-layer flow-layers)
+;;	locations    (vals location-map)]
+;;    (distribute-flow! flow-model location-map (get-rows source-layer) (get-cols source-layer))
+;;    (cache-all-actual-routes! locations flow-model)
+;;    locations))
 
-(def #^{:private true} nil-or-double>0?   #(or (nil? %) (and (float? %)   (pos? %))))
-(def #^{:private true} nil-or-integer>=1? #(or (nil? %) (and (integer? %) (>= % 1))))
-(def #^{:private true} nil-or-number>=1?  #(or (nil? %) (and (number? %)  (>= % 1))))
-(def #^{:private true} nil-or-matrix?     #(or (nil? %) (is-matrix? %)))
+(def #^{:private true} double>0?      #(and (float? %)   (pos? %)))
+(def #^{:private true} integer>=1?    #(and (integer? %) (>= % 1)))
+(def #^{:private true} number>=1?     #(and (number? %)  (>= % 1)))
+(def #^{:private true} nil-or-matrix? #(or (nil? %) (is-matrix? %)))
 
 (defn- zero-layer-below-threshold
   "Takes a two dimensional array of RVs and replaces all values whose
@@ -95,9 +112,9 @@
 	   use-layer     use-threshold
 	   flow-layers   trans-threshold
 	   rv-max-states downscaling-factor
-	   sink-type     use-type
-	   benefit-type  flow-model
-	   result-type]
+	   source-type   sink-type
+	   use-type      benefit-type
+	   flow-model    result-type]
     :as input-params
     :or {source-threshold   0.0
 	 sink-threshold     0.0
@@ -108,67 +125,64 @@
   {:pre [(every? is-matrix?       [source-layer use-layer])
 	 (every? nil-or-matrix?   (cons sink-layer (vals flow-layers)))
 	 (apply  grids-align?     (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers))))
-	 (every? nil-or-double>0? [source-threshold sink-threshold use-threshold trans-threshold])
-	 (nil-or-integer>=1?      rv-max-states)
-	 (nil-or-number>=1?       downscaling-factor)
-	 (every? #{:absolute :relative} [sink-type use-type])
+	 (every? double>0? [source-threshold sink-threshold use-threshold trans-threshold])
+	 (integer>=1? rv-max-states)
+	 (number>=1?  downscaling-factor)
+	 (every? #{:finite :infinite} [source-type sink-type use-type])
 	 (#{:rival :non-rival} benefit-type)
 	 (#{"LineOfSight" "Proximity" "Carbon" "Sediment"} flow-model)
-	 (#{:cli-menu :closure-map :matrix-list} result-type)]}
+	 (#{:cli-menu :closure-map :matrix-map} result-type)]}
   ;; Initialize global parameters
   (set-global-params! {:rv-max-states      rv-max-states
 		       :trans-threshold    trans-threshold
+		       :source-type        source-type
 		       :sink-type          sink-type
 		       :use-type           use-type
 		       :benefit-type       benefit-type})
   ;; Preprocess data layers (downsampling and zeroing below their thresholds)
   (let [rows             (get-rows source-layer)
 	cols             (get-cols source-layer)
-	preprocess-layer (fn [[l t]] (if l (zero-layer-below-threshold t (downsample-matrix downscaling-factor rv-average l))))
-	[source-layer sink-layer use-layer] (map preprocess-layer
-						 {source-layer source-threshold,
-						  sink-layer   sink-threshold,
-						  use-layer    use-threshold})
-	flow-layers (seq2map flow-layers (fn [[name matrix]]
-					   [name (downsample-matrix
-						  downscaling-factor
-						  (if (= name "Hydrosheds") aggregate-flow-dirs rv-average)
-						  matrix)]))]
-    ;; Display layers
-    (comment
-      (newline)
-      (apply print-matrix
-	     (map #(map-matrix (fn [rv] (mapmap double identity rv)) %)
-		  (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers)))))
-      (newline)
-      )
-    ;; Run flow model and return the results
-    (let [route-layer (distribute-flow flow-model source-layer sink-layer use-layer flow-layers)]
-      (newline)
-      (print-matrix (map-matrix #(let [weights (map (comp rv-mean :weight) (deref %))]
-				   [(count (filter pos?  weights))
-				    (count (filter zero? weights))
-				    (count (filter neg?  weights))])
-				route-layer))
-      (newline)
-      (println "That's all folks."))))
-
-#_(let [locations (simulate-service-flows flow-model source-layer sink-layer use-layer flow-layers)]
-    (condp = result-type
-      :cli-menu      (show-span-results-menu flow-model
-					     source-layer
-					     sink-layer
-					     use-layer
-					     flow-layers
-					     locations
-					     downscaling-factor)
-      :closure-map   (provide-results :closure-map
-				      flow-model
-				      locations
-				      rows cols
-				      downscaling-factor)
-      :matrix-list   (provide-results :matrix-list
-				      flow-model
-				      locations
-				      rows cols
-				      downscaling-factor)))
+	scaled-rows      (int (/ rows downscaling-factor))
+	scaled-cols      (int (/ cols downscaling-factor))
+	preprocess-layer (fn [l t] (if l
+				     (zero-layer-below-threshold t (resample-matrix scaled-rows scaled-cols rv-average l))
+				     (make-matrix scaled-rows scaled-cols (constantly rv-zero))))
+	[scaled-source-layer scaled-sink-layer scaled-use-layer] (map preprocess-layer
+								      [source-layer     sink-layer     use-layer]
+								      [source-threshold sink-threshold use-threshold])
+	scaled-flow-layers (seq2map flow-layers (fn [[name matrix]]
+						  [name (resample-matrix
+							 scaled-rows
+							 scaled-cols
+							 (if (= name "Hydrosheds") aggregate-flow-dirs rv-average)
+							 matrix)]))
+	;; Run flow model and return the results
+	cache-layer  (map-matrix (comp seq deref)
+				 (distribute-flow flow-model
+						  scaled-source-layer
+						  scaled-sink-layer
+						  scaled-use-layer
+						  scaled-flow-layers))
+	results-menu (mapmap identity #(comp (partial resample-matrix rows cols rv-average) %)
+			     (array-map
+			      "Source - Theoretical"  #(theoretical-source  scaled-source-layer scaled-use-layer)
+			      "Source - Inaccessible" #(inaccessible-source scaled-source-layer scaled-use-layer cache-layer)
+			      "Source - Possible"     #(possible-source     cache-layer)
+			      "Source - Blocked"      #(blocked-source      cache-layer)
+			      "Source - Actual"       #(actual-source       cache-layer)
+			      "Sink   - Theoretical"  #(theoretical-sink    scaled-source-layer scaled-sink-layer scaled-use-layer)
+			      "Sink   - Actual"       #(actual-sink         cache-layer)
+			      "Use    - Theoretical"  #(theoretical-use     scaled-source-layer scaled-use-layer)
+			      "Use    - Inaccessible" #(inaccessible-use    scaled-source-layer scaled-use-layer cache-layer)
+			      "Use    - Possible"     #(possible-use        cache-layer)
+			      "Use    - Blocked"      #(blocked-use         cache-layer)
+			      "Use    - Actual"       #(actual-use          cache-layer)
+			      "Flow   - Possible"     #(possible-flow       cache-layer flow-model)
+			      "Flow   - Blocked"      #(blocked-flow        cache-layer flow-model)
+			      "Flow   - Actual"       #(actual-flow         cache-layer flow-model)))]
+    (provide-results result-type
+		     results-menu
+		     source-layer
+		     sink-layer
+		     use-layer
+		     flow-layers)))

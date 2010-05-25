@@ -18,41 +18,43 @@
 ;;;-------------------------------------------------------------------
 ;;;
 ;;; This namespace defines the text-based menu interface for viewing
-;;; the results of a SPAN model run.
+;;; the results of a SPAN model run as well as the raw data return
+;;; functions.
 
 (ns clj-span.interface
-  (:use	[clj-misc.matrix-ops :only (print-matrix get-rows get-cols)]
-	[clj-span.analyzer   :only (theoretical-source
-				    theoretical-sink
-				    theoretical-use
-				    inaccessible-source
-				    inaccessible-sink
-				    inaccessible-use
-				    possible-flow
-				    possible-source
-				    possible-sink
-				    possible-use
-				    blocked-flow
-				    blocked-source
-				    blocked-sink
-				    blocked-use
-				    actual-flow
-				    actual-source
-				    actual-sink
-				    actual-use)]))
+  (:use	[clj-misc.utils      :only (mapmap)]
+	[clj-misc.randvars   :only (rv-zero)]
+	[clj-misc.matrix-ops :only (coord-map2matrix print-matrix get-rows get-cols in-bounds?)]))
 
 (defn- select-location
-  "Prompts for coords and returns the corresponding location object."
-  [locations rows cols]
+  "Prompts for coords and returns the selected [i j] pair."
+  [rows cols]
   (loop []
     (printf "%nInput location coords%n")
     (let [coords [(do (printf "Row [0-%d]: " (dec rows)) (flush) (read))
-		  (do (printf "Col [0-%d]: " (dec cols)) (flush) (read))]
-	  location (some #(and (= (:id %) coords) %) locations)]
-      (if location
-	location
+		  (do (printf "Col [0-%d]: " (dec cols)) (flush) (read))]]
+      (if (in-bounds? rows cols coords)
+	coords
 	(do (printf "No location at %s. Enter another selection.%n" coords)
 	    (recur))))))
+
+(defn- view-location-properties
+  "Prints a summary of the post-simulation properties of the
+   location."
+  [coords source-layer sink-layer use-layer flow-layers]
+  (let [fmt-str (str
+		 "%nLocation %s%n"
+		 "--------------------%n"
+		 "Source:        %s%n"
+		 "Sink:          %s%n"
+		 "Use:           %s%n"
+		 "Flow Features: %s%n")]
+    (printf fmt-str
+	    coords
+	    (get-in source-layer coords)
+	    (get-in sink-layer   coords)
+	    (get-in use-layer    coords)
+	    (mapmap identity #(get-in % coords) flow-layers))))
 
 (defn- select-menu-option
   "Prompts the user with a menu of choices and returns the label
@@ -88,141 +90,35 @@
     (into {} (for [i (range (get-rows source-layer)) j (range (get-cols source-layer)) :let [id [i j]]]
 	       [id (get-in selected-layer id)]))))
 
-(defn- view-location-properties
-  "Prints a summary of the post-simulation properties of the
-   location."
-  [location]
-  (let [fmt-str (str
-		 "%nLocation %s%n"
-		 "--------------------%n"
-		 "Neighbors:     %s%n"
-		 "Source:        %s%n"
-		 "Sink:          %s%n"
-		 "Use:           %s%n"
-		 "Flow Features: %s%n"
-		 "Carriers Encountered: %d%n")]
-    (printf fmt-str
-	    (:id location)
-	    (seq (:neighbors location))
-	    (:source location)
-	    (:sink location)
-	    (:use location)
-	    (:flow-features location)
-	    (count @(:carrier-cache location)))))
+(defmulti provide-results (fn [result-type results-menu source-layer sink-layer use-layer flow-layers] result-type))
 
-(defn- coord-map-to-matrix
-  "Renders a map of {[i j] -> value} into a 2D matrix, where value is
-   either a double or a probability distribution."
-  [rows cols coord-map]
-  (let [matrix (make-array (class (val (first coord-map))) rows cols)]
-    (doseq [[i j :as key] (keys coord-map)]
-	(aset matrix i j (coord-map key)))
-    matrix))
-
-(defn- upsample-results
-  [rows cols downscaling-factor result-map]
-  (if (== downscaling-factor 1)
-    result-map
-    (let [offset-range  (range downscaling-factor)
-	  row-remainder (rem rows downscaling-factor)
-	  col-remainder (rem cols downscaling-factor)]
-      (merge (into {} (mapcat (fn [[[i j] val]]
-				(let [i-base (* i downscaling-factor)
-				      j-base (* j downscaling-factor)]
-				  (for [i-offset offset-range j-offset offset-range]
-				    (let [idx [(+ i-base i-offset) (+ j-base j-offset)]]
-				      [idx val]))))
-			      result-map))
-	     (into {} (for [i (range rows) j (range cols (+ cols col-remainder))] [[i j] nil]))
-	     (into {} (for [i (range rows (+ rows row-remainder)) j (range cols)] [[i j] nil]))))))
-
-(defn show-span-results-menu
-  [flow-model source-layer sink-layer use-layer flow-layers locations downscaling-factor]
-  (let [rows     (* downscaling-factor (get-rows source-layer))
-	cols     (* downscaling-factor (get-cols source-layer))
-	upsample (partial upsample-results rows cols downscaling-factor)
-	menu (array-map
-	      "View Theoretical Source"  #(theoretical-source       locations)
-	      "View Theoretical Sink"    #(theoretical-sink         locations)
-	      "View Theoretical Use"     #(theoretical-use          locations)
-	      "View Inaccessible Source" #(inaccessible-source      locations)
-	      "View Inaccessible Sink"   #(inaccessible-sink        locations)
-	      "View Inaccessible Use"    #(inaccessible-use         locations)
-	      "View Possible Flow"       #(possible-flow            locations flow-model)
-	      "View Possible Source"     #(possible-source          locations)
-	      "View Possible Sink"       #(possible-sink            locations)
-	      "View Possible Use"        #(possible-use             locations)
-	      "View Blocked Flow"        #(blocked-flow             locations flow-model)
-	      "View Blocked Source"      #(blocked-source           locations flow-model)
-	      "View Blocked Sink"        #(blocked-sink             locations flow-model)
-	      "View Blocked Use"         #(blocked-use              locations flow-model)
-	      "View Actual Flow"         #(actual-flow              locations flow-model)
-	      "View Actual Source"       #(actual-source            locations flow-model)
-	      "View Actual Sink"         #(actual-sink              locations flow-model)
-	      "View Actual Use"          #(actual-use               locations flow-model)
-	      "View Location Properties" #(view-location-properties (select-location locations rows cols))
-	      "View Feature Map"         #(select-map-by-feature    source-layer
-								    sink-layer
-								    use-layer
-								    flow-layers)
-	      "Quit"                     nil)
+(defmethod provide-results :cli-menu
+  [_ results-menu source-layer sink-layer use-layer flow-layers]
+  (let [rows (get-rows source-layer)
+	cols (get-cols source-layer)
+	menu (-> results-menu
+		 (assoc "Location Properties"
+		   #(view-location-properties (select-location rows cols) source-layer sink-layer use-layer flow-layers))
+		 (assoc "Input Features"
+		   #(select-map-by-feature source-layer sink-layer use-layer flow-layers))
+		 (assoc "Quit"
+		   nil))
 	prompts (keys menu)]
-    (println "Flow-Model Results for" flow-model "at resolution" rows "x" cols ":")
-    (loop [choice (select-menu-option prompts)]
-      (let [action (menu choice)]
-	(when (fn? action)
-	  (let [coord-map (action)]
-	    (when (map? coord-map)
-	      (let [coord-map-upsampled (upsample coord-map)]
-		(newline)
-		(print-matrix (coord-map-to-matrix rows cols coord-map-upsampled))
-		(newline)
-		(println "Distinct values:" (count (distinct (vals coord-map-upsampled))))))
-	    (recur (select-menu-option prompts))))))))
-
-(defmulti provide-results (fn [result-type flow-model locations rows cols downscaling-factor] result-type))
+    (loop [action (menu (select-menu-option prompts))]
+      (when action
+	(when-let [coord-map (action)]
+	  (newline)
+	  (print-matrix (coord-map2matrix rows cols rv-zero coord-map))
+	  (newline)
+	  (println "Distinct values:" (count (distinct (vals coord-map)))))
+	(recur (menu (select-menu-option prompts)))))))
 
 (defmethod provide-results :closure-map
-  [_ flow-model locations rows cols downscaling-factor]
-  (let [upsample (partial upsample-results rows cols downscaling-factor)]
-    {:theoretical-source  #(upsample (theoretical-source  locations))
-     :theoretical-sink    #(upsample (theoretical-sink    locations))
-     :theoretical-use     #(upsample (theoretical-use     locations))
-     :inaccessible-source #(upsample (inaccessible-source locations))
-     :inaccessible-sink   #(upsample (inaccessible-sink   locations))
-     :inaccessible-use    #(upsample (inaccessible-use    locations))
-     :possible-flow       #(upsample (possible-flow       locations flow-model))
-     :possible-source     #(upsample (possible-source     locations))
-     :possible-sink       #(upsample (possible-sink       locations))
-     :possible-use        #(upsample (possible-use        locations))
-     :blocked-flow        #(upsample (blocked-flow        locations flow-model))
-     :blocked-source      #(upsample (blocked-source      locations flow-model))
-     :blocked-sink        #(upsample (blocked-sink        locations flow-model))
-     :blocked-use         #(upsample (blocked-use         locations flow-model))
-     :actual-flow         #(upsample (actual-flow         locations flow-model))
-     :actual-source       #(upsample (actual-source       locations flow-model))
-     :actual-sink         #(upsample (actual-sink         locations flow-model))
-     :actual-use          #(upsample (actual-use          locations flow-model))}))
+  [_ results-menu _ _ _ _]
+  results-menu)
 
-(defmethod provide-results :matrix-list
-  [_ flow-model locations rows cols downscaling-factor]
-  (map (comp (partial coord-map-to-matrix rows cols)
-	     (partial upsample-results rows cols downscaling-factor))
-       [(theoretical-source  locations)
-	(theoretical-sink    locations)
-	(theoretical-use     locations)
-	(inaccessible-source locations)
-	(inaccessible-sink   locations)
-	(inaccessible-use    locations)
-	(possible-flow       locations flow-model)
-	(possible-source     locations)
-	(possible-sink       locations)
-	(possible-use        locations)
-	(blocked-flow        locations flow-model)
-	(blocked-source      locations flow-model)
-	(blocked-sink        locations flow-model)
-	(blocked-use         locations flow-model)
-	(actual-flow         locations flow-model)
-	(actual-source       locations flow-model)
-	(actual-sink         locations flow-model)
-	(actual-use          locations flow-model)]))
+(defmethod provide-results :matrix-map
+  [_ results-menu source-layer _ _ _]
+  (let [rows (get-rows source-layer)
+	cols (get-cols source-layer)]
+    (mapmap identity #(coord-map2matrix rows cols rv-zero (%)) results-menu)))

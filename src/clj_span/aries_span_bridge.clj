@@ -26,7 +26,7 @@
 (ns clj-span.aries-span-bridge
   (:use [clj-span.core           :only (run-span)]
 	[clj-span.sediment-model :only (aggregate-flow-dirs)]
-	[clj-misc.matrix-ops     :only (seq2matrix downsample-matrix)]
+	[clj-misc.matrix-ops     :only (seq2matrix resample-matrix)]
 	[clj-misc.utils          :only (mapmap remove-nil-val-entries)]
 	[clj-misc.randvars       :only (cont-type disc-type successive-sums)]))
 
@@ -130,24 +130,23 @@
   [observation rows cols]
   (let [hydrosheds-observation  (run-at-shape "aries/flood/flow-direction"
 					      (get-shape (get-spatial-extent observation)))
-	hydrosheds-rows-native  (grid-rows    hydrosheds-observation)
-	hydrosheds-cols-native  (grid-columns hydrosheds-observation)
-	hydrosheds-layer-native (layer-from-observation hydrosheds-observation
+	hydrosheds-native-rows  (grid-rows    hydrosheds-observation)
+	hydrosheds-native-cols  (grid-columns hydrosheds-observation)
+	hydrosheds-native-layer (layer-from-observation hydrosheds-observation
 							(conc 'geophysics:FlowDirection)
-							hydrosheds-rows-native
-							hydrosheds-cols-native)
-	downscaling-factor      (/ hydrosheds-rows-native rows)]
-    (downsample-matrix downscaling-factor aggregate-flow-dirs hydrosheds-layer-native)))
+							hydrosheds-native-rows
+							hydrosheds-native-cols)]
+    (resample-matrix rows cols aggregate-flow-dirs hydrosheds-native-layer)))
 
 (defn span-driver
   "Takes the source, sink, use, and flow concepts along with the
    flow-params map and an observation containing the concepts'
    dependent features, calculates the SPAN flows, and returns the
    results using one of the following result-types: :cli-menu
-   :closure-map :matrix-list"
+   :closure-map :matrix-map"
   [observation source-concept use-concept sink-concept flow-concept
    {:keys [source-threshold sink-threshold use-threshold trans-threshold
-	   rv-max-states downscaling-factor sink-type use-type benefit-type result-type]
+	   rv-max-states downscaling-factor source-type sink-type use-type benefit-type result-type]
     :or {result-type :closure-map}}]
   ;; This version of SPAN only works for grid-based observations (i.e. raster maps).
   {:pre [(grid-extent? observation)]}
@@ -172,6 +171,7 @@
 		:trans-threshold    trans-threshold
 		:rv-max-states      rv-max-states
 		:downscaling-factor downscaling-factor
+		:source-type        source-type
 		:sink-type          sink-type
 		:use-type           use-type
 		:benefit-type       benefit-type

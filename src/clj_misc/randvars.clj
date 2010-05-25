@@ -58,7 +58,7 @@
 	(into {}
 	      (map #(vector (/ (apply + (keys %)) (count %))
 			    (apply + (vals %)))
-		   (partition partition-size partition-size [] (sort X))))
+		   (partition partition-size partition-size [] (sort-by key X))))
 	(meta X)))))
 
 (defmethod rv-resample ::continuous-distribution
@@ -79,7 +79,7 @@
 ;; This returns the average of the upper and lower bounds for the mean
 (defmethod rv-mean ::continuous-distribution
   [X]
-  (let [X*     (sort X)
+  (let [X*     (sort-by key X)
         states (keys X*)
 	probs  (successive-differences (vals X*))
 	upper  (reduce + (map * states probs))
@@ -199,14 +199,6 @@
   [X Y]
   (rv-resample (rv-convolute / X Y)))
 
-(defn rv-lt
-  [X Y]
-  (get (rv-convolute < X Y) true 0))
-
-(defn rv-gt
-  [X Y]
-  (get (rv-convolute > X Y) true 0))
-
 (defn rv-max
   [X Y]
   (if (> (rv-mean X) (rv-mean Y)) X Y))
@@ -214,6 +206,18 @@
 (defn rv-min
   [X Y]
   (if (< (rv-mean X) (rv-mean Y)) X Y))
+
+(defn rv-lt
+  [X Y]
+  (get (rv-convolute < X Y) true 0))
+
+;;(defn rv-gt
+;;  [X Y]
+;;  (get (rv-convolute > X Y) true 0))
+
+(defn rv-gt
+  [X Y]
+  (= X (rv-max X Y)))
 
 (defn- rv-map
   "Returns the distribution of the random variable X with f applied to its range values."

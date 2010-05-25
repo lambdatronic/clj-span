@@ -172,11 +172,15 @@
   (assert (and pointA pointB (== (count pointA) (count pointB))))
   (reduce + (map (fn [a b] (Math/abs (- a b))) pointA pointB)))
 
+(defn square-distance
+  [pointA pointB]
+  (assert (and pointA pointB (== (count pointA) (count pointB))))
+  (reduce + (map (fn [a b] (Math/pow (- a b) 2)) pointA pointB)))
+
 (defn euclidean-distance
   "Returns the euclidean distance between two n-dimensional points."
   [pointA pointB]
-  (assert (and pointA pointB (== (count pointA) (count pointB))))
-  (Math/sqrt (reduce + (map (fn [a b] (Math/pow (- a b) 2)) pointA pointB))))
+  (Math/sqrt (square-distance pointA pointB)))
 
 (defn count-distinct
   "Returns a map of {distinct-val -> num-instances, ...} for all the
