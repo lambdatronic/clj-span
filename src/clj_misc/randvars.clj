@@ -105,6 +105,7 @@
 			    (rest convolution))]
     all-unique))
 
+(comment
 (defn rv-convolute-3
   [f X Y]
   (let [convolution (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)])
@@ -115,6 +116,7 @@
 			    (transient (apply array-map (first convolution)))
 			    (rest convolution))]
     (persistent! all-unique)))
+)
 
 (defn rv-convolute-4
   [f X Y]
@@ -128,6 +130,7 @@
 			    (rest convolution))]
     (into {} all-unique)))
 
+(comment
 (defn rv-convolute-5
   [f X Y]
   (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
@@ -140,6 +143,7 @@
 			    (transient (vector (first convolution)))
 			    (rest convolution))]
     (into {} (persistent! all-unique))))
+)
 
 (defn rv-convolute-6
   [f X Y]
@@ -157,6 +161,7 @@
 				(assoc fXY v (+ old-p p))
 				(assoc fXY v p))))))))
 
+(comment
 (defn rv-convolute-7
   [f X Y]
   (loop [X* X, Y* Y, fXY (transient {})]
@@ -171,6 +176,7 @@
 			      (if-let [old-p (fXY v)]
 				(assoc! fXY v (+ old-p p))
 				(assoc! fXY v p))))))))
+)
 
 ;;; finish testing functions
 

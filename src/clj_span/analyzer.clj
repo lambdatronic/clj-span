@@ -147,12 +147,12 @@
 	    (map #(undecay flow-model %1 %2)
 		 (if (empty? use-effects)
 		   (repeat possible-weight)
-		   (reductions
-		    #(rv-add %1 (get use-effects %2 rv-zero))
-		    possible-weight
-;;		   (reduce 
-;;		    #(conj %1 (rv-add (peek %1) (get use-effects %2 rv-zero)))
-;;		    [possible-weight]
+;;		   (reductions
+;;		    #(rv-add %1 (get use-effects %2 rv-zero))
+;;		    possible-weight
+		   (reduce 
+		    #(conj %1 (rv-add (peek %1) (get use-effects %2 rv-zero)))
+		    [possible-weight]
 		    route-ids))
 		 (iterate inc 0)))))
 
@@ -163,12 +163,13 @@
     (let [route-ids (rseq (unbitpack-route source-id route))]
       (zipmap route-ids
 	      (map #(undecay flow-model %1 %2)
-		   (reductions
-		    #(reduce rv-add %1 (remove nil? ((juxt sink-effects use-effects) %2)))
-		    actual-weight
-;;		   (reduce 
+;;		   (reductions
+;;		    #(reduce rv-add %1 (remove nil? ((juxt sink-effects use-effects) %2)))
+;;		    actual-weight
+		   (reduce 
+		    #(conj %1 (reduce rv-add (peek %1) (remove nil? [(sink-effects %2) (use-effects %2)])))
 ;;		    #(conj %1 (reduce rv-add (peek %1) (remove nil? ((juxt sink-effects use-effects) %2))))
-;;		    [actual-weight]
+		    [actual-weight]
 		    route-ids)
 		   (iterate inc 0))))))
 

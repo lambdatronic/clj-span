@@ -24,7 +24,7 @@
 (ns clj-span.worldgen
   (:use [clj-misc.matrix-ops :only (make-matrix)]
 	[clj-misc.randvars   :only (cont-type disc-type)]
-	[clojure.contrib.duck-streams :only (file-str with-in-reader read-lines)]))
+	[clojure.contrib.duck-streams :only (spit file-str with-in-reader read-lines)]))
 
 (defn read-layer-from-file
   [filename]

@@ -64,7 +64,7 @@
 
 (defn bitpack-route
   [id-seq]
-  (byte-array (map (comp delta-codes subtract-ids) (rest id-seq) id-seq)))
+  (into-array Byte/TYPE (map (comp delta-codes subtract-ids) (rest id-seq) id-seq)))
 
 (defn unbitpack-route
   [source-id bytecodes]
