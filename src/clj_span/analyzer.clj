@@ -116,11 +116,11 @@
   [source-layer use-layer]
   (if (= *use-type* :finite)
     use-layer
-    (let [num-users  (count (remove (partial = rv-zero) (matrix2seq use-layer)))
-	  use-amount (if (= *source-type* :finite)
-		       (let [total-source (reduce rv-add rv-zero (remove (partial = rv-zero) (matrix2seq source-layer)))]
-			 (rv-scalar-divide total-source num-users)
-			 total-source))]
+    (let [total-source (reduce rv-add rv-zero (remove (partial = rv-zero) (matrix2seq source-layer)))
+	  use-amount   (if (= *source-type* :finite)
+			 (let [num-users (count (remove (partial = rv-zero) (matrix2seq use-layer)))]
+			   (rv-scalar-divide total-source num-users))
+			 total-source)]
       (map-matrix #(if (not= rv-zero %) use-amount rv-zero) use-layer))))
 (def theoretical-use (memoize theoretical-use))
 

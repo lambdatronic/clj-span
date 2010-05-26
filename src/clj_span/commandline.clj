@@ -33,7 +33,7 @@
 
 (def #^{:private true} usage-message
      (str
-      "Usage: java -cp clj-span.jar:clojure.jar:clojure-contrib.jar:debug-repl.jar clj_span.commandline \\ \n"
+      "Usage: java -cp clj-span-standalone.jar clj_span.commandline \\ \n"
       "            -source-layer       <filepath> \\ \n"
       "            -sink-layer         <filepath> \\ \n"
       "            -use-layer          <filepath> \\ \n"
@@ -128,4 +128,7 @@
 	(println "\nAll inputs are valid.\n")
 	(doseq [[key _ _] param-tests] (println (find input-params key)))
 	(newline)
-	(run-span (assoc (strings-to-better-types input-params) :result-type :cli-menu))))))
+	(run-span (assoc (strings-to-better-types input-params) :result-type :cli-menu))
+	(shutdown-agents)
+	(flush)
+	(System/exit 0)))))

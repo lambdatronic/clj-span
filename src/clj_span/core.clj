@@ -163,23 +163,24 @@
 						  scaled-sink-layer
 						  scaled-use-layer
 						  scaled-flow-layers))
-	results-menu (mapmap identity #(comp (partial resample-matrix rows cols rv-average) %)
-			     (array-map
-			      "Source - Theoretical"  #(theoretical-source  scaled-source-layer scaled-use-layer)
-			      "Source - Inaccessible" #(inaccessible-source scaled-source-layer scaled-use-layer cache-layer)
-			      "Source - Possible"     #(possible-source     cache-layer)
-			      "Source - Blocked"      #(blocked-source      cache-layer)
-			      "Source - Actual"       #(actual-source       cache-layer)
-			      "Sink   - Theoretical"  #(theoretical-sink    scaled-source-layer scaled-sink-layer scaled-use-layer)
-			      "Sink   - Actual"       #(actual-sink         cache-layer)
-			      "Use    - Theoretical"  #(theoretical-use     scaled-source-layer scaled-use-layer)
-			      "Use    - Inaccessible" #(inaccessible-use    scaled-source-layer scaled-use-layer cache-layer)
-			      "Use    - Possible"     #(possible-use        cache-layer)
-			      "Use    - Blocked"      #(blocked-use         cache-layer)
-			      "Use    - Actual"       #(actual-use          cache-layer)
-			      "Flow   - Possible"     #(possible-flow       cache-layer flow-model)
-			      "Flow   - Blocked"      #(blocked-flow        cache-layer flow-model)
-			      "Flow   - Actual"       #(actual-flow         cache-layer flow-model)))]
+	results-menu (apply array-map
+			    (mapcat (fn [[name f]] [name (comp (partial resample-matrix rows cols rv-average) f)])
+				    (array-map
+				     "Source - Theoretical"  #(theoretical-source  scaled-source-layer scaled-use-layer)
+				     "Source - Inaccessible" #(inaccessible-source scaled-source-layer scaled-use-layer cache-layer)
+				     "Source - Possible"     #(possible-source     cache-layer)
+				     "Source - Blocked"      #(blocked-source      cache-layer)
+				     "Source - Actual"       #(actual-source       cache-layer)
+				     "Sink   - Theoretical"  #(theoretical-sink    scaled-source-layer scaled-sink-layer scaled-use-layer)
+				     "Sink   - Actual"       #(actual-sink         cache-layer)
+				     "Use    - Theoretical"  #(theoretical-use     scaled-source-layer scaled-use-layer)
+				     "Use    - Inaccessible" #(inaccessible-use    scaled-source-layer scaled-use-layer cache-layer)
+				     "Use    - Possible"     #(possible-use        cache-layer)
+				     "Use    - Blocked"      #(blocked-use         cache-layer)
+				     "Use    - Actual"       #(actual-use          cache-layer)
+				     "Flow   - Possible"     #(possible-flow       cache-layer flow-model)
+				     "Flow   - Blocked"      #(blocked-flow        cache-layer flow-model)
+				     "Flow   - Actual"       #(actual-flow         cache-layer flow-model))))]
     (provide-results result-type
 		     results-menu
 		     source-layer

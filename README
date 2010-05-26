@@ -16,14 +16,12 @@ Copyright Gary W. Johnson, Jr. (gwjohnso@uvm.edu) 2009,2010
 To run clj-span, you will need:
 
 1) Sun's JDK 1.6+
-2) Clojure 1.2.0-master-SNAPSHOT
-3) Clojure-Contrib 1.2.0-SNAPSHOT
-4) Debug-REPL 0.3.0-SNAPSHOT
+2) clj-span-standalone.jar (contains clojure and clojure-contrib)
 
-Then simply place clj-span.jar, clojure.jar, clojure-contrib.jar, and
-debug-repl.jar on your classpath and fire up your JVM as follows:
+Then simply place clj-span-standalone.jar on your classpath and fire
+up your JVM as follows:
 
-java -cp clj-span.jar:clojure.jar:clojure-contrib.jar:debug-repl.jar clj_span.commandline \
+java -cp clj-span-standalone.jar clj_span.commandline \
      -source-layer       <filepath> \
      -sink-layer         <filepath> \
      -use-layer          <filepath> \
