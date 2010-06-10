@@ -23,6 +23,7 @@
 
 (ns clj-span.worldgen
   (:use [clj-misc.matrix-ops :only (make-matrix)]
+	[clj-misc.utils      :only (constraints-1.0)]
 	[clj-misc.randvars   :only (cont-type disc-type)]
 	[clojure.contrib.duck-streams :only (spit file-str with-in-reader read-lines)]))
 
@@ -37,13 +38,13 @@
 
 (defn make-random-layer
   [rows cols type]
-  {:pre [(#{:discrete :continuous} type)]}
+  (constraints-1.0 {:pre [(#{:discrete :continuous} type)]})
   (let [meta (if (= type :discrete) disc-type cont-type)]
     (make-matrix rows cols (fn [_] (with-meta {(rationalize (rand 100.0)) 1} meta)))))
 
 (defn make-random-layer-map
   [rows cols name-to-type-map]
-  {:pre [(every? #(or (fn? %) (#{:discrete :continuous :hydrosheds} %)) (vals name-to-type-map))]}
+  (constraints-1.0 {:pre [(every? #(or (fn? %) (#{:discrete :continuous :hydrosheds} %)) (vals name-to-type-map))]})
   (into {}
 	(for [[name type] name-to-type-map]
 	  [name (make-matrix rows cols

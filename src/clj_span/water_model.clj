@@ -16,13 +16,13 @@
 ;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
 
 (ns clj-span.water-model
-  (:use [clj-misc.utils     :only (memoize-by-first-arg depth-first-tree-search)]
-	[clj-misc.randvars  :only (rv-lt rv-scale rv-scalar-divide rv-zero-below-scalar rv-mean)]
+  (:use [clj-misc.utils     :only (memoize-by-first-arg depth-first-tree-search def-)]
+	[clj-misc.randvars  :only (_<_ _d rv-scale rv-zero-below-scalar rv-mean)]
 	[clj-span.model-api :only (distribute-flow! service-carrier)]
 	[clj-span.analyzer  :only (source-loc? sink-loc? use-loc?)]
 	[clj-span.params    :only (*trans-threshold*)]))
 
-(def #^{:private true} elev-concept "Altitude")
+(def- elev-concept "Altitude")
 
 (defn- most-downhill-neighbors
   [location location-map]
@@ -42,7 +42,7 @@
   [location neighbors]
   (let [local-elev        (get-in location [:flow-features elev-concept])
 	neighbor-elevs    (vec (map #(get-in % [:flow-features elev-concept]) neighbors))
-	neighbors-lower?  (vec (map #(rv-lt % local-elev) neighbor-elevs))
+	neighbors-lower?  (vec (map #(_<_ % local-elev) neighbor-elevs))
 	local-lowest?     (reduce (fn [a b] (* (- 1 a) (- 1 b))) neighbors-lower?)
         neighbors-lowest? (loop [i   (dec (count neighbor-elevs))
 				 j   0
@@ -52,7 +52,7 @@
 			      (if (== j i)
 				(recur (dec i) 0 i<j)
 				(recur i (inc j) 
-				       (let [lt-prob (rv-lt (neighbor-elevs i) (neighbor-elevs j))]
+				       (let [lt-prob (_<_ (neighbor-elevs i) (neighbor-elevs j))]
 					 (-> i<j
 					     (assoc i (* (i<j i) lt-prob))
 					     (assoc j (* (i<j j) (- 1 lt-prob)))))))))]
@@ -62,7 +62,7 @@
 (defn- deterministic-successors
   [[weight route] location-map]
   (when-let [downhill-neighbors (most-downhill-neighbors (peek route) location-map)]
-    (let [downhill-weight (rv-scalar-divide weight (count downhill-neighbors))]
+    (let [downhill-weight (_d weight (count downhill-neighbors))]
       (if (> (rv-mean downhill-weight) *trans-threshold*)
 	(let [zeroed-downhill-weight (rv-zero-below-scalar downhill-weight *trans-threshold*)]
 	  (map #(vector zeroed-downhill-weight (conj route %)) downhill-neighbors))))))

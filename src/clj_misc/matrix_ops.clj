@@ -22,7 +22,8 @@
 ;;; vectors of vectors.
 
 (ns clj-misc.matrix-ops
-  (:use [clojure.set :only (map-invert)]))
+  (:use [clojure.set    :only (map-invert)]
+	[clj-misc.utils :only (constraints-1.0 def- p &)]))
 
 (defn get-rows [matrix] (count matrix))
 (defn get-cols [matrix] (count (first matrix)))
@@ -30,8 +31,8 @@
 (defn is-matrix?
   [matrix]
   (and
-   (instance? clojure.lang.PersistentVector matrix)
-   (instance? clojure.lang.PersistentVector (first matrix))))
+   (vector? matrix)
+   (vector? (first matrix))))
 
 (defn make-matrix
   "Creates a rows x cols vector of vectors whose states are generated
@@ -52,19 +53,19 @@
   [[a b] [c d]]
   [(- a c) (- b d)])
 
-(def #^{:private true} delta-codes {[ 0  1] (byte -1)     ; e
-				    [-1  1] (byte -2)     ; se
-				    [-1  0] (byte -4)     ; s
-				    [-1 -1] (byte -8)     ; sw
-				    [ 0 -1] (byte -16)    ; w
-				    [ 1 -1] (byte -32)    ; nw
-				    [ 1  0] (byte -64)    ; n
-				    [ 1  1] (byte -128)}) ; ne
-(def #^{:private true} undelta-codes (map-invert delta-codes))
+(def- delta-codes {[ 0  1] (byte -1)			  ; e
+		   [-1  1] (byte -2)			  ; se
+		   [-1  0] (byte -4)			  ; s
+		   [-1 -1] (byte -8)			  ; sw
+		   [ 0 -1] (byte -16)			  ; w
+		   [ 1 -1] (byte -32)			  ; nw
+		   [ 1  0] (byte -64)			  ; n
+		   [ 1  1] (byte -128)})		  ; ne
+(def- undelta-codes (map-invert delta-codes))
 
 (defn bitpack-route
   [id-seq]
-  (into-array Byte/TYPE (map (comp delta-codes subtract-ids) (rest id-seq) id-seq)))
+  (into-array Byte/TYPE (map (& delta-codes subtract-ids) (rest id-seq) id-seq)))
 
 (defn unbitpack-route
   [source-id bytecodes]
@@ -76,7 +77,7 @@
   "Creates a rows x cols vector of vectors whose states are
    the successive elements of aseq."
   [rows cols aseq]
-  {:pre [(== (count aseq) (* rows cols))]}
+  (constraints-1.0 {:pre [(== (count aseq) (* rows cols))]})
   (vec (map vec (partition cols aseq))))
 
 (defn matrix2seq
@@ -114,18 +115,18 @@
   ([f matrix]
      (vec (map (fn [row] (vec (map f row))) matrix)))
   ([f matrix & matrices]
-     {:pre [(apply grids-align? matrix matrices)]}
+     (constraints-1.0 {:pre [(apply grids-align? matrix matrices)]})
      (let [matrices (cons matrix matrices)]
        (make-matrix (get-rows matrix) (get-cols matrix)
 		    (fn [coords] (apply f (map #(get-in % coords) matrices)))))))
 
 (defn resample-matrix
   [new-rows new-cols aggregator-fn matrix]
-  {:pre [(every? #(and (pos? %) (integer? %)) [new-rows new-cols])]}
+  (constraints-1.0 {:pre [(every? #(and (pos? %) (integer? %)) [new-rows new-cols])]})
   (let [orig-rows             (get-rows matrix)
 	orig-cols             (get-cols matrix)
-	lcm-rows              (first (filter #(zero? (mod % new-rows)) (iterate (partial + orig-rows) orig-rows)))
-	lcm-cols              (first (filter #(zero? (mod % new-cols)) (iterate (partial + orig-cols) orig-cols)))
+	lcm-rows              (first (filter #(zero? (mod % new-rows)) (iterate (p + orig-rows) orig-rows)))
+	lcm-cols              (first (filter #(zero? (mod % new-cols)) (iterate (p + orig-cols) orig-cols)))
 	upscale-factor-rows   (/ lcm-rows orig-rows)
 	upscale-factor-cols   (/ lcm-cols orig-cols)
 	lcm-matrix            (make-matrix lcm-rows lcm-cols
@@ -150,7 +151,7 @@
 (defn get-neighbors
   "Return a sequence of neighboring points within the map bounds."
   [[i j] rows cols]
-  (filter (partial in-bounds? rows cols)
+  (filter (p in-bounds? rows cols)
 	  (map #(vector (+ i %1) (+ j %2))
 	       [-1 -1 -1  0 0  1 1 1]
 	       [-1  0  1 -1 1 -1 0 1])))

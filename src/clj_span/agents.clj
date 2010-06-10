@@ -54,15 +54,15 @@
   :min-weight       0.1)
 
 #_(defspan :carrier sledder-foo
-  "This agent always moves downhill by the steepest path."
-  :initial-weight   (fn [start-location] (vector (:source-quantity start-location) (:source-quality start-location)))
-  :movement         (fn [current-location] (steepest-downhill (cons current-location (:neighbors current-location))))
-  :decay            nil
-  :weight-branching (fn [weight next-locations] (let [num-next (count next-locations)]
-						  (if (== num-next 1)
-						    weight
-						    (repeat num-next (/ weight num-next)))))
-  :min-weight       0.1)
+    "This agent always moves downhill by the steepest path."
+    :initial-weight   (fn [start-location] (vector (:source-quantity start-location) (:source-quality start-location)))
+    :movement         (fn [current-location] (steepest-downhill (cons current-location (:neighbors current-location))))
+    :decay            nil
+    :weight-branching (fn [weight next-locations] (let [num-next (count next-locations)]
+						    (if (== num-next 1)
+						      weight
+						      (repeat num-next (/ weight num-next)))))
+    :min-weight       0.1)
 
 (defspan :service surface-water-provision-to-farmers
   "The Ecosystem Service of providing above ground water to farmers."

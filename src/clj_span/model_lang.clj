@@ -93,7 +93,8 @@
 ;;    a) Map out (Source - Use)*(Source_i / Source) for each cell i to show the distribution of overproduction.
 ;;    b) Map out (Use - Source)*(Use_i / Use) for each cell i to show the distribution of overuse.
 
-(ns clj-span.model-lang)
+(ns clj-span.model-lang
+  (:use [clj-misc.utils :only (constraints-1.0)]))
 
 (defstruct service :source :sink :user :carrier)
 (defstruct source  :source-type :source-rate :source-limit)
@@ -131,7 +132,7 @@
 (defmacro defspan
   "Define SPAN model components."
   [type varname & forms]
-  {:pre [(or (even? (count forms)) (string? (first forms)))]}
+  (constraints-1.0 {:pre [(or (even? (count forms)) (string? (first forms)))]})
   (let [[doc-string properties] (if (odd? (count forms))
 				  [(first forms) (rest forms)]
 				  [nil forms])]

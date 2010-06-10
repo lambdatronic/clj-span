@@ -27,7 +27,7 @@
 	[clj-misc.matrix-ops :only (matrix2seq)]
 	[clj-misc.randvars   :only (rv-mean
 				    rv-zero
-				    rv-zero-below-scalar
+				    rv-pos
 				    scalar-rv-subtract
 				    rv-add
 				    rv-subtract
@@ -116,10 +116,9 @@
    2) If use-type = :absolute
         possible-use = min(use, (possible-inflow - possible-sink))"
   [location]
-  (let [inflow-remaining (rv-zero-below-scalar
+  (let [inflow-remaining (rv-pos
 			  (rv-subtract (possible-local-inflow location)
-				       (possible-local-sink location))
-			  0)]
+				       (possible-local-sink location)))]
     (if (= *use-type* :relative)
       (rv-multiply (:use location) inflow-remaining)
       (min-key rv-mean (:use location) inflow-remaining))))
@@ -143,12 +142,11 @@
    use (if :benefit-type = :rival) values from the inflow.  Outflow is
    only mappable for sink and use locations."
   [location]
-  (let [inflow-remaining (rv-zero-below-scalar
+  (let [inflow-remaining (rv-pos
 			  (rv-subtract (possible-local-inflow location)
-				       (possible-local-sink location))
-			  0)]
+				       (possible-local-sink location)))]
     (if (= *benefit-type* :rival)
-      (rv-zero-below-scalar (rv-subtract inflow-remaining (possible-local-use location)) 0)
+      (rv-pos (rv-subtract inflow-remaining (possible-local-use location)))
       inflow-remaining)))
 
 (defn- possible-outflow
@@ -166,7 +164,7 @@
    cannot be used by any location either due to propagation decay,
    lack of use capacity, or lack of flow pathways to use locations."
   [locations]
-  (merge-with (fn [t p] (rv-zero-below-scalar (rv-subtract t p) 0))
+  (merge-with (fn [t p] (rv-pos (rv-subtract t p)))
 	      (theoretical-source locations)
 	      (possible-source locations)))
 
@@ -176,7 +174,7 @@
    cannot be utilized by each location either due to propagation decay
    of the asset or lack of flow pathways to sink locations."
   [locations]
-  (merge-with (fn [t p] (rv-zero-below-scalar (rv-subtract t p) 0))
+  (merge-with (fn [t p] (rv-pos (rv-subtract t p)))
 	      (theoretical-sink locations)
 	      (possible-sink locations)))
 
@@ -186,7 +184,7 @@
    be utilized by each location either due to propagation decay of the
    asset or lack of flow pathways to use locations."
   [locations]
-  (merge-with (fn [t p] (rv-zero-below-scalar (rv-subtract t p) 0))
+  (merge-with (fn [t p] (rv-pos (rv-subtract t p)))
 	      (theoretical-use locations)
 	      (possible-use locations)))
 
@@ -328,10 +326,9 @@
    2) If use-type = :absolute
         actual-use = min(use, (actual-inflow - actual-sink))"
   [location flow-model]
-  (let [inflow-remaining (rv-zero-below-scalar
+  (let [inflow-remaining (rv-pos
 			  (rv-subtract (actual-local-inflow location flow-model)
-				       (actual-local-sink location flow-model))
-			  0)]
+				       (actual-local-sink location flow-model)))]
     (if (= *use-type* :relative)
       (rv-multiply (:use location) inflow-remaining)
       (min-key rv-mean (:use location) inflow-remaining))))
@@ -355,12 +352,11 @@
    use (if :benefit-type = :rival) values from the inflow.  Outflow is
    only mappable for sink and use locations."
   [location flow-model]
-  (let [inflow-remaining (rv-zero-below-scalar
+  (let [inflow-remaining (rv-pos
 			  (rv-subtract (actual-local-inflow location flow-model)
-				       (actual-local-sink location flow-model))
-			  0)]
+				       (actual-local-sink location flow-model)))]
     (if (= *benefit-type* :rival)
-      (rv-zero-below-scalar (rv-subtract inflow-remaining (actual-local-use location flow-model)) 0)
+      (rv-pos (rv-subtract inflow-remaining (actual-local-use location flow-model)))
       inflow-remaining)))
 (def actual-local-outflow (memoize-by-first-arg actual-local-outflow))
 
@@ -378,7 +374,7 @@
    Blocked-flow is the amount of the possible-flow which cannot be
    realized due to upstream sinks or uses."
   [locations flow-model]
-  (merge-with (fn [p a] (rv-zero-below-scalar (rv-subtract p a) 0))
+  (merge-with (fn [p a] (rv-pos (rv-subtract p a)))
 	      (possible-flow locations flow-model)
 	      (actual-flow locations flow-model)))
 
@@ -387,7 +383,7 @@
    Blocked-source is the amount of the possible-source which cannot be
    used by any location due to upstream sinks or uses."
   [locations flow-model]
-  (merge-with (fn [p a] (rv-zero-below-scalar (rv-subtract p a) 0))
+  (merge-with (fn [p a] (rv-pos (rv-subtract p a)))
 	      (possible-source locations)
 	      (actual-source locations flow-model)))
 
@@ -396,7 +392,7 @@
    Blocked-inflow is the amount of the possible-inflow which cannot be
    realized due to upstream sinks or uses."
   [locations flow-model]
-  (merge-with (fn [p a] (rv-zero-below-scalar (rv-subtract p a) 0))
+  (merge-with (fn [p a] (rv-pos (rv-subtract p a)))
 	      (possible-inflow locations)
 	      (actual-inflow locations flow-model)))
 
@@ -405,7 +401,7 @@
    Blocked-sink is the amount of the possible-sink which cannot be
    realized due to upstream sinks or uses."
   [locations flow-model]
-  (merge-with (fn [p a] (rv-zero-below-scalar (rv-subtract p a) 0))
+  (merge-with (fn [p a] (rv-pos (rv-subtract p a)))
 	      (possible-sink locations)
 	      (actual-sink locations flow-model)))
 
@@ -414,7 +410,7 @@
    Blocked-use is the amount of the possible-use which cannot be
    realized due to upstream sinks or uses."
   [locations flow-model]
-  (merge-with (fn [p a] (rv-zero-below-scalar (rv-subtract p a) 0))
+  (merge-with (fn [p a] (rv-pos (rv-subtract p a)))
 	      (possible-use locations)
 	      (actual-use locations flow-model)))
 
@@ -423,6 +419,6 @@
    Blocked-outflow is the amount of the possible-outflow which cannot be
    realized due to upstream sinks or uses."
   [locations flow-model]
-  (merge-with (fn [p a] (rv-zero-below-scalar (rv-subtract p a) 0))
+  (merge-with (fn [p a] (rv-pos (rv-subtract p a)))
 	      (possible-outflow locations)
 	      (actual-outflow locations flow-model)))

@@ -22,8 +22,28 @@
 ;;; {state -> probability}.  Both discrete and continuous random
 ;;; variables are supported.  Continuous RVs are represented using
 ;;; samples from their cumulative distribution functions (CDFs).
+;;;
+;;; This library also provides some shorthand abbreviations for many
+;;; of the arithmetic functions:
+;;;
+;;; _0_ rv-zero
+;;; _+_ rv-add
+;;; _-_ rv-subtract
+;;; _*_ rv-multiply
+;;; _d_ rv-divide
+;;; _<_ rv-lt
+;;; _>_ rv-gt
+;;;  +_ scalar-rv-add
+;;;  -_ scalar-rv-subtract
+;;;  *_ scalar-rv-multiply
+;;;  d_ scalar-rv-divide
+;;; _+  rv-scalar-add
+;;; _-  rv-scalar-subtract
+;;; _*  rv-scalar-multiply
+;;; _d  rv-scalar-divide
 
-(ns clj-misc.randvars)
+(ns clj-misc.randvars
+  (:use [clj-misc.utils :only (p)]))
 
 (def *rv-max-states* 10)
 (defn reset-rv-max-states! [new-val] (alter-var-root #'*rv-max-states* (constantly new-val)))
@@ -74,7 +94,7 @@
 
 (defmethod rv-mean ::discrete-distribution
   [X]
-  (reduce + (map (partial apply *) X)))
+  (reduce + (map (p apply *) X)))
 
 ;; This returns the average of the upper and lower bounds for the mean
 (defmethod rv-mean ::continuous-distribution
@@ -87,6 +107,7 @@
     (/ (+ upper lower) 2)))
 
 (def rv-zero (with-meta (array-map 0 1) disc-type))
+(def _0_ rv-zero)
 
 ;;; testing functions below here
 
@@ -105,8 +126,7 @@
 			    (rest convolution))]
     all-unique))
 
-(comment
-(defn rv-convolute-3
+#_(defn rv-convolute-3
   [f X Y]
   (let [convolution (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)])
 	all-unique  (reduce (fn [amap [v2 p2]]
@@ -116,7 +136,6 @@
 			    (transient (apply array-map (first convolution)))
 			    (rest convolution))]
     (persistent! all-unique)))
-)
 
 (defn rv-convolute-4
   [f X Y]
@@ -130,8 +149,7 @@
 			    (rest convolution))]
     (into {} all-unique)))
 
-(comment
-(defn rv-convolute-5
+#_(defn rv-convolute-5
   [f X Y]
   (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
 	all-unique  (reduce (fn [acc [v2 p2 :as n]]
@@ -143,7 +161,6 @@
 			    (transient (vector (first convolution)))
 			    (rest convolution))]
     (into {} (persistent! all-unique))))
-)
 
 (defn rv-convolute-6
   [f X Y]
@@ -161,8 +178,7 @@
 				(assoc fXY v (+ old-p p))
 				(assoc fXY v p))))))))
 
-(comment
-(defn rv-convolute-7
+#_(defn rv-convolute-7
   [f X Y]
   (loop [X* X, Y* Y, fXY (transient {})]
     (if (empty? X*)
@@ -176,7 +192,6 @@
 			      (if-let [old-p (fXY v)]
 				(assoc! fXY v (+ old-p p))
 				(assoc! fXY v p))))))))
-)
 
 ;;; finish testing functions
 
@@ -192,18 +207,22 @@
 (defn rv-add
   [X Y]
   (rv-resample (rv-convolute + X Y)))
+(def _+_ rv-add)
 
 (defn rv-subtract
   [X Y]
   (rv-resample (rv-convolute - X Y)))
+(def _-_ rv-subtract)
 
 (defn rv-multiply
   [X Y]
   (rv-resample (rv-convolute * X Y)))
+(def _*_ rv-multiply)
 
 (defn rv-divide
   [X Y]
   (rv-resample (rv-convolute / X Y)))
+(def _d_ rv-divide)
 
 (defn rv-max
   [X Y]
@@ -216,6 +235,7 @@
 (defn rv-lt
   [X Y]
   (get (rv-convolute < X Y) true 0))
+(def _<_ rv-lt)
 
 ;;(defn rv-gt
 ;;  [X Y]
@@ -224,6 +244,7 @@
 (defn rv-gt
   [X Y]
   (= X (rv-max X Y)))
+(def _>_ rv-gt)
 
 (defn- rv-map
   "Returns the distribution of the random variable X with f applied to its range values."
@@ -234,41 +255,49 @@
   [x Y]
   (let [x* (rationalize x)]
     (rv-map #(+ x* %) Y)))
+(def +_ scalar-rv-add)
 
 (defn scalar-rv-subtract
   [x Y]
   (let [x* (rationalize x)]
     (rv-map #(- x* %) Y)))
+(def -_ scalar-rv-subtract)
 
 (defn scalar-rv-multiply
   [x Y]
   (let [x* (rationalize x)]
     (rv-map #(* x* %) Y)))
+(def *_ scalar-rv-multiply)
 
 (defn scalar-rv-divide
   [x Y]
   (let [x* (rationalize x)]
     (rv-map #(/ x* %) Y)))
+(def d_ scalar-rv-divide)
 
 (defn rv-scalar-add
   [X y]
   (let [y* (rationalize y)]
     (rv-map #(+ % y*) X)))
+(def _+ rv-scalar-add)
 
 (defn rv-scalar-subtract
   [X y]
   (let [y* (rationalize y)]
     (rv-map #(- % y*) X)))
+(def _- rv-scalar-subtract)
 
 (defn rv-scalar-multiply
   [X y]
   (let [y* (rationalize y)]
     (rv-map #(* % y*) X)))
+(def _* rv-scalar-multiply)
 
 (defn rv-scalar-divide
   [X y]
   (let [y* (rationalize y)]
     (rv-map #(/ % y*) X)))
+(def _d rv-scalar-divide)
 
 (defn rv-zero-above-scalar
   "Sets all values greater than y in the random variable X to 0."
@@ -279,6 +308,11 @@
   "Sets all values less than y in the random variable X to 0."
   [X y]
   (rv-convolute #(if (< %2 %1) 0 %2) {(rationalize y) 1} X))
+
+(defn rv-pos
+  "Sets all negative values in X to 0."
+  [X]
+  (rv-zero-below-scalar X 0))
 
 (defn rv-average
   [RVs]

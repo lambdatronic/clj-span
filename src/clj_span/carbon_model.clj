@@ -25,37 +25,42 @@
 ;;;   consumption (i.e. Emissions)
 
 (ns clj-span.carbon-model
-  (:use [clj-span.model-api  :only (distribute-flow service-carrier)]
-	[clj-misc.randvars   :only (rv-zero rv-add rv-divide rv-multiply rv-min)]
-	[clj-misc.matrix-ops :only (filter-matrix-for-coords make-matrix get-rows get-cols)]))
+  (:use [clj-misc.utils      :only (p &)]
+	[clj-span.model-api  :only (distribute-flow service-carrier)]
+	[clj-misc.randvars   :only (_0_ _+_ _*_ _d_ rv-min)]
+	[clj-misc.matrix-ops :only (filter-matrix-for-coords make-matrix map-matrix get-rows get-cols)]))
 
 (defmethod distribute-flow "Carbon"
   [_ source-layer _ use-layer _]
   "The amount of carbon sequestration produced is distributed among
    the consumers (carbon emitters) according to their relative :use
    values."
-  (let [route-layer       (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly (atom ())))
-	source-points     (filter-matrix-for-coords #(not= rv-zero %) source-layer)
-	use-points        (filter-matrix-for-coords #(not= rv-zero %) use-layer)]
+  (let [cache-layer       (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly (atom ())))
+	source-points     (filter-matrix-for-coords (p not= _0_) source-layer)
+	use-points        (filter-matrix-for-coords (p not= _0_) use-layer)]
     (println "Source points:" (count source-points))
     (println "Use points:   " (count use-points))
     (if (and (seq source-points) (seq use-points))
       (let [source-values     (map #(get-in source-layer %) source-points)
 	    use-values        (map #(get-in use-layer    %) use-points)
-	    total-production  (reduce rv-add rv-zero source-values)
-	    total-consumption (reduce rv-add rv-zero use-values)
-	    percent-produced  (map #(rv-divide % total-production) source-values)
-	    source-use-ratio  (rv-divide total-production total-consumption)]
+	    total-production  (reduce _+_ _0_ source-values)
+	    total-consumption (reduce _+_ _0_ use-values)
+	    percent-produced  (map #(_d_ % total-production) source-values)
+	    source-use-ratio  (_d_ total-production total-consumption)]
 	(dorun (pmap
 		(fn [uid use-cap]
-		  (let [amount-usable (rv-min use-cap (rv-multiply use-cap source-use-ratio))]
-		    (reset! (get-in route-layer uid)
+		  (let [amount-usable (rv-min use-cap (_*_ use-cap source-use-ratio))]
+		    (reset! (get-in cache-layer uid)
 			    (map (fn [sid source-percent]
-				   (struct-map service-carrier
-				     :weight (rv-multiply source-percent amount-usable)
-				     :route  sid))
+				   (let [weight (_*_ source-percent amount-usable)]
+				     (struct-map service-carrier
+				       :source-id       sid
+				       :route           nil
+				       :possible-weight weight
+				       :actual-weight   weight
+				       :sink-effects    nil)))
 				 source-points
 				 percent-produced))))
 		use-points
 		use-values))))
-    route-layer))
+    (map-matrix (& seq deref) cache-layer)))

@@ -23,11 +23,30 @@
 (ns clj-misc.utils
   (:import (java.util HashMap)))
 
+;; Some useful abbreviations for point-free style.
+(def p partial)
+(def & comp)
+
 (defn print-sysprops
   "Print out the result of System.getProperties()"
   []
   (doseq [[key val] (. System getProperties)]
       (printf "%s = %s\n" key val)))
+
+(defmacro constraints-1.0
+  [constraint-map]
+  (cons 'do (for [pre-constraint (:pre constraint-map)]
+	      `(assert ~pre-constraint))))
+
+(defmacro def-
+  [name & args]
+  (let [name# (with-meta name {:private true})]
+    `(def ~name# ~@args)))
+
+(defmacro defmulti-
+  [name & args]
+  (let [name# (with-meta name {:private true})]
+    `(defmulti ~name# ~@args)))
 
 (defn add-anyway
   "Sums the non-nil argument values."
@@ -76,7 +95,7 @@
 
 (defn remove-nil-val-entries
   [amap]
-  (into {} (remove (comp nil? val) amap)))
+  (into {} (remove (& nil? val) amap)))
 
 (defn key-by-val
   "Returns the key from a map m whose corresponding value field is a

@@ -26,31 +26,32 @@
 
 (ns clj-span.commandline
   (:gen-class)
-  (:use [clj-span.core :only (run-span)]
-	[clojure.set :as set :only (difference)]
-	[clojure.contrib.duck-streams :only (file-str)]
-	[clj-span.worldgen :only (read-layer-from-file)]))
+  (:use [clj-span.core                :only (run-span)]
+	[clj-misc.utils               :only (def- defmulti-)]
+	[clj-span.worldgen            :only (read-layer-from-file)]
+	[clojure.set :as set          :only (difference)]
+	[clojure.contrib.duck-streams :only (file-str)]))
 
-(def #^{:private true} usage-message
-     (str
-      "Usage: java -cp clj-span-standalone.jar clj_span.commandline \\ \n"
-      "            -source-layer       <filepath> \\ \n"
-      "            -sink-layer         <filepath> \\ \n"
-      "            -use-layer          <filepath> \\ \n"
-      "            -flow-layers        <filepath> \\ \n"
-      "            -source-threshold   <double>   \\ \n"
-      "            -sink-threshold     <double>   \\ \n"
-      "            -use-threshold      <double>   \\ \n"
-      "            -trans-threshold    <double>   \\ \n"
-      "            -rv-max-states      <integer>  \\ \n"
-      "            -downscaling-factor <number>   \\ \n"
-      "            -source-type        <finite|infinite> \\ \n"
-      "            -sink-type          <finite|infinite> \\ \n"
-      "            -use-type           <finite|infinite> \\ \n"
-      "            -benefit-type       <rival|non-rival> \\ \n"
-      "            -flow-model         <line-of-sight|proximity|carbon|sediment>\n"))
+(def- usage-message
+  (str
+   "Usage: java -cp clj-span-standalone.jar clj_span.commandline \\ \n"
+   "            -source-layer       <filepath> \\ \n"
+   "            -sink-layer         <filepath> \\ \n"
+   "            -use-layer          <filepath> \\ \n"
+   "            -flow-layers        <filepath> \\ \n"
+   "            -source-threshold   <double>   \\ \n"
+   "            -sink-threshold     <double>   \\ \n"
+   "            -use-threshold      <double>   \\ \n"
+   "            -trans-threshold    <double>   \\ \n"
+   "            -rv-max-states      <integer>  \\ \n"
+   "            -downscaling-factor <number>   \\ \n"
+   "            -source-type        <finite|infinite> \\ \n"
+   "            -sink-type          <finite|infinite> \\ \n"
+   "            -use-type           <finite|infinite> \\ \n"
+   "            -benefit-type       <rival|non-rival> \\ \n"
+   "            -flow-model         <line-of-sight|proximity|carbon|sediment>\n"))
 
-(defmulti #^{:private true} print-usage (fn [error-type extra-info] error-type))
+(defmulti- print-usage (fn [error-type extra-info] error-type))
 
 (defmethod print-usage :args-not-even [_ _]
   (println (str "\nError: The number of input arguments must be even.\n\n" usage-message)))
@@ -59,23 +60,23 @@
   (let [error-message (apply str (interpose "\n\t" extra-info))]
     (println (str "\nError: The parameter values that you entered are incorrect.\n\t" error-message "\n\n" usage-message))))
 
-(def #^{:private true} param-tests
-     [["-source-layer"       #(.canRead (file-str %))    " is not readable."                  ]
-      ["-sink-layer"         #(.canRead (file-str %))    " is not readable."   	              ]
-      ["-use-layer"          #(.canRead (file-str %))    " is not readable."   	              ]
-      ["-flow-layers"        #(.canRead (file-str %))    " is not readable."   	              ]
-      ["-source-threshold"   #(float?  (read-string %))  " is not a double."                  ]
-      ["-sink-threshold"     #(float?  (read-string %))  " is not a double."                  ]
-      ["-use-threshold"      #(float?  (read-string %))  " is not a double."                  ]
-      ["-trans-threshold"    #(float?  (read-string %))  " is not a double."                  ]
-      ["-rv-max-states"      #(integer?(read-string %))  " is not an integer."                ]
-      ["-downscaling-factor" #(number? (read-string %))  " is not a number."                  ]
-      ["-source-type"        #{"finite" "infinite"}      " must be one of finite or infinite."]
-      ["-sink-type"          #{"finite" "infinite"}      " must be one of finite or infinite."]
-      ["-use-type"           #{"finite" "infinite"}      " must be one of finite or infinite."]
-      ["-benefit-type"       #{"rival" "non-rival"}      " must be one of rival or non-rival."]
-      ["-flow-model"         #{"line-of-sight" "proximity" "carbon" "sediment"}
-                             " must be one of line-of-sight, proximity, carbon, or sediment."]])
+(def- param-tests
+  [["-source-layer"       #(.canRead (file-str %))    " is not readable."                  ]
+   ["-sink-layer"         #(.canRead (file-str %))    " is not readable."   	           ]
+   ["-use-layer"          #(.canRead (file-str %))    " is not readable."   	           ]
+   ["-flow-layers"        #(.canRead (file-str %))    " is not readable."   	           ]
+   ["-source-threshold"   #(float?  (read-string %))  " is not a double."                  ]
+   ["-sink-threshold"     #(float?  (read-string %))  " is not a double."                  ]
+   ["-use-threshold"      #(float?  (read-string %))  " is not a double."                  ]
+   ["-trans-threshold"    #(float?  (read-string %))  " is not a double."                  ]
+   ["-rv-max-states"      #(integer?(read-string %))  " is not an integer."                ]
+   ["-downscaling-factor" #(number? (read-string %))  " is not a number."                  ]
+   ["-source-type"        #{"finite" "infinite"}      " must be one of finite or infinite."]
+   ["-sink-type"          #{"finite" "infinite"}      " must be one of finite or infinite."]
+   ["-use-type"           #{"finite" "infinite"}      " must be one of finite or infinite."]
+   ["-benefit-type"       #{"rival" "non-rival"}      " must be one of rival or non-rival."]
+   ["-flow-model"         #{"line-of-sight" "proximity" "carbon" "sediment"}
+    " must be one of line-of-sight, proximity, carbon, or sediment."]])
 
 (defn- valid-params?
   [params]

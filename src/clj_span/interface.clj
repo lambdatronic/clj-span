@@ -23,8 +23,7 @@
 
 (ns clj-span.interface
   (:use	[clj-misc.utils      :only (mapmap)]
-	[clj-misc.randvars   :only (rv-zero)]
-	[clj-misc.matrix-ops :only (matrix2seq coord-map2matrix print-matrix get-rows get-cols in-bounds?)]))
+	[clj-misc.matrix-ops :only (matrix2seq print-matrix get-rows get-cols in-bounds?)]))
 
 (defn- select-location
   "Prompts for coords and returns the selected [i j] pair."
@@ -82,15 +81,12 @@
    distribution."
   [source-layer sink-layer use-layer flow-layers]
   (let [feature-names    (list* "Source" "Sink" "Use" (keys flow-layers))
-	selected-feature (select-menu-option feature-names)
-	selected-layer   ((-> flow-layers
-			      (assoc "Source" source-layer)
-			      (assoc "Sink"   sink-layer)
-			      (assoc "Use"    use-layer))
-			  selected-feature)]
-    selected-layer))
-    ;;    (into {} (for [i (range (get-rows source-layer)) j (range (get-cols source-layer)) :let [id [i j]]]
-;;	       [id (get-in selected-layer id)]))))
+	selected-feature (select-menu-option feature-names)]
+    ((-> flow-layers
+	 (assoc "Source" source-layer)
+	 (assoc "Sink"   sink-layer)
+	 (assoc "Use"    use-layer))
+     selected-feature)))
 
 (defmulti provide-results (fn [result-type results-menu source-layer sink-layer use-layer flow-layers] result-type))
 
@@ -110,23 +106,12 @@
     (loop [action (menu (select-menu-option prompts))]
       (when action
 	(when-let [matrix-result (action)]
-;;	(when-let [coord-map (action)]
 	  (newline)
 	  (print-matrix matrix-result)
-;;	  (print-matrix (coord-map2matrix rows cols rv-zero coord-map))
 	  (newline)
 	  (println "Distinct values:" (count (distinct (matrix2seq matrix-result)))))
-;;	  (println "Distinct values:" (count (distinct (vals coord-map)))))
 	(recur (menu (select-menu-option prompts)))))))
 
-;; FIXME: The results-menu actions generate matrices, not coord-maps.
 (defmethod provide-results :closure-map
   [_ results-menu _ _ _ _]
   results-menu)
-
-;; FIXME: The results-menu actions generate matrices, not coord-maps.
-(defmethod provide-results :matrix-map
-  [_ results-menu source-layer _ _ _]
-  (let [rows (get-rows source-layer)
-	cols (get-cols source-layer)]
-    (mapmap identity #(coord-map2matrix rows cols rv-zero (%)) results-menu)))

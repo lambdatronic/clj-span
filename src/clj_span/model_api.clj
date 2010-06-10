@@ -23,7 +23,12 @@
 
 (ns clj-span.model-api)
 
-(defstruct service-carrier :weight :route)
+(defstruct service-carrier
+  :source-id      ; starting id of this flow path
+  :route          ; byte array of directions from source-id to use-id or nil
+  :possible-weight; amount of source-weight which reaches (and is used by) this use location disregarding sink-effects
+  :actual-weight  ; amount of source-weight which reaches (and is used by) this use location including sink-effects
+  :sink-effects)  ; map of sink-ids to sink-effects on this flow path (decayed as necessary)
 
 (defmulti distribute-flow!
   "Service-specific flow distribution functions."
@@ -49,12 +54,12 @@
 
 (defmulti decay
   "Service-specific decay functions."
-  (fn [flow-model weight steps] flow-model))
+  (fn [flow-model weight distance] flow-model))
 
 (defmethod decay :default [_ weight _] weight)
 
 (defmulti undecay
   "Service-specific inverse decay functions."
-  (fn [flow-model weight steps] flow-model))
+  (fn [flow-model weight distance] flow-model))
 
 (defmethod undecay :default [_ weight _] weight)

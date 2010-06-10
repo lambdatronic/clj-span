@@ -27,7 +27,7 @@
   (:use [clj-span.core           :only (run-span)]
 	[clj-span.sediment-model :only (aggregate-flow-dirs)]
 	[clj-misc.matrix-ops     :only (seq2matrix resample-matrix)]
-	[clj-misc.utils          :only (mapmap remove-nil-val-entries)]
+	[clj-misc.utils          :only (mapmap remove-nil-val-entries constraints-1.0 p)]
 	[clj-misc.randvars       :only (cont-type disc-type successive-sums)]))
 
 #_(refer 'thinklab :only '(conc))
@@ -77,7 +77,7 @@
    probabilities are represented as rationals."
   [ds rows cols]
   (let [n            (* rows cols)
-	to-rationals (partial map #(if (Double/isNaN %) 0 (rationalize %)))]
+	to-rationals (p map #(if (Double/isNaN %) 0 (rationalize %)))]
     (if (and (probabilistic? ds) (not (binary? ds)))
       (if (encodes-continuous-distribution? ds)
 	;; sampled continuous distributions (FIXME: How is missing information represented?)
@@ -143,13 +143,13 @@
    flow-params map and an observation containing the concepts'
    dependent features, calculates the SPAN flows, and returns the
    results using one of the following result-types: :cli-menu
-   :closure-map :matrix-map"
+   :closure-map"
   [observation source-concept use-concept sink-concept flow-concept
    {:keys [source-threshold sink-threshold use-threshold trans-threshold
 	   rv-max-states downscaling-factor source-type sink-type use-type benefit-type result-type]
     :or {result-type :closure-map}}]
   ;; This version of SPAN only works for grid-based observations (i.e. raster maps).
-  {:pre [(grid-extent? observation)]}
+  (constraints-1.0 {:pre [(grid-extent? observation)]})
   (let [rows         (grid-rows    observation)
 	cols         (grid-columns observation)
 	flow-model   (.getLocalName (get-observable-class observation))

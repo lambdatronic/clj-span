@@ -23,17 +23,12 @@
 ;;; will generate a map of {[i j] -> value} pairs.
 
 (ns clj-span.analyzer
-  (:use [clj-span.model-api  :only (undecay)]
+  (:use [clj-misc.utils      :only (p)]
+	[clj-span.model-api  :only (undecay)]
 	[clj-span.params     :only (*source-type*
 				    *sink-type*
 				    *use-type*)]
-	[clj-misc.randvars   :only (rv-zero
-				    rv-zero-below-scalar
-				    rv-add
-				    rv-subtract
-				    rv-min
-				    rv-scalar-divide
-				    scalar-rv-multiply)]
+	[clj-misc.randvars   :only (_0_ _+_ _-_ _d *_ rv-min)]
 	[clj-misc.matrix-ops :only (get-rows
 				    get-cols
 				    matrix2seq
@@ -41,22 +36,14 @@
 				    make-matrix
 				    unbitpack-route)]))
 
-;;(defstruct service-carrer
-;;  :source-id      ; starting id of this flow path
-;;  :route          ; byte array of directions from source-id to use-id or nil
-;;  :possible-weight; amount of source-weight which reaches (and is used by) this use location disregarding sink-effects
-;;  :actual-weight  ; amount of source-weight which reaches (and is used by) this use location including sink-effects
-;;  :sink-effects   ; map of sink-ids to sink-effects on this flow path (decayed as necessary)
-;;  :use-effects)   ; map of rival-use-ids to rival-use-effects on this flow path (decayed as necessary)
-
 (defn theoretical-source
   "If *source-type* is finite, return source-layer. Else return
    source-layer * num-users."
   [source-layer use-layer]
   (if (= *source-type* :finite)
     source-layer
-    (let [num-users (count (remove (partial = rv-zero) (matrix2seq use-layer)))]
-      (map-matrix (partial scalar-rv-multiply num-users) source-layer))))
+    (let [num-users (count (remove (p = _0_) (matrix2seq use-layer)))]
+      (map-matrix (p *_ num-users) source-layer))))
 (def theoretical-source (memoize theoretical-source))
 
 (defn possible-source
@@ -64,11 +51,11 @@
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
   [cache-layer]
-  (let [coord-map (apply merge-with rv-add {}
+  (let [coord-map (apply merge-with _+_ {}
 			 (for [cache (remove nil? (matrix2seq cache-layer))
 			       {:keys [source-id possible-weight]} cache]
 			   {source-id possible-weight}))]
-    (make-matrix (get-rows cache-layer) (get-cols cache-layer) #(get coord-map % rv-zero))))
+    (make-matrix (get-rows cache-layer) (get-cols cache-layer) #(get coord-map % _0_))))
 (def possible-source (memoize possible-source))
 
 (defn actual-source
@@ -76,11 +63,11 @@
    its theoretical source that impacts a user along any flow path,
    including the negative effects of sinks and rival users."
   [cache-layer]
-  (let [coord-map (apply merge-with rv-add {}
+  (let [coord-map (apply merge-with _+_ {}
 			 (for [cache (remove nil? (matrix2seq cache-layer))
 			       {:keys [source-id actual-weight]} cache]
 			   {source-id actual-weight}))]
-    (make-matrix (get-rows cache-layer) (get-cols cache-layer) #(get coord-map % rv-zero))))
+    (make-matrix (get-rows cache-layer) (get-cols cache-layer) #(get coord-map % _0_))))
 (def actual-source (memoize actual-source))
 
 (defn theoretical-sink
@@ -90,23 +77,23 @@
   [source-layer sink-layer use-layer]
   (if (= *sink-type* :finite)
     sink-layer
-    (let [num-sources   (count (remove (partial = rv-zero) (matrix2seq source-layer)))
-	  num-users     (count (remove (partial = rv-zero) (matrix2seq use-layer)))
+    (let [num-sources   (count (remove (p = _0_) (matrix2seq source-layer)))
+	  num-users     (count (remove (p = _0_) (matrix2seq use-layer)))
 	  max-flowpaths (* num-sources num-users)
 	  sink-amount   (if (*source-type* :finite)
-			  (let [total-source (reduce rv-add rv-zero (remove (partial = rv-zero) (matrix2seq source-layer)))]
-			    #(rv-min (scalar-rv-multiply max-flowpaths %) total-source))
-			  (partial scalar-rv-multiply max-flowpaths))]
-      (map-matrix #(if (not= rv-zero %) (sink-amount %) rv-zero) sink-layer))))
+			  (let [total-source (reduce _+_ _0_ (remove (p = _0_) (matrix2seq source-layer)))]
+			    #(rv-min (*_ max-flowpaths %) total-source))
+			  (p *_ max-flowpaths))]
+      (map-matrix #(if (not= _0_ %) (sink-amount %) _0_) sink-layer))))
 
 (defn actual-sink
   "Returns a matrix of RVs, in which each cell contains the fraction
    of its theoretical sink that impacts a user along any flow path."
   [cache-layer]
-  (let [coord-map (apply merge-with rv-add {}
+  (let [coord-map (apply merge-with _+_ {}
 			 (for [cache (remove nil? (matrix2seq cache-layer))]
 			   (:sink-effects cache)))]
-    (make-matrix (get-rows cache-layer) (get-cols cache-layer) #(get coord-map % rv-zero))))
+    (make-matrix (get-rows cache-layer) (get-cols cache-layer) #(get coord-map % _0_))))
 
 (defn theoretical-use
   "If *use-type* is finite, return use-layer. Else return a new layer
@@ -116,12 +103,12 @@
   [source-layer use-layer]
   (if (= *use-type* :finite)
     use-layer
-    (let [total-source (reduce rv-add rv-zero (remove (partial = rv-zero) (matrix2seq source-layer)))
+    (let [total-source (reduce _+_ _0_ (remove (p = _0_) (matrix2seq source-layer)))
 	  use-amount   (if (= *source-type* :finite)
-			 (let [num-users (count (remove (partial = rv-zero) (matrix2seq use-layer)))]
-			   (rv-scalar-divide total-source num-users))
+			 (let [num-users (count (remove (p = _0_) (matrix2seq use-layer)))]
+			   (_d total-source num-users))
 			 total-source)]
-      (map-matrix #(if (not= rv-zero %) use-amount rv-zero) use-layer))))
+      (map-matrix #(if (not= _0_ %) use-amount _0_) use-layer))))
 (def theoretical-use (memoize theoretical-use))
 
 (defn possible-use
@@ -129,7 +116,7 @@
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
   [cache-layer]
-  (map-matrix #(reduce rv-add rv-zero (map :possible-weight %)) cache-layer))
+  (map-matrix #(reduce _+_ _0_ (map :possible-weight %)) cache-layer))
 (def possible-use (memoize possible-use))
 
 (defn actual-use
@@ -137,7 +124,7 @@
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
   [cache-layer]
-  (map-matrix #(reduce rv-add rv-zero (map :actual-weight %)) cache-layer))
+  (map-matrix #(reduce _+_ _0_ (map :actual-weight %)) cache-layer))
 (def actual-use (memoize actual-use))
 
 (defn- rerun-possible-route
@@ -148,10 +135,10 @@
 		 (if (empty? use-effects)
 		   (repeat possible-weight)
 ;;		   (reductions
-;;		    #(rv-add %1 (get use-effects %2 rv-zero))
+;;		    #(_+_ %1 (get use-effects %2 _0_))
 ;;		    possible-weight
 		   (reduce 
-		    #(conj %1 (rv-add (peek %1) (get use-effects %2 rv-zero)))
+		    #(conj %1 (_+_ (peek %1) (get use-effects %2 _0_)))
 		    [possible-weight]
 		    route-ids))
 		 (iterate inc 0)))))
@@ -164,11 +151,11 @@
       (zipmap route-ids
 	      (map #(undecay flow-model %1 %2)
 ;;		   (reductions
-;;		    #(reduce rv-add %1 (remove nil? ((juxt sink-effects use-effects) %2)))
+;;		    #(reduce _+_ %1 (remove nil? ((juxt sink-effects use-effects) %2)))
 ;;		    actual-weight
 		   (reduce 
-		    #(conj %1 (reduce rv-add (peek %1) (remove nil? [(sink-effects %2) (use-effects %2)])))
-;;		    #(conj %1 (reduce rv-add (peek %1) (remove nil? ((juxt sink-effects use-effects) %2))))
+		    #(conj %1 (reduce _+_ (peek %1) (remove nil? [(sink-effects %2) (use-effects %2)])))
+;;		    #(conj %1 (reduce _+_ (peek %1) (remove nil? ((juxt sink-effects use-effects) %2))))
 		    [actual-weight]
 		    route-ids)
 		   (iterate inc 0))))))
@@ -178,9 +165,9 @@
   (let [rows (get-rows cache-layer)
 	cols (get-cols cache-layer)]
     (if-let [carriers-with-routes (seq (filter :route (apply concat (matrix2seq cache-layer))))]
-      (let [coord-map (apply merge-with rv-add
-			     (map (partial rerun-possible-route flow-model) carriers-with-routes))]
-	(make-matrix rows cols #(get coord-map % rv-zero)))
+      (let [coord-map (apply merge-with _+_
+			     (map (p rerun-possible-route flow-model) carriers-with-routes))]
+	(make-matrix rows cols #(get coord-map % _0_)))
       (possible-source cache-layer))))
 (def possible-flow (memoize possible-flow))
 
@@ -189,9 +176,9 @@
   (let [rows (get-rows cache-layer)
 	cols (get-cols cache-layer)]
     (if-let [carriers-with-routes (seq (filter :route (apply concat (matrix2seq cache-layer))))]
-      (let [coord-map (apply merge-with rv-add
-			     (map (partial rerun-actual-route flow-model) carriers-with-routes))]
-	(make-matrix rows cols #(get coord-map % rv-zero)))
+      (let [coord-map (apply merge-with _+_
+			     (map (p rerun-actual-route flow-model) carriers-with-routes))]
+	(make-matrix rows cols #(get coord-map % _0_)))
       (actual-source cache-layer))))
 (def actual-flow (memoize actual-flow))
 
@@ -201,7 +188,7 @@
    cannot be used by any location either due to propagation decay,
    lack of use capacity, or lack of flow pathways to use locations."
   [source-layer use-layer cache-layer]
-  (map-matrix rv-subtract
+  (map-matrix _-_
 	      (theoretical-source source-layer use-layer)
 	      (possible-source    cache-layer)))
 
@@ -211,7 +198,7 @@
    be utilized by each location either due to propagation decay of the
    asset or lack of flow pathways to use locations."
   [source-layer use-layer cache-layer]
-  (map-matrix rv-subtract
+  (map-matrix _-_
 	      (theoretical-use source-layer use-layer)
 	      (possible-use    cache-layer)))
 
@@ -220,7 +207,7 @@
    Blocked-source is the amount of the possible-source which cannot be
    used by any location due to upstream sinks or uses."
   [cache-layer]
-  (map-matrix rv-subtract
+  (map-matrix _-_
 	      (possible-source cache-layer)
 	      (actual-source   cache-layer)))
 
@@ -229,7 +216,7 @@
    Blocked-use is the amount of the possible-use which cannot be
    realized due to upstream sinks or uses."
   [cache-layer]
-  (map-matrix rv-subtract
+  (map-matrix _-_
 	      (possible-use cache-layer)
 	      (actual-use   cache-layer)))
 
@@ -238,6 +225,6 @@
    Blocked-flow is the amount of the possible-flow which cannot be
    realized due to upstream sinks or uses."
   [cache-layer flow-model]
-  (map-matrix rv-subtract
+  (map-matrix _-_
 	      (possible-flow cache-layer flow-model)
 	      (actual-flow   cache-layer flow-model)))
