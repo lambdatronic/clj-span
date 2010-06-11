@@ -10,7 +10,7 @@ java -cp clj-span-standalone.jar clj_span.commandline \
     -use-threshold      0.1   \
     -trans-threshold    0.1   \
     -rv-max-states       10   \
-    -downscaling-factor   3   \
+    -downscaling-factor  $2   \
     -source-type        infinite  \
     -sink-type          infinite  \
     -use-type           infinite  \

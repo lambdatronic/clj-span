@@ -101,7 +101,7 @@
 			   (for [boundary-id (find-bounding-box (keys frontier) rows cols)]
 			     (when-let [frontier-options (seq (remove nil? (map frontier (get-neighbors boundary-id rows cols))))]
 			       (make-frontier-element! boundary-id flow-model cache-layer source-layer sink-layer use-layer
-						     (apply max-key (fn [[u r s]] (rv-mean u)) frontier-options))))))))))
+						       (apply max-key (fn [[u r s]] (rv-mean u)) frontier-options))))))))))
 
 (defmethod distribute-flow "Proximity"
   [flow-model source-layer sink-layer use-layer _]

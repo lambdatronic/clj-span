@@ -137,14 +137,15 @@
 ;;		   (reductions
 ;;		    #(_+_ %1 (get use-effects %2 _0_))
 ;;		    possible-weight
-		   (reduce 
+;;		    route-ids)
+		   (reduce
 		    #(conj %1 (_+_ (peek %1) (get use-effects %2 _0_)))
 		    [possible-weight]
 		    route-ids))
 		 (iterate inc 0)))))
 
 (defn- rerun-actual-route
-  [flow-model {:keys [source-id route actual-weight sink-effects use-effects] :as carrier}]
+  [flow-model {:keys [source-id route actual-weight sink-effects use-effects] :or {use-effects {}} :as carrier}]
   (if (empty? sink-effects)
     (rerun-possible-route flow-model carrier)
     (let [route-ids (rseq (unbitpack-route source-id route))]
@@ -153,7 +154,8 @@
 ;;		   (reductions
 ;;		    #(reduce _+_ %1 (remove nil? ((juxt sink-effects use-effects) %2)))
 ;;		    actual-weight
-		   (reduce 
+;;		    route-ids)
+		   (reduce
 		    #(conj %1 (reduce _+_ (peek %1) (remove nil? [(sink-effects %2) (use-effects %2)])))
 ;;		    #(conj %1 (reduce _+_ (peek %1) (remove nil? ((juxt sink-effects use-effects) %2))))
 		    [actual-weight]

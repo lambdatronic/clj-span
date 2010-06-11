@@ -130,8 +130,8 @@
 	upscale-factor-rows   (/ lcm-rows orig-rows)
 	upscale-factor-cols   (/ lcm-cols orig-cols)
 	lcm-matrix            (make-matrix lcm-rows lcm-cols
-					   (fn [[i j]] (get-in matrix [(unchecked-divide i upscale-factor-rows)
-								       (unchecked-divide j upscale-factor-cols)])))
+					   (fn [[i j]] (get-in matrix [(int (/ i upscale-factor-rows))
+								       (int (/ j upscale-factor-cols))])))
 	downscale-factor-rows (/ lcm-rows new-rows)
 	downscale-factor-cols (/ lcm-cols new-cols)
 	offset-range-rows     (range downscale-factor-rows)
