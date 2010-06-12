@@ -27,7 +27,7 @@
   (:use [clj-span.core           :only (run-span)]
 	[clj-span.sediment-model :only (aggregate-flow-dirs)]
 	[clj-misc.matrix-ops     :only (seq2matrix resample-matrix)]
-	[clj-misc.utils          :only (mapmap remove-nil-val-entries constraints-1.0 p)]
+	[clj-misc.utils          :only (mapmap remove-nil-val-entries constraints-1.0 p &)]
 	[clj-misc.randvars       :only (cont-type disc-type successive-sums)]))
 
 #_(refer 'thinklab :only '(conc))
@@ -94,11 +94,11 @@
 								bounds))))
 		get-cdf-vals          (if unbounded-from-below?
 					(if unbounded-from-above?
-					  #(successive-sums (to-rationals (butlast (get-probabilities ds %))))
-					  #(successive-sums (to-rationals (get-probabilities ds %))))
+					  (& successive-sums to-rationals butlast (p get-probabilities ds))
+					  (& successive-sums to-rationals (p get-probabilities ds)))
 					(if unbounded-from-above?
-					  #(successive-sums 0 (to-rationals (butlast (get-probabilities ds %))))
-					  #(successive-sums 0 (to-rationals (get-probabilities ds %)))))]
+					  (& (p successive-sums 0) to-rationals butlast (p get-probabilities ds))
+					  (& (p successive-sums 0) to-rationals (p get-probabilities ds))))]
 	    (for [idx (range n)]
 	      (with-meta (apply struct prob-dist (get-cdf-vals idx)) cont-type))))
 	;; discrete distributions (FIXME: How is missing information represented? Fns aren't setup for non-numeric values.)

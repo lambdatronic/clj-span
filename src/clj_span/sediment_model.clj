@@ -26,14 +26,14 @@
 	[clj-misc.matrix-ops    :only (get-rows get-cols make-matrix filter-matrix-for-coords in-bounds? find-line-between map-matrix)]
 	[clj-misc.randvars      :only (_0_ _+_ _-_ _*_ _d_ -_ _* _d rv-min rv-mean)]))
 
-(def- hydrosheds-delta-codes {{  1 1} [ 0  1]			  ; e
-			      {  2 1} [-1  1]			  ; se
-			      {  4 1} [-1  0]			  ; s
-			      {  8 1} [-1 -1]			  ; sw
-			      { 16 1} [ 0 -1]			  ; w
-			      { 32 1} [ 1 -1]			  ; nw
-			      { 64 1} [ 1  0]			  ; n
-			      {128 1} [ 1  1]})			  ; ne
+(def hydrosheds-delta-codes {{  1 1} [ 0  1]	; e
+			     {  2 1} [-1  1]	; se
+			     {  4 1} [-1  0]	; s
+			     {  8 1} [-1 -1]	; sw
+			     { 16 1} [ 0 -1]	; w
+			     { 32 1} [ 1 -1]	; nw
+			     { 64 1} [ 1  0]	; n
+			     {128 1} [ 1  1]}); ne
 
 ;; try out (vecfoo (floor (/ (atan2 x y) 45))) or approximate by checking quadrant of vector-direction
 (defn aggregate-flow-dirs
@@ -48,8 +48,6 @@
 	      distances-to-dirs (seq2map hydrosheds-delta-codes (fn [[code v]] [(square-distance unit-vector v) code]))]
 	  (distances-to-dirs (apply min (keys distances-to-dirs))))))))
 
-(def *absorption-threshold* 0.1) ; this is just a hack - make it meaningful
-
 (defn- step-downstream!
   [cache-layer hydrosheds-layer sink-map use-map scaled-sinks
    rows cols [current-id source-ids source-fractions incoming-utilities sink-effects]]
@@ -57,7 +55,7 @@
     (when flow-delta ; if nil, we've hit 0 (ocean) or -1 (inland sink)
       (let [new-id (map + current-id flow-delta)]
 	(when (in-bounds? rows cols new-id) ; otherwise, we've gone off the map
-	  (let [affected-sinks     (filter #(> (rv-mean @(scaled-sinks %)) *absorption-threshold*) (sink-map new-id))
+	  (let [affected-sinks     (filter (& (p not= _0_) deref scaled-sinks) (sink-map new-id))
 		affected-users     (if (seq affected-sinks) (use-map new-id))
 		total-incoming     (reduce _+_ incoming-utilities)
 		sink-effects       (if (seq affected-sinks) ; sinks encountered
@@ -74,10 +72,10 @@
 					 (swap! (scaled-sinks sink-id) _-_ (sink-effects sink-id)))
 				       (let [total-sunk   (reduce _+_ (map sink-effects affected-sinks))
 					     out-fraction (-_ 1 (_d_ total-sunk total-incoming))]
-					 (map #(_*_ % out-fraction) incoming-utilities)))
+					 (map (p _*_ out-fraction) incoming-utilities)))
 				     incoming-utilities)]
 	    (when (seq affected-users)	; users encountered
-	      (doseq [cache (map #(get-in cache-layer %) affected-users)]
+	      (doseq [cache (map (p get-in cache-layer) affected-users)]
 		(swap! cache concat
 		       (map (fn [sid sfrac utility]
 			      (struct-map service-carrier
@@ -85,7 +83,7 @@
 				:route           nil
 				:possible-weight _0_
 				:actual-weight   utility
-				:sink-effects    (mapmap identity #(_*_ % sfrac) sink-effects)))
+				:sink-effects    (mapmap identity (p _*_ sfrac) sink-effects)))
 			    source-ids
 			    source-fractions
 			    incoming-utilities))))
@@ -120,7 +118,7 @@
 		    ;; floodplain boundary
 		    (let [loc-delta       (map - data-id in-stream-id)
 			  outside-id      (first (drop-while #(not= _0_ (get-in floodplain-layer %))
-							     (rest (iterate #(map + loc-delta %) data-id))))
+							     (rest (iterate (p map + loc-delta) data-id))))
 			  inside-id       (map - outside-id loc-delta)
 			  boundary-id     (first (drop-while #(not= _0_ (get-in floodplain-layer %))
 							     (find-line-between inside-id outside-id)))
@@ -138,12 +136,13 @@
   [_ source-layer sink-layer use-layer
    {hydrosheds-layer "Hydrosheds", stream-layer "RiverStream",
     floodplain-layer "FloodPlainPresence", elevation-layer "Altitude"}]
+  (println "Running Sediment flow model.")
   (let [rows           (get-rows source-layer)
 	cols           (get-cols source-layer)
 	cache-layer    (make-matrix rows cols (constantly (atom ())))
 	[source-map sink-map use-map] (pmap (&
 					     (p move-points-into-stream-channel hydrosheds-layer stream-layer)
-					     (p filter-matrix-for-coords #(not= _0_ %)))
+					     (p filter-matrix-for-coords (p not= _0_)))
 					    [source-layer sink-layer use-layer])
 	[scaled-sources scaled-sinks] (pmap (p scale-by-stream-proximity floodplain-layer elevation-layer)
 					    [source-map   sink-map]

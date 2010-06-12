@@ -35,16 +35,17 @@
   "The amount of carbon sequestration produced is distributed among
    the consumers (carbon emitters) according to their relative :use
    values."
+  (println "Running Carbon flow model.")
   (let [cache-layer       (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly (atom ())))
 	source-points     (filter-matrix-for-coords (p not= _0_) source-layer)
 	use-points        (filter-matrix-for-coords (p not= _0_) use-layer)]
     (println "Source points:" (count source-points))
     (println "Use points:   " (count use-points))
     (if (and (seq source-points) (seq use-points))
-      (let [source-values     (map #(get-in source-layer %) source-points)
-	    use-values        (map #(get-in use-layer    %) use-points)
-	    total-production  (reduce _+_ _0_ source-values)
-	    total-consumption (reduce _+_ _0_ use-values)
+      (let [source-values     (map (p get-in source-layer) source-points)
+	    use-values        (map (p get-in use-layer)    use-points)
+	    total-production  (reduce _+_ source-values)
+	    total-consumption (reduce _+_ use-values)
 	    percent-produced  (map #(_d_ % total-production) source-values)
 	    source-use-ratio  (_d_ total-production total-consumption)]
 	(dorun (pmap

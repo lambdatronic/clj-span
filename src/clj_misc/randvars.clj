@@ -43,10 +43,13 @@
 ;;; _d  rv-scalar-divide
 
 (ns clj-misc.randvars
-  (:use [clj-misc.utils :only (p)]))
+  (:use [clj-misc.utils :only (p select-n-distinct select-n-summands my-partition-all constraints-1.0)]))
 
 (def *rv-max-states* 10)
-(defn reset-rv-max-states! [new-val] (alter-var-root #'*rv-max-states* (constantly new-val)))
+(defn reset-rv-max-states!
+  [new-val]
+  (if (and (pos? new-val) (integer? new-val))
+    (alter-var-root #'*rv-max-states* (constantly new-val))))
 
 (def cont-type {:type ::continuous-distribution})
 (def disc-type {:type ::discrete-distribution})
@@ -65,6 +68,30 @@
     nums
     (cons (first nums) (map - (rest nums) nums))))
 
+(defmulti to-continuous-randvar type)
+
+(defmethod to-continuous-randvar ::discrete-distribution
+  [discrete-RV]
+  (with-meta
+    (let [sorted-RV (sort discrete-RV)]
+      (zipmap (keys sorted-RV)
+	      (successive-sums (vals sorted-RV))))
+    cont-type))
+
+(defmethod to-continuous-randvar ::continuous-distribution [continuous-RV] continuous-RV)
+  
+;; I should really make sure that all state values are rational.
+(defn make-randvar
+  [rv-type num-states valid-states]
+  (constraints-1.0 {:pre [(#{:discrete :continuous} rv-type)]})
+  (let [discrete-RV (with-meta
+		      (zipmap (select-n-distinct num-states valid-states)
+			      (map #(/ % 100.0) (select-n-summands num-states 100)))
+		      disc-type)]
+    (if (= rv-type :discrete)
+      discrete-RV
+      (to-continuous-randvar discrete-RV))))
+
 (defmulti rv-resample
   "Returns a new random variable with <=*rv-max-states* states sampled from X."
   type)
@@ -78,7 +105,7 @@
 	(into {}
 	      (map #(vector (/ (apply + (keys %)) (count %))
 			    (apply + (vals %)))
-		   (partition partition-size partition-size [] (sort-by key X))))
+		   (my-partition-all partition-size (sort-by key X))))
 	(meta X)))))
 
 (defmethod rv-resample ::continuous-distribution
@@ -221,7 +248,7 @@
 
 (defn rv-divide
   [X Y]
-  (rv-resample (rv-convolute / X Y)))
+  (rv-resample (rv-convolute / X (dissoc Y 0))))
 (def _d_ rv-divide)
 
 (defn rv-max
@@ -271,8 +298,9 @@
 
 (defn scalar-rv-divide
   [x Y]
-  (let [x* (rationalize x)]
-    (rv-map #(/ x* %) Y)))
+  (let [x* (rationalize x)
+	Y* (dissoc Y 0)]
+    (rv-map #(/ x* %) Y*)))
 (def d_ scalar-rv-divide)
 
 (defn rv-scalar-add
@@ -326,7 +354,7 @@
   (let [scale-factor (rationalize scale-factor-double)
 	rv           (sort rv-unsorted)
 	values       (vec (keys rv))
-	probs        (vec (map #(* scale-factor %) (successive-differences (vals rv))))
+	probs        (vec (map (p * scale-factor) (successive-differences (vals rv))))
 	zero-pos     (loop [i 0, max (count values)] (when (< i max) (if (zero? (values i)) i (recur (inc i) max))))
 	pos-pos      (loop [i 0, max (count values)] (when (< i max) (if (pos?  (values i)) i (recur (inc i) max))))
 	values2      (if zero-pos values (concat (take pos-pos values) [0] (drop pos-pos values)))
@@ -339,7 +367,7 @@
   [rv scale-factor-double]
   (let [scale-factor (rationalize scale-factor-double)
 	values       (vec (keys rv))
-	probs        (vec (map #(* scale-factor %) (vals rv)))
+	probs        (vec (map (p * scale-factor) (vals rv)))
 	zero-pos     (loop [i 0, max (count values)] (when (< i max) (if (zero? (values i)) i (recur (inc i) max))))
 	values2      (if zero-pos values (cons 0 values))
 	probs2       (if zero-pos

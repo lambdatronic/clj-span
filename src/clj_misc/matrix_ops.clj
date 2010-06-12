@@ -124,23 +124,31 @@
   [new-rows new-cols aggregator-fn matrix]
   (constraints-1.0 {:pre [(every? #(and (pos? %) (integer? %)) [new-rows new-cols])]})
   (let [orig-rows             (get-rows matrix)
-	orig-cols             (get-cols matrix)
-	lcm-rows              (first (filter #(zero? (mod % new-rows)) (iterate (p + orig-rows) orig-rows)))
-	lcm-cols              (first (filter #(zero? (mod % new-cols)) (iterate (p + orig-cols) orig-cols)))
-	upscale-factor-rows   (/ lcm-rows orig-rows)
-	upscale-factor-cols   (/ lcm-cols orig-cols)
-	lcm-matrix            (make-matrix lcm-rows lcm-cols
-					   (fn [[i j]] (get-in matrix [(int (/ i upscale-factor-rows))
-								       (int (/ j upscale-factor-cols))])))
-	downscale-factor-rows (/ lcm-rows new-rows)
-	downscale-factor-cols (/ lcm-cols new-cols)
-	offset-range-rows     (range downscale-factor-rows)
-	offset-range-cols     (range downscale-factor-cols)]
-    (make-matrix new-rows new-cols 
-		 (fn [[i j]] (let [i-base (* i downscale-factor-rows)
-				   j-base (* i downscale-factor-cols)]
-			       (aggregator-fn (for [i-offset offset-range-rows j-offset offset-range-cols]
-						(get-in lcm-matrix [(+ i-base i-offset) (+ j-base j-offset)]))))))))
+	orig-cols             (get-cols matrix)]
+    (if (and (== orig-rows new-rows) (== orig-cols new-cols))
+      matrix
+      (let [lcm-rows              (first (filter #(zero? (mod % new-rows)) (iterate (p + orig-rows) orig-rows)))
+	    lcm-cols              (first (filter #(zero? (mod % new-cols)) (iterate (p + orig-cols) orig-cols)))
+	    upscale-factor-rows   (/ lcm-rows orig-rows)
+	    upscale-factor-cols   (/ lcm-cols orig-cols)
+	    lcm-matrix            (if (and (== upscale-factor-rows 1)
+					   (== upscale-factor-cols 1))
+				    matrix
+				    (make-matrix lcm-rows lcm-cols
+						 (fn [[i j]] (get-in matrix [(int (/ i upscale-factor-rows))
+									     (int (/ j upscale-factor-cols))]))))
+	    downscale-factor-rows (/ lcm-rows new-rows)
+	    downscale-factor-cols (/ lcm-cols new-cols)]
+	(if (and (== downscale-factor-rows 1)
+		 (== downscale-factor-cols 1))
+	  lcm-matrix
+	  (let [offset-range-rows (range downscale-factor-rows)
+		offset-range-cols (range downscale-factor-cols)]
+	    (make-matrix new-rows new-cols 
+			 (fn [[i j]] (let [i-base (* i downscale-factor-rows)
+					   j-base (* j downscale-factor-cols)]
+				       (aggregator-fn (for [i-offset offset-range-rows j-offset offset-range-cols]
+							(get-in lcm-matrix [(+ i-base i-offset) (+ j-base j-offset)]))))))))))))
 
 (defn in-bounds?
   "Returns true if the point is within the map bounds defined by

@@ -23,7 +23,7 @@
 
 (ns clj-span.worldgen
   (:use [clj-misc.matrix-ops :only (make-matrix)]
-	[clj-misc.utils      :only (constraints-1.0)]
+	[clj-misc.utils      :only (constraints-1.0 p)]
 	[clj-misc.randvars   :only (cont-type disc-type)]
 	[clojure.contrib.duck-streams :only (spit file-str with-in-reader read-lines)]))
 
@@ -36,12 +36,14 @@
   (binding [*print-dup* true]
     (spit (file-str filename) layer)))
 
+;; Deprecated - reimplement with clj-misc.randvars/make-randvar
 (defn make-random-layer
   [rows cols type]
   (constraints-1.0 {:pre [(#{:discrete :continuous} type)]})
   (let [meta (if (= type :discrete) disc-type cont-type)]
-    (make-matrix rows cols (fn [_] (with-meta {(rationalize (rand 100.0)) 1} meta)))))
+    (make-matrix rows cols (fn [_] (with-meta {(rationalize (rand-int 100)) 1} meta)))))
 
+;; Deprecated - reimplement with clj-misc.randvars/make-randvar
 (defn make-random-layer-map
   [rows cols name-to-type-map]
   (constraints-1.0 {:pre [(every? #(or (fn? %) (#{:discrete :continuous :hydrosheds} %)) (vals name-to-type-map))]})
@@ -56,7 +58,7 @@
 								     disc-type
 								     cont-type)]
 							  (fn [_] (with-meta
-								    {(rationalize (rand 100.0)) 1}
+								    {(rationalize (rand-int 100)) 1}
 								    meta)))))])))
 
 (defn make-layer-from-ascii-grid
@@ -64,5 +66,5 @@
   (let [lines (read-lines filename)
 	rows  (Integer/parseInt (second (re-find #"^NROWS\s+(\d+)" (first  lines))))
 	cols  (Integer/parseInt (second (re-find #"^NCOLS\s+(\d+)" (second lines))))
-	data  (drop-while #(re-find #"^[^\d]" %) lines)]
+	data  (drop-while (p re-find #"^[^\d]") lines)]
     (println "Stub...process the data...")))

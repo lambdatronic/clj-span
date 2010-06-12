@@ -131,7 +131,7 @@
   [flow-model {:keys [source-id route possible-weight use-effects]}]
   (let [route-ids (rseq (unbitpack-route source-id route))]
     (zipmap route-ids
-	    (map #(undecay flow-model %1 %2)
+	    (map (p undecay flow-model)
 		 (if (empty? use-effects)
 		   (repeat possible-weight)
 ;;		   (reductions
@@ -150,7 +150,7 @@
     (rerun-possible-route flow-model carrier)
     (let [route-ids (rseq (unbitpack-route source-id route))]
       (zipmap route-ids
-	      (map #(undecay flow-model %1 %2)
+	      (map (p undecay flow-model)
 ;;		   (reductions
 ;;		    #(reduce _+_ %1 (remove nil? ((juxt sink-effects use-effects) %2)))
 ;;		    actual-weight

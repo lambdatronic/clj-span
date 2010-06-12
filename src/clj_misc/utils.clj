@@ -48,6 +48,49 @@
   (let [name# (with-meta name {:private true})]
     `(defmulti ~name# ~@args)))
 
+(defn dissoc-seq
+  [idx s]
+  (constraints-1.0 {:pre [(>= idx 0) (< idx (count s))]})
+  (let [split-seq (split-at idx s)]
+    (concat (first split-seq) (rest (second split-seq)))))
+
+(defn dissoc-vec
+  [idx v]
+  (vec (dissoc-seq idx v)))
+
+(defn select-n-distinct
+  [n coll]
+  (if (>= n (count coll))
+    (vec coll)
+    (first
+     (nth (iterate (fn [[picks opts]]
+		     (let [idx (rand-int (count opts))]
+		       [(conj picks (opts idx))
+			(dissoc-vec idx opts)]))
+		   [[] (vec coll)])
+	  n))))
+
+(defn select-n-summands
+  "Returns a vector of n numbers which add up to total.  If total is a
+   double, the summands will be doubles.  The same goes for integers."
+  [n total]
+  (if (< n 2)
+    (list total)
+    (let [rand-fn  (if (integer? total) rand-int rand)
+	  summands (nth (iterate #(conj % (rand-fn (reduce - total %)))
+				 [(rand-fn total)])
+			(- n 2))]
+      (conj summands (reduce - total summands)))))
+
+(defn my-partition-all
+  [partition-size coll]
+  (loop [remaining coll
+	 result    []]
+    (if (empty? remaining)
+      (seq result)
+      (recur (drop partition-size remaining)
+	     (conj result (take partition-size remaining))))))
+
 (defn add-anyway
   "Sums the non-nil argument values."
   [x y]
@@ -111,7 +154,7 @@
 (defn vectorize
   "Creates a vect of vects from a 2D Java array."
   [java-array]
-  (into [] (map #(into [] %) java-array)))
+  (into [] (map (p into []) java-array)))
 
 (defn arrayify
   "Creates a 2D Java array (of Objects) from a vect of vects."
@@ -139,7 +182,7 @@
   "Expands a vector of the form [:foo 2 :bar 1 :baz 3] into
    [:foo :foo :bar :baz :baz :baz]."
   [avec]
-  (assert (even? (count avec)))
+  (constraints-1.0 {:pre [(even? (count avec))]})
   (loop [orig-vec avec
 	 expanded-vec []]
     (if (empty? orig-vec)
@@ -150,23 +193,22 @@
 (defn contains-item?
   "Returns true if sequence contains item.  Otherwise nil."
   [sequence item]
-  (some #(= % item) sequence))
+  (some (p = item) sequence))
 
 (defn breadth-first-search
   "The classic breadth-first-search.  Bread and butter of computer
    science.  Implemented using tail recursion, of course! ;)"
-  [open-list closed-list successors goal?]
-  (loop [open-list   open-list
-	 closed-list closed-list]
+  [open-list closed-set successors goal?]
+  (loop [open-list  open-list
+	 closed-set closed-set]
     (when-first [this-node open-list]
-	(if (contains-item? closed-list this-node)
-	  (recur (rest open-list) closed-list)
+	(if (contains? closed-set this-node)
+	  (recur (rest open-list) closed-set)
 	  (if (goal? this-node)
 	    this-node
 	    (recur (concat (rest open-list)
-			   (filter #(not (contains-item? closed-list %))
-				   (successors this-node)))
-		   (cons this-node closed-list)))))))
+			   (filter (complement closed-set) (successors this-node)))
+		   (conj closed-set this-node)))))))
 
 (defn depth-first-tree-search
   "The classic depth-first-tree-search.  Bread and butter of computer
@@ -188,12 +230,12 @@
 (defn manhattan-distance
   "Returns the manhattan distance between two n-dimensional points."
   [pointA pointB]
-  (assert (and pointA pointB (== (count pointA) (count pointB))))
+  (constraints-1.0 {:pre [pointA pointB (== (count pointA) (count pointB))]})
   (reduce + (map (fn [a b] (Math/abs (- a b))) pointA pointB)))
 
 (defn square-distance
   [pointA pointB]
-  (assert (and pointA pointB (== (count pointA) (count pointB))))
+  (constraints-1.0 {:pre [pointA pointB (== (count pointA) (count pointB))]})
   (reduce + (map (fn [a b] (Math/pow (- a b) 2)) pointA pointB)))
 
 (defn euclidean-distance
@@ -209,14 +251,14 @@
   ([vals]
      (seq2map
       (distinct vals)
-      (fn [val] [val (count (filter #(= % val) vals))])))
+      (fn [val] [val (count (filter (p = val) vals))])))
   ([vals n]
      (let [d-vals       (distinct vals)
 	   num-distinct (count d-vals)]
        (assoc
 	   (seq2map
 	    (take n d-vals)
-	    (fn [val] [val (count (filter #(= % val) vals))]))
+	    (fn [val] [val (count (filter (p = val) vals))]))
 	 "..." (- d-vals n)))))
 
 (defn memoize-by-first-arg

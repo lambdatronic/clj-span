@@ -27,7 +27,7 @@
 (ns clj-span.commandline
   (:gen-class)
   (:use [clj-span.core                :only (run-span)]
-	[clj-misc.utils               :only (def- defmulti-)]
+	[clj-misc.utils               :only (def- defmulti- &)]
 	[clj-span.worldgen            :only (read-layer-from-file)]
 	[clojure.set :as set          :only (difference)]
 	[clojure.contrib.duck-streams :only (file-str)]))
@@ -61,20 +61,20 @@
     (println (str "\nError: The parameter values that you entered are incorrect.\n\t" error-message "\n\n" usage-message))))
 
 (def- param-tests
-  [["-source-layer"       #(.canRead (file-str %))    " is not readable."                  ]
-   ["-sink-layer"         #(.canRead (file-str %))    " is not readable."   	           ]
-   ["-use-layer"          #(.canRead (file-str %))    " is not readable."   	           ]
-   ["-flow-layers"        #(.canRead (file-str %))    " is not readable."   	           ]
-   ["-source-threshold"   #(float?  (read-string %))  " is not a double."                  ]
-   ["-sink-threshold"     #(float?  (read-string %))  " is not a double."                  ]
-   ["-use-threshold"      #(float?  (read-string %))  " is not a double."                  ]
-   ["-trans-threshold"    #(float?  (read-string %))  " is not a double."                  ]
-   ["-rv-max-states"      #(integer?(read-string %))  " is not an integer."                ]
-   ["-downscaling-factor" #(number? (read-string %))  " is not a number."                  ]
-   ["-source-type"        #{"finite" "infinite"}      " must be one of finite or infinite."]
-   ["-sink-type"          #{"finite" "infinite"}      " must be one of finite or infinite."]
-   ["-use-type"           #{"finite" "infinite"}      " must be one of finite or infinite."]
-   ["-benefit-type"       #{"rival" "non-rival"}      " must be one of rival or non-rival."]
+  [["-source-layer"       #(.canRead (file-str %))  " is not readable."  		 ]
+   ["-sink-layer"         #(.canRead (file-str %))  " is not readable."  		 ]
+   ["-use-layer"          #(.canRead (file-str %))  " is not readable."  		 ]
+   ["-flow-layers"        #(.canRead (file-str %))  " is not readable."  		 ]
+   ["-source-threshold"   (& float?   read-string)  " is not a double."  		 ]
+   ["-sink-threshold"     (& float?   read-string)  " is not a double."  		 ]
+   ["-use-threshold"      (& float?   read-string)  " is not a double."  		 ]
+   ["-trans-threshold"    (& float?   read-string)  " is not a double."  		 ]
+   ["-rv-max-states"      (& integer? read-string)  " is not an integer."		 ]
+   ["-downscaling-factor" (& number?  read-string)  " is not a number."  		 ]               
+   ["-source-type"        #{"finite" "infinite"}    " must be one of finite or infinite."]
+   ["-sink-type"          #{"finite" "infinite"}    " must be one of finite or infinite."]
+   ["-use-type"           #{"finite" "infinite"}    " must be one of finite or infinite."]
+   ["-benefit-type"       #{"rival" "non-rival"}    " must be one of rival or non-rival."]
    ["-flow-model"         #{"line-of-sight" "proximity" "carbon" "sediment"}
     " must be one of line-of-sight, proximity, carbon, or sediment."]])
 

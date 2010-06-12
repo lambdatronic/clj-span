@@ -88,10 +88,10 @@
 	 (assoc "Use"    use-layer))
      selected-feature)))
 
-(defmulti provide-results (fn [result-type results-menu source-layer sink-layer use-layer flow-layers] result-type))
+(defmulti provide-results (fn [result-type source-layer sink-layer use-layer flow-layers results-menu] result-type))
 
 (defmethod provide-results :cli-menu
-  [_ results-menu source-layer sink-layer use-layer flow-layers]
+  [_ source-layer sink-layer use-layer flow-layers results-menu]
   (let [rows        (get-rows source-layer)
 	cols        (get-cols source-layer)
 	menu-extras (array-map
@@ -113,5 +113,5 @@
 	(recur (menu (select-menu-option prompts)))))))
 
 (defmethod provide-results :closure-map
-  [_ results-menu _ _ _ _]
+  [_ _ _ _ _ results-menu]
   results-menu)

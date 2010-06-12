@@ -67,9 +67,9 @@
 	   (when (not= source-point use-point) ;; no in-situ use
 	     (let [sight-line     (rest (find-line-between use-point source-point))
 		   use-elev       (get-in elev-layer use-point)
-		   elevs          (map #(get-in elev-layer %) sight-line)
+		   elevs          (map (p get-in elev-layer) sight-line)
 		   rises          (map #(_-_ % use-elev) elevs)
-		   runs           (map #(euclidean-distance use-point %) sight-line)
+		   runs           (map (p euclidean-distance use-point) sight-line)
 		   slopes         (butlast (map _d rises runs))
 		   sight-slopes   (cons _0_
 					(reduce #(conj %1 (rv-max (peek %1) %2))
@@ -102,6 +102,7 @@
 ;; their utility contributions in the cache-layer."
 (defmethod distribute-flow "LineOfSight"
   [flow-model source-layer sink-layer use-layer {elev-layer "Altitude"}]
+  (println "Running LineOfSight flow model.")
   (let [cache-layer   (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly (atom ())))
 	source-points (filter-matrix-for-coords (p not= _0_) source-layer)
 	use-points    (filter-matrix-for-coords (p not= _0_) use-layer)]

@@ -105,13 +105,14 @@
 
 (defmethod distribute-flow "Proximity"
   [flow-model source-layer sink-layer use-layer _]
+  (println "Running Proximity flow model.")
   (let [rows          (get-rows source-layer)
 	cols          (get-cols source-layer)
 	cache-layer   (make-matrix rows cols (constantly (atom {})))
-	source-points (filter-matrix-for-coords #(not= _0_ %) source-layer)]
+	source-points (filter-matrix-for-coords (p not= _0_) source-layer)]
     (println "Source points:" (count source-points))
     (dorun (pmap
 	    (p distribute-gaussian! flow-model cache-layer source-layer sink-layer use-layer rows cols)
 	    source-points
-	    (map #(get-in source-layer %) source-points)))
+	    (map (p get-in source-layer) source-points)))
     (map-matrix (& vals deref) cache-layer)))
