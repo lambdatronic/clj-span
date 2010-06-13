@@ -8,7 +8,7 @@ Using clj-span, you can run a collection of parameterizable SPAN flow
 simulation models (line-of-sight, proximity, carbon, and sediment
 currently) and visualize their results as map outputs.
 
-Copyright Gary W. Johnson, Jr. (gwjohnso@uvm.edu) 2009,2010
+Copyright Gary W. Johnson (gwjohnso@uvm.edu) 2009,2010
 
 
 * Usage
