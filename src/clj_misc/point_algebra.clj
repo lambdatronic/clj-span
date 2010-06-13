@@ -40,8 +40,8 @@
   [[x y & more :as point] bounds]
   (assert (and bounds (== (count point) (count bounds))))
   (not (some false?
-	     (map (fn [x [min-x max-x]] (and (>= x min-x) (< x max-x)))
-		  point bounds))))
+             (map (fn [x [min-x max-x]] (and (>= x min-x) (< x max-x)))
+                  point bounds))))
 
 (defn make-bounded-neighbor-generator
   "Returns a function that, given a point, generates a sequence of all
@@ -50,9 +50,9 @@
   [bounds]
   (fn [[x y]]
     (filter (fn [point] (in-bounds? point bounds))
-	    (for [row-mod [dec identity inc] col-mod [dec identity inc]
-		  :when (not (and (= row-mod identity) (= col-mod identity)))]
-	      [(row-mod x) (col-mod y)]))))
+            (for [row-mod [dec identity inc] col-mod [dec identity inc]
+                  :when (not (and (= row-mod identity) (= col-mod identity)))]
+              [(row-mod x) (col-mod y)]))))
 
 (defn nearest-point-where
   "Returns the nearest point to origin-point which satisfies the test
@@ -68,12 +68,12 @@
   "Return a list of [x y] points."
   [rows cols num-points]
   (loop [r rows
-	 c cols
-	 n num-points
-	 points nil]
+         c cols
+         n num-points
+         points nil]
     (if (== n 0)
       points
       (let [point [(rand-int r) (rand-int c)]]
-	(if (contains-item? points point)
-	  (recur r c n points)
-	  (recur r c (dec n) (cons point points)))))))
+        (if (contains-item? points point)
+          (recur r c n points)
+          (recur r c (dec n) (cons point points)))))))

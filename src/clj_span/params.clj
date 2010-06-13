@@ -30,10 +30,10 @@
   [{:keys [rv-max-states trans-threshold source-type sink-type use-type benefit-type]}]
   (reset-rv-max-states! rv-max-states)
   (doseq [[sym value] {'*trans-threshold* trans-threshold,
-		       '*source-type*     source-type,
-		       '*sink-type*       sink-type,
-		       '*use-type*        use-type,
-		       '*benefit-type*    benefit-type}]
+                       '*source-type*     source-type,
+                       '*sink-type*       sink-type,
+                       '*use-type*        use-type,
+                       '*benefit-type*    benefit-type}]
     (intern (find-ns 'clj-span.params) sym value)))
 
 (defn print-global-params

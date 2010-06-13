@@ -42,7 +42,7 @@
 
 (defmacro check-mem [form]
   `(let [mem-before# (memory-usage)
-	 result#     ~form
-	 mem-after#  (memory-usage)]
+         result#     ~form
+         mem-after#  (memory-usage)]
      (dump-memory-usage (map - mem-after# mem-before#))
      result#))

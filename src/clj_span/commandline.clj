@@ -27,10 +27,10 @@
 (ns clj-span.commandline
   (:gen-class)
   (:use [clj-span.core                :only (run-span)]
-	[clj-misc.utils               :only (def- defmulti- &)]
-	[clj-span.worldgen            :only (read-layer-from-file)]
-	[clojure.set :as set          :only (difference)]
-	[clojure.contrib.duck-streams :only (file-str)]))
+        [clj-misc.utils               :only (def- defmulti- &)]
+        [clj-span.worldgen            :only (read-layer-from-file)]
+        [clojure.set :as set          :only (difference)]
+        [clojure.contrib.duck-streams :only (file-str)]))
 
 (def- usage-message
   (str
@@ -54,23 +54,23 @@
 (defmulti- print-usage (fn [error-type extra-info] error-type))
 
 (defmethod print-usage :args-not-even [_ _]
-  (println (str "\nError: The number of input arguments must be even.\n\n" usage-message)))
+           (println (str "\nError: The number of input arguments must be even.\n\n" usage-message)))
 
 (defmethod print-usage :param-errors [_ extra-info]
-  (let [error-message (apply str (interpose "\n\t" extra-info))]
-    (println (str "\nError: The parameter values that you entered are incorrect.\n\t" error-message "\n\n" usage-message))))
+           (let [error-message (apply str (interpose "\n\t" extra-info))]
+             (println (str "\nError: The parameter values that you entered are incorrect.\n\t" error-message "\n\n" usage-message))))
 
 (def- param-tests
-  [["-source-layer"       #(.canRead (file-str %))  " is not readable."  		 ]
-   ["-sink-layer"         #(.canRead (file-str %))  " is not readable."  		 ]
-   ["-use-layer"          #(.canRead (file-str %))  " is not readable."  		 ]
-   ["-flow-layers"        #(.canRead (file-str %))  " is not readable."  		 ]
-   ["-source-threshold"   (& float?   read-string)  " is not a double."  		 ]
-   ["-sink-threshold"     (& float?   read-string)  " is not a double."  		 ]
-   ["-use-threshold"      (& float?   read-string)  " is not a double."  		 ]
-   ["-trans-threshold"    (& float?   read-string)  " is not a double."  		 ]
-   ["-rv-max-states"      (& integer? read-string)  " is not an integer."		 ]
-   ["-downscaling-factor" (& number?  read-string)  " is not a number."  		 ]               
+  [["-source-layer"       #(.canRead (file-str %))  " is not readable."          ]
+   ["-sink-layer"         #(.canRead (file-str %))  " is not readable."          ]
+   ["-use-layer"          #(.canRead (file-str %))  " is not readable."          ]
+   ["-flow-layers"        #(.canRead (file-str %))  " is not readable."          ]
+   ["-source-threshold"   (& float?   read-string)  " is not a double."          ]
+   ["-sink-threshold"     (& float?   read-string)  " is not a double."          ]
+   ["-use-threshold"      (& float?   read-string)  " is not a double."          ]
+   ["-trans-threshold"    (& float?   read-string)  " is not a double."          ]
+   ["-rv-max-states"      (& integer? read-string)  " is not an integer."        ]
+   ["-downscaling-factor" (& number?  read-string)  " is not a number."          ]               
    ["-source-type"        #{"finite" "infinite"}    " must be one of finite or infinite."]
    ["-sink-type"          #{"finite" "infinite"}    " must be one of finite or infinite."]
    ["-use-type"           #{"finite" "infinite"}    " must be one of finite or infinite."]
@@ -81,15 +81,15 @@
 (defn- valid-params?
   [params]
   (let [errors (remove nil?
-		       (map (fn [[key test? error-msg]]
-			      (if-let [val (params key)]
-				(if-not (test? val) (str val error-msg))
-				(str "No value provided for " key)))
-			    param-tests))
-	input-keys   (set (keys params))
-	valid-keys   (set (map first param-tests))
-	invalid-keys (set/difference input-keys valid-keys)
-	errors (concat errors (map #(str % " is not a valid parameter name.") invalid-keys))]
+                       (map (fn [[key test? error-msg]]
+                              (if-let [val (params key)]
+                                (if-not (test? val) (str val error-msg))
+                                (str "No value provided for " key)))
+                            param-tests))
+        input-keys   (set (keys params))
+        valid-keys   (set (map first param-tests))
+        invalid-keys (set/difference input-keys valid-keys)
+        errors (concat errors (map #(str % " is not a valid parameter name.") invalid-keys))]
     (if (empty? errors)
       true
       (print-usage :param-errors errors))))
@@ -114,7 +114,7 @@
       (assoc :use-type           (keyword (input-params "-use-type")))
       (assoc :benefit-type       (keyword (input-params "-benefit-type")))
       (assoc :flow-model         ({"line-of-sight" "LineOfSight", "proximity" "Proximity", "carbon" "Carbon", "sediment" "Sediment"}
-				  (input-params "-flow-model")))))
+                                  (input-params "-flow-model")))))
 
 (defn -main
   "The compiled Java class' main method.  Pass it all the SPAN inputs
@@ -126,10 +126,10 @@
     (print-usage :args-not-even nil)
     (let [input-params (into {} (map vec (partition 2 args)))]
       (when (valid-params? input-params)
-	(println "\nAll inputs are valid.\n")
-	(doseq [[key _ _] param-tests] (println (find input-params key)))
-	(newline)
-	(run-span (assoc (strings-to-better-types input-params) :result-type :cli-menu))
-	(shutdown-agents)
-	(flush)
-	(System/exit 0)))))
+        (println "\nAll inputs are valid.\n")
+        (doseq [[key _ _] param-tests] (println (find input-params key)))
+        (newline)
+        (run-span (assoc (strings-to-better-types input-params) :result-type :cli-menu))
+        (shutdown-agents)
+        (flush)
+        (System/exit 0)))))

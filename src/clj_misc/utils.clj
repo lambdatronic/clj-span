@@ -31,12 +31,12 @@
   "Print out the result of System.getProperties()"
   []
   (doseq [[key val] (. System getProperties)]
-      (printf "%s = %s\n" key val)))
+    (printf "%s = %s\n" key val)))
 
 (defmacro constraints-1.0
   [constraint-map]
   (cons 'do (for [pre-constraint (:pre constraint-map)]
-	      `(assert ~pre-constraint))))
+              `(assert ~pre-constraint))))
 
 (defmacro def-
   [name & args]
@@ -64,11 +64,11 @@
     (vec coll)
     (first
      (nth (iterate (fn [[picks opts]]
-		     (let [idx (rand-int (count opts))]
-		       [(conj picks (opts idx))
-			(dissoc-vec idx opts)]))
-		   [[] (vec coll)])
-	  n))))
+                     (let [idx (rand-int (count opts))]
+                       [(conj picks (opts idx))
+                        (dissoc-vec idx opts)]))
+                   [[] (vec coll)])
+          n))))
 
 (defn select-n-summands
   "Returns a vector of n numbers which add up to total.  If total is a
@@ -77,26 +77,26 @@
   (if (< n 2)
     (list total)
     (let [rand-fn  (if (integer? total) rand-int rand)
-	  summands (nth (iterate #(conj % (rand-fn (reduce - total %)))
-				 [(rand-fn total)])
-			(- n 2))]
+          summands (nth (iterate #(conj % (rand-fn (reduce - total %)))
+                                 [(rand-fn total)])
+                        (- n 2))]
       (conj summands (reduce - total summands)))))
 
 (defn my-partition-all
   [partition-size coll]
   (loop [remaining coll
-	 result    []]
+         result    []]
     (if (empty? remaining)
       (seq result)
       (recur (drop partition-size remaining)
-	     (conj result (take partition-size remaining))))))
+             (conj result (take partition-size remaining))))))
 
 (defn add-anyway
   "Sums the non-nil argument values."
   [x y]
   (cond (nil? x) y
-	(nil? y) x
-	:otherwise (+ x y)))
+        (nil? y) x
+        :otherwise (+ x y)))
 
 (defn seq2map
   "Constructs a map from a sequence by applying keyvalfn to each
@@ -113,10 +113,10 @@
    val using (mergefn curval val)."
   [aseq keyvalfn mergefn]
   (reduce (fn [amap x]
-	    (let [[key val] (keyvalfn x)]
-	      (update-in amap [key] mergefn val)))
-	  {}
-	  aseq))
+            (let [[key val] (keyvalfn x)]
+              (update-in amap [key] mergefn val)))
+          {}
+          aseq))
 
 (defn mapmap
   "Creates a new map by applying keyfn to every key of in-map and
@@ -129,12 +129,12 @@
    valfn to every corresponding val."
   [keyfn valfn in-map]
   (loop [keyvals (seq in-map)
-	 out-map (new HashMap)]
+         out-map (new HashMap)]
     (if (empty? keyvals)
       out-map
       (let [[key val] (first keyvals)]
-	(recur (rest keyvals)
-	       (doto out-map (.put (keyfn key) (valfn val))))))))
+        (recur (rest keyvals)
+               (doto out-map (.put (keyfn key) (valfn val))))))))
 
 (defn remove-nil-val-entries
   [amap]
@@ -184,11 +184,11 @@
   [avec]
   (constraints-1.0 {:pre [(even? (count avec))]})
   (loop [orig-vec avec
-	 expanded-vec []]
+         expanded-vec []]
     (if (empty? orig-vec)
       expanded-vec
       (recur (drop 2 orig-vec)
-	     (multi-conj (first orig-vec) (second orig-vec) expanded-vec)))))
+             (multi-conj (first orig-vec) (second orig-vec) expanded-vec)))))
 
 (defn contains-item?
   "Returns true if sequence contains item.  Otherwise nil."
@@ -200,15 +200,15 @@
    science.  Implemented using tail recursion, of course! ;)"
   [open-list closed-set successors goal?]
   (loop [open-list  open-list
-	 closed-set closed-set]
+         closed-set closed-set]
     (when-first [this-node open-list]
-	(if (contains? closed-set this-node)
-	  (recur (rest open-list) closed-set)
-	  (if (goal? this-node)
-	    this-node
-	    (recur (concat (rest open-list)
-			   (filter (complement closed-set) (successors this-node)))
-		   (conj closed-set this-node)))))))
+                (if (contains? closed-set this-node)
+                  (recur (rest open-list) closed-set)
+                  (if (goal? this-node)
+                    this-node
+                    (recur (concat (rest open-list)
+                                   (filter (complement closed-set) (successors this-node)))
+                           (conj closed-set this-node)))))))
 
 (defn depth-first-tree-search
   "The classic depth-first-tree-search.  Bread and butter of computer
@@ -216,9 +216,9 @@
   [open-list successors goal?]
   (loop [open-list open-list]
     (when-first [this-node open-list]
-	(if (goal? this-node)
-	  this-node
-	  (recur (concat (successors this-node) (rest open-list)))))))
+                (if (goal? this-node)
+                  this-node
+                  (recur (concat (successors this-node) (rest open-list)))))))
 
 (defn between [val low high] (and (>= val low) (< val high)))
 
@@ -254,26 +254,26 @@
       (fn [val] [val (count (filter (p = val) vals))])))
   ([vals n]
      (let [d-vals       (distinct vals)
-	   num-distinct (count d-vals)]
+           num-distinct (count d-vals)]
        (assoc
-	   (seq2map
-	    (take n d-vals)
-	    (fn [val] [val (count (filter (p = val) vals))]))
-	 "..." (- d-vals n)))))
+           (seq2map
+            (take n d-vals)
+            (fn [val] [val (count (filter (p = val) vals))]))
+         "..." (- d-vals n)))))
 
 (defn memoize-by-first-arg
   [function]
   (let [cache (atom {})]
     (fn [& args]
       (or (@cache (first args))
-	  (let [result (apply function args)]
-	    (swap! cache assoc (first args) result)
-	    result)))))
+          (let [result (apply function args)]
+            (swap! cache assoc (first args) result)
+            result)))))
 
 (defn distribute-load-over-processors
   [action-fn arg-seq]
   (let [num-processors (.availableProcessors (Runtime/getRuntime))
-	agents (map agent (replicate (+ 2 num-processors) ()))]
+        agents (map agent (replicate (+ 2 num-processors) ()))]
     (println "Sending Tasks to" (count agents) "Agents...")
     (dorun (map #(send %1 action-fn %2) (cycle agents) arg-seq))
     (println "Waiting for Agents to Finish...")

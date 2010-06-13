@@ -23,7 +23,7 @@
 
 (ns clj-misc.matrix-ops
   (:use [clojure.set    :only (map-invert)]
-	[clj-misc.utils :only (constraints-1.0 def- p &)]))
+        [clj-misc.utils :only (constraints-1.0 def- p &)]))
 
 (defn get-rows [matrix] (count matrix))
 (defn get-cols [matrix] (count (first matrix)))
@@ -39,28 +39,28 @@
    by calling val-fn on the [i j] coordinate pair."
   [rows cols val-fn]
   (vec (pmap
-	(fn [i] (vec (map
-		      (fn [j] (val-fn [i j]))
-		      (range cols))))
-	(range rows))))
+        (fn [i] (vec (map
+                      (fn [j] (val-fn [i j]))
+                      (range cols))))
+        (range rows))))
 
 (defn filter-matrix-for-coords
   [pred? matrix]
   (filter (fn [id] (pred? (get-in matrix id)))
-	  (for [i (range (get-rows matrix)) j (range (get-cols matrix))] [i j])))
+          (for [i (range (get-rows matrix)) j (range (get-cols matrix))] [i j])))
 
 (defn subtract-ids
   [[a b] [c d]]
   [(- a c) (- b d)])
 
-(def- delta-codes {[ 0  1] (byte -1)			  ; e
-		   [-1  1] (byte -2)			  ; se
-		   [-1  0] (byte -4)			  ; s
-		   [-1 -1] (byte -8)			  ; sw
-		   [ 0 -1] (byte -16)			  ; w
-		   [ 1 -1] (byte -32)			  ; nw
-		   [ 1  0] (byte -64)			  ; n
-		   [ 1  1] (byte -128)})		  ; ne
+(def- delta-codes {[ 0  1] (byte -1)    ; e
+                   [-1  1] (byte -2)    ; se
+                   [-1  0] (byte -4)    ; s
+                   [-1 -1] (byte -8)    ; sw
+                   [ 0 -1] (byte -16)   ; w
+                   [ 1 -1] (byte -32)   ; nw
+                   [ 1  0] (byte -64)   ; n
+                   [ 1  1] (byte -128)}) ; ne
 (def- undelta-codes (map-invert delta-codes))
 
 (defn bitpack-route
@@ -70,8 +70,8 @@
 (defn unbitpack-route
   [source-id bytecodes]
   (reduce (fn [ids delta] (conj ids (vec (map + delta (peek ids)))))
-	  [source-id]
-	  (map undelta-codes bytecodes)))
+          [source-id]
+          (map undelta-codes bytecodes)))
 
 (defn seq2matrix
   "Creates a rows x cols vector of vectors whose states are
@@ -89,7 +89,7 @@
 (defn matrix2coord-map
   [matrix]
   (zipmap (for [i (get-rows matrix) j (get-cols matrix)] [i j])
-	  (matrix2seq matrix)))
+          (matrix2seq matrix)))
 
 (defn coord-map2matrix
   [rows cols nil-val coord-map]
@@ -99,7 +99,7 @@
   [rows cols coord-map]
   (let [matrix (make-array (class (val (first coord-map))) rows cols)]
     (doseq [[i j :as key] (keys coord-map)]
-	(aset matrix i j (coord-map key)))
+      (aset matrix i j (coord-map key)))
     matrix))
 
 (defn grids-align?
@@ -118,37 +118,37 @@
      (constraints-1.0 {:pre [(apply grids-align? matrix matrices)]})
      (let [matrices (cons matrix matrices)]
        (make-matrix (get-rows matrix) (get-cols matrix)
-		    (fn [coords] (apply f (map #(get-in % coords) matrices)))))))
+                    (fn [coords] (apply f (map #(get-in % coords) matrices)))))))
 
 (defn resample-matrix
   [new-rows new-cols aggregator-fn matrix]
   (constraints-1.0 {:pre [(every? #(and (pos? %) (integer? %)) [new-rows new-cols])]})
   (let [orig-rows             (get-rows matrix)
-	orig-cols             (get-cols matrix)]
+        orig-cols             (get-cols matrix)]
     (if (and (== orig-rows new-rows) (== orig-cols new-cols))
       matrix
       (let [lcm-rows              (first (filter #(zero? (mod % new-rows)) (iterate (p + orig-rows) orig-rows)))
-	    lcm-cols              (first (filter #(zero? (mod % new-cols)) (iterate (p + orig-cols) orig-cols)))
-	    upscale-factor-rows   (/ lcm-rows orig-rows)
-	    upscale-factor-cols   (/ lcm-cols orig-cols)
-	    lcm-matrix            (if (and (== upscale-factor-rows 1)
-					   (== upscale-factor-cols 1))
-				    matrix
-				    (make-matrix lcm-rows lcm-cols
-						 (fn [[i j]] (get-in matrix [(int (/ i upscale-factor-rows))
-									     (int (/ j upscale-factor-cols))]))))
-	    downscale-factor-rows (/ lcm-rows new-rows)
-	    downscale-factor-cols (/ lcm-cols new-cols)]
-	(if (and (== downscale-factor-rows 1)
-		 (== downscale-factor-cols 1))
-	  lcm-matrix
-	  (let [offset-range-rows (range downscale-factor-rows)
-		offset-range-cols (range downscale-factor-cols)]
-	    (make-matrix new-rows new-cols 
-			 (fn [[i j]] (let [i-base (* i downscale-factor-rows)
-					   j-base (* j downscale-factor-cols)]
-				       (aggregator-fn (for [i-offset offset-range-rows j-offset offset-range-cols]
-							(get-in lcm-matrix [(+ i-base i-offset) (+ j-base j-offset)]))))))))))))
+            lcm-cols              (first (filter #(zero? (mod % new-cols)) (iterate (p + orig-cols) orig-cols)))
+            upscale-factor-rows   (/ lcm-rows orig-rows)
+            upscale-factor-cols   (/ lcm-cols orig-cols)
+            lcm-matrix            (if (and (== upscale-factor-rows 1)
+                                           (== upscale-factor-cols 1))
+                                    matrix
+                                    (make-matrix lcm-rows lcm-cols
+                                                 (fn [[i j]] (get-in matrix [(int (/ i upscale-factor-rows))
+                                                                             (int (/ j upscale-factor-cols))]))))
+            downscale-factor-rows (/ lcm-rows new-rows)
+            downscale-factor-cols (/ lcm-cols new-cols)]
+        (if (and (== downscale-factor-rows 1)
+                 (== downscale-factor-cols 1))
+          lcm-matrix
+          (let [offset-range-rows (range downscale-factor-rows)
+                offset-range-cols (range downscale-factor-cols)]
+            (make-matrix new-rows new-cols 
+                         (fn [[i j]] (let [i-base (* i downscale-factor-rows)
+                                           j-base (* j downscale-factor-cols)]
+                                       (aggregator-fn (for [i-offset offset-range-rows j-offset offset-range-cols]
+                                                        (get-in lcm-matrix [(+ i-base i-offset) (+ j-base j-offset)]))))))))))))
 
 (defn in-bounds?
   "Returns true if the point is within the map bounds defined by
@@ -160,15 +160,15 @@
   "Return a sequence of neighboring points within the map bounds."
   [[i j] rows cols]
   (filter (p in-bounds? rows cols)
-	  (map #(vector (+ i %1) (+ j %2))
-	       [-1 -1 -1  0 0  1 1 1]
-	       [-1  0  1 -1 1 -1 0 1])))
+          (map #(vector (+ i %1) (+ j %2))
+               [-1 -1 -1  0 0  1 1 1]
+               [-1  0  1 -1 1 -1 0 1])))
 
 (defn print-matrix
   ([matrix]
      (dotimes [i (get-rows matrix)]
        (dotimes [j (get-cols matrix)]
-	 (print (get-in matrix [i j]) ""))
+         (print (get-in matrix [i j]) ""))
        (newline)))
   ([matrix & matrices]
      (print-matrix matrix)
@@ -217,42 +217,42 @@
    only this one point."
   [[pi pj] [bi bj]]
   (let [m (if (not= pj bj) (/ (- bi pi) (- bj pj)))
-	b (if m (- pi (* m pj)))
-	f (fn [x] (+ (* m x) b))]
+        b (if m (- pi (* m pj)))
+        f (fn [x] (+ (* m x) b))]
     (cond (nil? m) (map (fn [i] [i pj])
-			(if (< pi bi)
-			  (range pi (inc bi))
-			  (range pi (dec bi) -1)))
+                        (if (< pi bi)
+                          (range pi (inc bi))
+                          (range pi (dec bi) -1)))
 
-	  (== m 0) (map (fn [j] [pi j])
-			(if (< pj bj)
-			  (range pj (inc bj))
-			  (range pj (dec bj) -1)))
+          (== m 0) (map (fn [j] [pi j])
+                        (if (< pj bj)
+                          (range pj (inc bj))
+                          (range pj (dec bj) -1)))
 
-	  :otherwise (let [get-i-range
-			   (cond (and (< pi bi) (< pj bj))
-				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j pj) 0.0 0.5)))))
-					       right-i (int (Math/round (f (+ j (if (== j bj) 0.0 0.5)))))]
-					   (range left-i (inc right-i))))
-					       
-				 (and (< pi bi) (> pj bj))
-				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j bj) 0.0 0.5)))))
-					       right-i (int (Math/round (f (+ j (if (== j pj) 0.0 0.5)))))]
-					   (range right-i (inc left-i))))
-					       
-				 (and (> pi bi) (< pj bj))
-				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j pj) 0.0 0.5)))))
-					       right-i (int (Math/round (f (+ j (if (== j bj) 0.0 0.5)))))]
-					   (range left-i  (dec right-i) -1)))
-					       
-				 (and (> pi bi) (> pj bj))
-				 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j bj) 0.0 0.5)))))
-					       right-i (int (Math/round (f (+ j (if (== j pj) 0.0 0.5)))))]
-					   (range right-i (dec left-i)  -1))))
-			   j-range (if (< pj bj)
-				     (range pj (inc bj))
-				     (range pj (dec bj) -1))]
-		       (for [j j-range i (get-i-range j)] [i j])))))
+          :otherwise (let [get-i-range
+                           (cond (and (< pi bi) (< pj bj))
+                                 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j pj) 0.0 0.5)))))
+                                               right-i (int (Math/round (f (+ j (if (== j bj) 0.0 0.5)))))]
+                                           (range left-i (inc right-i))))
+                           
+                                 (and (< pi bi) (> pj bj))
+                                 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j bj) 0.0 0.5)))))
+                                               right-i (int (Math/round (f (+ j (if (== j pj) 0.0 0.5)))))]
+                                           (range right-i (inc left-i))))
+                           
+                                 (and (> pi bi) (< pj bj))
+                                 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j pj) 0.0 0.5)))))
+                                               right-i (int (Math/round (f (+ j (if (== j bj) 0.0 0.5)))))]
+                                           (range left-i  (dec right-i) -1)))
+                           
+                                 (and (> pi bi) (> pj bj))
+                                 (fn [j] (let [left-i  (int (Math/round (f (- j (if (== j bj) 0.0 0.5)))))
+                                               right-i (int (Math/round (f (+ j (if (== j pj) 0.0 0.5)))))]
+                                           (range right-i (dec left-i)  -1))))
+                           j-range (if (< pj bj)
+                                     (range pj (inc bj))
+                                     (range pj (dec bj) -1))]
+                       (for [j j-range i (get-i-range j)] [i j])))))
 
 (defn find-bounding-box
   "Returns a new list of points which completely bounds the
@@ -261,15 +261,15 @@
   [points rows cols]
   (when (seq points)
     (let [row-coords (map first  points)
-	  col-coords (map second points)
-	  min-i (apply min row-coords)
-	  min-j (apply min col-coords)
-	  max-i (apply max row-coords)
-	  max-j (apply max col-coords)
-	  bottom (dec min-i)
-	  top    (inc max-i)
-	  left   (dec min-j)
-	  right  (inc max-j)]
+          col-coords (map second points)
+          min-i (apply min row-coords)
+          min-j (apply min col-coords)
+          max-i (apply max row-coords)
+          max-j (apply max col-coords)
+          bottom (dec min-i)
+          top    (inc max-i)
+          left   (dec min-j)
+          right  (inc max-j)]
       (concat
        (when (>= left   0)    (for [i (range min-i top) j [left]]     [i j]))
        (when (<  right  cols) (for [i (range min-i top) j [right]]    [i j]))

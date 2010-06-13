@@ -23,9 +23,9 @@
 
 (ns clj-span.worldgen
   (:use [clj-misc.matrix-ops :only (make-matrix)]
-	[clj-misc.utils      :only (constraints-1.0 p)]
-	[clj-misc.randvars   :only (cont-type disc-type)]
-	[clojure.contrib.duck-streams :only (spit file-str with-in-reader read-lines)]))
+        [clj-misc.utils      :only (constraints-1.0 p)]
+        [clj-misc.randvars   :only (cont-type disc-type)]
+        [clojure.contrib.duck-streams :only (spit file-str with-in-reader read-lines)]))
 
 (defn read-layer-from-file
   [filename]
@@ -48,23 +48,23 @@
   [rows cols name-to-type-map]
   (constraints-1.0 {:pre [(every? #(or (fn? %) (#{:discrete :continuous :hydrosheds} %)) (vals name-to-type-map))]})
   (into {}
-	(for [[name type] name-to-type-map]
-	  [name (make-matrix rows cols
-			     (cond (fn? type)           type
-				   (= type :hydrosheds) (fn [_] (with-meta
-								  {([-1 0 1 2 4 8 16 32 64 128] (rand-int 10)) 1}
-								  disc-type))
-				   :otherwise           (let [meta (if (= type :discrete)
-								     disc-type
-								     cont-type)]
-							  (fn [_] (with-meta
-								    {(rationalize (rand-int 100)) 1}
-								    meta)))))])))
+        (for [[name type] name-to-type-map]
+          [name (make-matrix rows cols
+                             (cond (fn? type)           type
+                                   (= type :hydrosheds) (fn [_] (with-meta
+                                                                  {([-1 0 1 2 4 8 16 32 64 128] (rand-int 10)) 1}
+                                                                  disc-type))
+                                   :otherwise           (let [meta (if (= type :discrete)
+                                                                     disc-type
+                                                                     cont-type)]
+                                                          (fn [_] (with-meta
+                                                                    {(rationalize (rand-int 100)) 1}
+                                                                    meta)))))])))
 
 (defn make-layer-from-ascii-grid
   [filename]
   (let [lines (read-lines filename)
-	rows  (Integer/parseInt (second (re-find #"^NROWS\s+(\d+)" (first  lines))))
-	cols  (Integer/parseInt (second (re-find #"^NCOLS\s+(\d+)" (second lines))))
-	data  (drop-while (p re-find #"^[^\d]") lines)]
+        rows  (Integer/parseInt (second (re-find #"^NROWS\s+(\d+)" (first  lines))))
+        cols  (Integer/parseInt (second (re-find #"^NCOLS\s+(\d+)" (second lines))))
+        data  (drop-while (p re-find #"^[^\d]") lines)]
     (println "Stub...process the data...")))

@@ -59,9 +59,9 @@
     :movement         (fn [current-location] (steepest-downhill (cons current-location (:neighbors current-location))))
     :decay            nil
     :weight-branching (fn [weight next-locations] (let [num-next (count next-locations)]
-						    (if (== num-next 1)
-						      weight
-						      (repeat num-next (/ weight num-next)))))
+                                                    (if (== num-next 1)
+                                                      weight
+                                                      (repeat num-next (/ weight num-next)))))
     :min-weight       0.1)
 
 (defspan :service surface-water-provision-to-farmers

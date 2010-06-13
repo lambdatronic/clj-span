@@ -109,34 +109,34 @@
   [type properties]
   (let [properties (into {} (map vec (partition 2 properties)))]
     (condp = type
-      :source
+        :source
       (let [{:keys [source-type source-rate source-limit]} properties]
-	(value-types? source-type))
+        (value-types? source-type))
 
       :sink
       (let [{:keys [sink-type sink-rate sink-limit sink-recovery-rate]} properties]
-	(value-types? sink-type))
+        (value-types? sink-type))
 
       :user
       (let [{:keys [use-type use-rate use-limit use-recovery-rate rival?]} properties]
-	(value-types? use-type))
-
+        (value-types? use-type))
+        
       :carrier
       (let [{:keys [origin weight movement decay weight-branching min-weight]} properties]
-	true)
+        true)
 
       :service
       (let [{:keys [source sink user carrier]} properties]
-	true))))
+        true))))
 
 (defmacro defspan
   "Define SPAN model components."
   [type varname & forms]
   (constraints-1.0 {:pre [(or (even? (count forms)) (string? (first forms)))]})
   (let [[doc-string properties] (if (odd? (count forms))
-				  [(first forms) (rest forms)]
-				  [nil forms])]
+                                  [(first forms) (rest forms)]
+                                  [nil forms])]
     (assert (and (#(or (nil? %) (string? %)) doc-string)
-		 (valid-properties? type properties)))
+                 (valid-properties? type properties)))
     `(def #^{:doc ~doc-string :span-role ~type} ~varname
-	  (struct-map ~(symbol (name type)) ~@properties))))
+          (struct-map ~(symbol (name type)) ~@properties))))

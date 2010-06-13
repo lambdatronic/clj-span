@@ -17,22 +17,22 @@
 
 (ns clj-span.water-model
   (:use [clj-misc.utils     :only (memoize-by-first-arg depth-first-tree-search def-)]
-	[clj-misc.randvars  :only (_<_ _d rv-scale rv-zero-below-scalar rv-mean)]
-	[clj-span.model-api :only (distribute-flow! service-carrier)]
-	[clj-span.analyzer  :only (source-loc? sink-loc? use-loc?)]
-	[clj-span.params    :only (*trans-threshold*)]))
+        [clj-misc.randvars  :only (_<_ _d rv-scale rv-zero-below-scalar rv-mean)]
+        [clj-span.model-api :only (distribute-flow! service-carrier)]
+        [clj-span.analyzer  :only (source-loc? sink-loc? use-loc?)]
+        [clj-span.params    :only (*trans-threshold*)]))
 
 (def- elev-concept "Altitude")
 
 (defn- most-downhill-neighbors
   [location location-map]
   (let [neighbors      (map location-map (:neighbors location))
-	neighbor-elevs (map #(rv-mean (get-in % [:flow-features elev-concept])) neighbors)
-	local-elev     (rv-mean (get-in location [:flow-features elev-concept]))
-	min-elev       (apply min local-elev neighbor-elevs)]
+        neighbor-elevs (map #(rv-mean (get-in % [:flow-features elev-concept])) neighbors)
+        local-elev     (rv-mean (get-in location [:flow-features elev-concept]))
+        min-elev       (apply min local-elev neighbor-elevs)]
     (remove nil?
-	    (map (fn [n elev] (if (== elev min-elev) n))
-		 neighbors neighbor-elevs))))
+            (map (fn [n elev] (if (== elev min-elev) n))
+                 neighbors neighbor-elevs))))
 (def most-downhill-neighbors (memoize-by-first-arg most-downhill-neighbors))
 
 ;; FIXME this doesn't work if more than one location is lowest
@@ -41,21 +41,21 @@
 (defn- transition-probabilities
   [location neighbors]
   (let [local-elev        (get-in location [:flow-features elev-concept])
-	neighbor-elevs    (vec (map #(get-in % [:flow-features elev-concept]) neighbors))
-	neighbors-lower?  (vec (map #(_<_ % local-elev) neighbor-elevs))
-	local-lowest?     (reduce (fn [a b] (* (- 1 a) (- 1 b))) neighbors-lower?)
+        neighbor-elevs    (vec (map #(get-in % [:flow-features elev-concept]) neighbors))
+        neighbors-lower?  (vec (map #(_<_ % local-elev) neighbor-elevs))
+        local-lowest?     (reduce (fn [a b] (* (- 1 a) (- 1 b))) neighbors-lower?)
         neighbors-lowest? (loop [i   (dec (count neighbor-elevs))
-				 j   0
-				 i<j neighbors-lower?]
-			    (if (== i 0)
-			      i<j
-			      (if (== j i)
-				(recur (dec i) 0 i<j)
-				(recur i (inc j) 
-				       (let [lt-prob (_<_ (neighbor-elevs i) (neighbor-elevs j))]
-					 (-> i<j
-					     (assoc i (* (i<j i) lt-prob))
-					     (assoc j (* (i<j j) (- 1 lt-prob)))))))))]
+                                 j   0
+                                 i<j neighbors-lower?]
+                            (if (== i 0)
+                              i<j
+                              (if (== j i)
+                                (recur (dec i) 0 i<j)
+                                (recur i (inc j) 
+                                       (let [lt-prob (_<_ (neighbor-elevs i) (neighbor-elevs j))]
+                                         (-> i<j
+                                             (assoc i (* (i<j i) lt-prob))
+                                             (assoc j (* (i<j j) (- 1 lt-prob)))))))))]
     (cons local-lowest? neighbors-lowest?)))
 (def transition-probabilities (memoize-by-first-arg transition-probabilities))
 
@@ -64,17 +64,17 @@
   (when-let [downhill-neighbors (most-downhill-neighbors (peek route) location-map)]
     (let [downhill-weight (_d weight (count downhill-neighbors))]
       (if (> (rv-mean downhill-weight) *trans-threshold*)
-	(let [zeroed-downhill-weight (rv-zero-below-scalar downhill-weight *trans-threshold*)]
-	  (map #(vector zeroed-downhill-weight (conj route %)) downhill-neighbors))))))
+        (let [zeroed-downhill-weight (rv-zero-below-scalar downhill-weight *trans-threshold*)]
+          (map #(vector zeroed-downhill-weight (conj route %)) downhill-neighbors))))))
 
 (defn- probabilistic-successors
   [[weight route] location-map]
   (let [current-loc (peek route)
-	neighbors   (map location-map (:neighbors current-loc))
-	trans-probs (transition-probabilities current-loc neighbors)]
+        neighbors   (map location-map (:neighbors current-loc))
+        trans-probs (transition-probabilities current-loc neighbors)]
     (when (< (first trans-probs) 0.9) ;; FIXME add this to flow-params
       (filter (fn [[w _]] (> (rv-mean w) *trans-threshold*))
-	      (map (fn [l p] [(rv-scale weight p) (conj route l)]) neighbors (rest trans-probs))))))
+              (map (fn [l p] [(rv-scale weight p) (conj route l)]) neighbors (rest trans-probs))))))
 
 ;; FIXME make this function only store carriers on sinks if a use
 ;; location is found along its path
@@ -84,18 +84,18 @@
    possible, so check for weight below trans-threshold."
   [location-map source-location]
   (let [goal? (fn [[weight route]]
-		(let [current-loc (peek route)]
-		  (when (or (sink-loc? current-loc) (use-loc? current-loc))
-		    (swap! (:carrier-cache current-loc) conj (struct service-carrier weight route)))
-		  false))]
+                (let [current-loc (peek route)]
+                  (when (or (sink-loc? current-loc) (use-loc? current-loc))
+                    (swap! (:carrier-cache current-loc) conj (struct service-carrier weight route)))
+                  false))]
     (loop [open-list (list [(:source source-location) [source-location]])]
       (when-first [this-node open-list]
-	(if (goal? this-node)
-	  this-node
-	  (recur (concat (deterministic-successors this-node location-map) (rest open-list))))))))
+                  (if (goal? this-node)
+                    this-node
+                    (recur (concat (deterministic-successors this-node location-map) (rest open-list))))))))
 
 (defmethod distribute-flow! "Water"
   [_ location-map _ _]
   (dorun (pmap
-	  (fn [source-location] (distribute-downhill! location-map source-location))
-	  (filter source-loc? (vals location-map)))))
+          (fn [source-location] (distribute-downhill! location-map source-location))
+          (filter source-loc? (vals location-map)))))

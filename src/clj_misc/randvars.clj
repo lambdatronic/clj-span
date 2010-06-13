@@ -75,7 +75,7 @@
   (with-meta
     (let [sorted-RV (sort discrete-RV)]
       (zipmap (keys sorted-RV)
-	      (successive-sums (vals sorted-RV))))
+              (successive-sums (vals sorted-RV))))
     cont-type))
 
 (defmethod to-continuous-randvar ::continuous-distribution [continuous-RV] continuous-RV)
@@ -85,9 +85,9 @@
   [rv-type num-states valid-states]
   (constraints-1.0 {:pre [(#{:discrete :continuous} rv-type)]})
   (let [discrete-RV (with-meta
-		      (zipmap (select-n-distinct num-states valid-states)
-			      (map #(/ % 100.0) (select-n-summands num-states 100)))
-		      disc-type)]
+                      (zipmap (select-n-distinct num-states valid-states)
+                              (map #(/ % 100.0) (select-n-summands num-states 100)))
+                      disc-type)]
     (if (= rv-type :discrete)
       discrete-RV
       (to-continuous-randvar discrete-RV))))
@@ -102,11 +102,11 @@
     X
     (let [partition-size (Math/ceil (/ (dec (count X)) (dec *rv-max-states*)))]
       (with-meta
-	(into {}
-	      (map #(vector (/ (apply + (keys %)) (count %))
-			    (apply + (vals %)))
-		   (my-partition-all partition-size (sort-by key X))))
-	(meta X)))))
+        (into {}
+              (map #(vector (/ (apply + (keys %)) (count %))
+                            (apply + (vals %)))
+                   (my-partition-all partition-size (sort-by key X))))
+        (meta X)))))
 
 (defmethod rv-resample ::continuous-distribution
   [X]
@@ -128,9 +128,9 @@
   [X]
   (let [X*     (sort-by key X)
         states (keys X*)
-	probs  (successive-differences (vals X*))
-	upper  (reduce + (map * states probs))
-	lower  (reduce + (map * states (rest probs)))]
+        probs  (successive-differences (vals X*))
+        upper  (reduce + (map * states probs))
+        lower  (reduce + (map * states (rest probs)))]
     (/ (+ upper lower) 2)))
 
 (def rv-zero (with-meta (array-map 0 1) disc-type))
@@ -145,49 +145,49 @@
 (defn rv-convolute-2
   [f X Y]
   (let [convolution (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)])
-	all-unique  (reduce (fn [amap [v2 p2]]
-			      (if-let [p1 (amap v2)]
-				(assoc amap v2 (+ p1 p2))
-				(assoc amap v2 p2)))
-			    (apply array-map (first convolution))
-			    (rest convolution))]
+        all-unique  (reduce (fn [amap [v2 p2]]
+                              (if-let [p1 (amap v2)]
+                                (assoc amap v2 (+ p1 p2))
+                                (assoc amap v2 p2)))
+                            (apply array-map (first convolution))
+                            (rest convolution))]
     all-unique))
 
 #_(defn rv-convolute-3
-  [f X Y]
-  (let [convolution (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)])
-	all-unique  (reduce (fn [amap [v2 p2]]
-			      (if-let [p1 (amap v2)]
-				(assoc! amap v2 (+ p1 p2))
-				(assoc! amap v2 p2)))
-			    (transient (apply array-map (first convolution)))
-			    (rest convolution))]
-    (persistent! all-unique)))
+    [f X Y]
+    (let [convolution (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)])
+          all-unique  (reduce (fn [amap [v2 p2]]
+                                (if-let [p1 (amap v2)]
+                                  (assoc! amap v2 (+ p1 p2))
+                                  (assoc! amap v2 p2)))
+                              (transient (apply array-map (first convolution)))
+                              (rest convolution))]
+      (persistent! all-unique)))
 
 (defn rv-convolute-4
   [f X Y]
   (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
-	all-unique  (reduce (fn [acc [v2 p2 :as n]]
-			      (let [[v1 p1] (peek acc)]
-				(if (== v1 v2)
-				  (conj (pop acc) [v2 (+ p1 p2)])
-				  (conj acc n))))
-			    (vector (first convolution))
-			    (rest convolution))]
+        all-unique  (reduce (fn [acc [v2 p2 :as n]]
+                              (let [[v1 p1] (peek acc)]
+                                (if (== v1 v2)
+                                  (conj (pop acc) [v2 (+ p1 p2)])
+                                  (conj acc n))))
+                            (vector (first convolution))
+                            (rest convolution))]
     (into {} all-unique)))
 
 #_(defn rv-convolute-5
-  [f X Y]
-  (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
-	all-unique  (reduce (fn [acc [v2 p2 :as n]]
-			      (let [last-idx (dec (count acc))
-				    [v1 p1]  (acc last-idx)]
-				(if (== v1 v2)
-				  (assoc! acc last-idx [v2 (+ p1 p2)])
-				  (conj!  acc n))))
-			    (transient (vector (first convolution)))
-			    (rest convolution))]
-    (into {} (persistent! all-unique))))
+    [f X Y]
+    (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
+          all-unique  (reduce (fn [acc [v2 p2 :as n]]
+                                (let [last-idx (dec (count acc))
+                                      [v1 p1]  (acc last-idx)]
+                                  (if (== v1 v2)
+                                    (assoc! acc last-idx [v2 (+ p1 p2)])
+                                    (conj!  acc n))))
+                              (transient (vector (first convolution)))
+                              (rest convolution))]
+      (into {} (persistent! all-unique))))
 
 (defn rv-convolute-6
   [f X Y]
@@ -195,30 +195,30 @@
     (if (empty? X*)
       fXY
       (if (empty? Y*)
-	(recur (rest X*) Y fXY)
-	(recur X* (rest Y*) (let [[v1 p1] (first X*)
-				  [v2 p2] (first Y*)
-				  v       (f v1 v2)
-				  p       (* p1 p2)]
-			      ;;(update-in fXY [v] #(+ p (or % 0)))))))))
-			      (if-let [old-p (fXY v)]
-				(assoc fXY v (+ old-p p))
-				(assoc fXY v p))))))))
+        (recur (rest X*) Y fXY)
+        (recur X* (rest Y*) (let [[v1 p1] (first X*)
+                                  [v2 p2] (first Y*)
+                                  v       (f v1 v2)
+                                  p       (* p1 p2)]
+                              ;;(update-in fXY [v] #(+ p (or % 0)))))))))
+                              (if-let [old-p (fXY v)]
+                                (assoc fXY v (+ old-p p))
+                                (assoc fXY v p))))))))
 
 #_(defn rv-convolute-7
-  [f X Y]
-  (loop [X* X, Y* Y, fXY (transient {})]
-    (if (empty? X*)
-      (persistent! fXY)
-      (if (empty? Y*)
-	(recur (rest X*) Y fXY)
-	(recur X* (rest Y*) (let [[v1 p1] (first X*)
-				  [v2 p2] (first Y*)
-				  v       (f v1 v2)
-				  p       (* p1 p2)]
-			      (if-let [old-p (fXY v)]
-				(assoc! fXY v (+ old-p p))
-				(assoc! fXY v p))))))))
+    [f X Y]
+    (loop [X* X, Y* Y, fXY (transient {})]
+      (if (empty? X*)
+        (persistent! fXY)
+        (if (empty? Y*)
+          (recur (rest X*) Y fXY)
+          (recur X* (rest Y*) (let [[v1 p1] (first X*)
+                                    [v2 p2] (first Y*)
+                                    v       (f v1 v2)
+                                    p       (* p1 p2)]
+                                (if-let [old-p (fXY v)]
+                                  (assoc! fXY v (+ old-p p))
+                                  (assoc! fXY v p))))))))
 
 ;;; finish testing functions
 
@@ -299,7 +299,7 @@
 (defn scalar-rv-divide
   [x Y]
   (let [x* (rationalize x)
-	Y* (dissoc Y 0)]
+        Y* (dissoc Y 0)]
     (rv-map #(/ x* %) Y*)))
 (def d_ scalar-rv-divide)
 
@@ -352,27 +352,27 @@
 (defmethod rv-scale ::continuous-distribution
   [rv-unsorted scale-factor-double]
   (let [scale-factor (rationalize scale-factor-double)
-	rv           (sort rv-unsorted)
-	values       (vec (keys rv))
-	probs        (vec (map (p * scale-factor) (successive-differences (vals rv))))
-	zero-pos     (loop [i 0, max (count values)] (when (< i max) (if (zero? (values i)) i (recur (inc i) max))))
-	pos-pos      (loop [i 0, max (count values)] (when (< i max) (if (pos?  (values i)) i (recur (inc i) max))))
-	values2      (if zero-pos values (concat (take pos-pos values) [0] (drop pos-pos values)))
-	probs2       (successive-sums (if zero-pos
-					(assoc probs zero-pos (+ (probs zero-pos) (- 1 scale-factor)))
-					(concat (take pos-pos probs) [(- 1 scale-factor)] (drop pos-pos probs))))]
+        rv           (sort rv-unsorted)
+        values       (vec (keys rv))
+        probs        (vec (map (p * scale-factor) (successive-differences (vals rv))))
+        zero-pos     (loop [i 0, max (count values)] (when (< i max) (if (zero? (values i)) i (recur (inc i) max))))
+        pos-pos      (loop [i 0, max (count values)] (when (< i max) (if (pos?  (values i)) i (recur (inc i) max))))
+        values2      (if zero-pos values (concat (take pos-pos values) [0] (drop pos-pos values)))
+        probs2       (successive-sums (if zero-pos
+                                        (assoc probs zero-pos (+ (probs zero-pos) (- 1 scale-factor)))
+                                        (concat (take pos-pos probs) [(- 1 scale-factor)] (drop pos-pos probs))))]
     (with-meta (zipmap values2 probs2) cont-type)))
 
 (defmethod rv-scale ::discrete-distribution
   [rv scale-factor-double]
   (let [scale-factor (rationalize scale-factor-double)
-	values       (vec (keys rv))
-	probs        (vec (map (p * scale-factor) (vals rv)))
-	zero-pos     (loop [i 0, max (count values)] (when (< i max) (if (zero? (values i)) i (recur (inc i) max))))
-	values2      (if zero-pos values (cons 0 values))
-	probs2       (if zero-pos
-		       (assoc probs zero-pos (+ (probs zero-pos) (- 1 scale-factor)))
-		       (cons (- 1 scale-factor) probs))]
+        values       (vec (keys rv))
+        probs        (vec (map (p * scale-factor) (vals rv)))
+        zero-pos     (loop [i 0, max (count values)] (when (< i max) (if (zero? (values i)) i (recur (inc i) max))))
+        values2      (if zero-pos values (cons 0 values))
+        probs2       (if zero-pos
+                       (assoc probs zero-pos (+ (probs zero-pos) (- 1 scale-factor)))
+                       (cons (- 1 scale-factor) probs))]
     (with-meta (zipmap values2 probs2) disc-type)))
 
 ;; Example profiling code
