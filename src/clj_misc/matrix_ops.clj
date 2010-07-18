@@ -120,6 +120,15 @@
        (make-matrix (get-rows matrix) (get-cols matrix)
                     (fn [coords] (apply f (map #(get-in % coords) matrices)))))))
 
+(defn divides?
+  "Is y divisible by x? (i.e. x is the denominator)"
+  [x y]
+  (zero? (mod y x)))
+
+(defn least-common-multiple
+  [x y]
+  (first (filter (p divides? x) (iterate (p + y) y))))
+
 (defn resample-matrix
   [new-rows new-cols aggregator-fn matrix]
   (constraints-1.0 {:pre [(every? #(and (pos? %) (integer? %)) [new-rows new-cols])]})
@@ -127,8 +136,8 @@
         orig-cols             (get-cols matrix)]
     (if (and (== orig-rows new-rows) (== orig-cols new-cols))
       matrix
-      (let [lcm-rows              (first (filter #(zero? (mod % new-rows)) (iterate (p + orig-rows) orig-rows)))
-            lcm-cols              (first (filter #(zero? (mod % new-cols)) (iterate (p + orig-cols) orig-cols)))
+      (let [lcm-rows              (least-common-multiple new-rows orig-rows)
+            lcm-cols              (least-common-multiple new-cols orig-cols)
             upscale-factor-rows   (/ lcm-rows orig-rows)
             upscale-factor-cols   (/ lcm-cols orig-cols)
             lcm-matrix            (if (and (== upscale-factor-rows 1)
