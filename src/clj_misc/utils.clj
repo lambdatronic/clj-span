@@ -38,6 +38,17 @@
   (cons 'do (for [pre-constraint (:pre constraint-map)]
               `(assert ~pre-constraint))))
 
+;; FIXME: doesn't work because % is caught by the reader
+(defmacro constraints-1.0-full
+  [constraint-map & body]
+  `(do
+     ~@(for [pre-constraint# (:pre constraint-map)]
+         `(assert ~pre-constraint#))
+     (let [result# ~@body]
+       ~@(for [post-constraint# (:post constraint-map)]
+           `(#(assert ~post-constraint#) result#))
+       result#)))
+
 (defmacro def-
   [name & args]
   (let [name# (with-meta name {:private true})]

@@ -16,12 +16,12 @@
 ;;; along with CLJ-SPAN.  If not, see <http://www.gnu.org/licenses/>.
 
 (ns span.location-builder
-  (:use [misc.utils        :only (maphash seq2map)]
-	[misc.matrix-ops   :only (get-neighbors)]
-	[span.randvars     :only (unpack-datasource rv-zero)]))
+  (:use [misc.utils        :only (maphash mapmap seq2map)]
+        [misc.matrix-ops   :only (get-neighbors)]
+        [span.randvars     :only (unpack-datasource rv-zero)]))
 (refer 'corescience :only '(find-state
-			    find-observation
-			    get-state-map))
+                            find-observation
+                            get-state-map))
 
 (defstruct location :id :neighbors :source :sink :use :flow-features :carrier-cache)
 
@@ -56,7 +56,7 @@
   [obs conc rows cols n]
   (when conc
     (let [subobs (find-observation obs conc)
-	  states (get-state-map subobs)]
+          states (get-state-map subobs)]
       (println "EXTRACT-ALL-VALUES...")
       (println "OBS:   " obs)
       (println "CONC:  " conc)
@@ -64,28 +64,45 @@
       (println "STATES:" states)
       (maphash (memfn getLocalName) #(vec (unpack-datasource % rows cols n)) (get-state-map (find-observation obs conc))))))
 
+#_(defn make-location-map-alternate
+    "Returns a map of ids to location objects, one per location in the
+     data layers."
+    [source-layer sink-layer use-layer flow-layers]
+    (let [rows (get-rows source-layer)
+          cols (get-cols source-layer)]
+      (into {}
+            (for [i (range rows) j (range cols) :let [id [i j]]]
+              [id (struct-map location
+                    :id            id
+                    :neighbors     (get-neighbors id rows cols)
+                    :source        (get-in source-layer id)
+                    :sink          (get-in sink-layer   id)
+                    :use           (get-in use-layer    id)
+                    :flow-features (mapmap identity #(get-in % id) flow-layers)
+                    :carrier-cache (atom ()))]))))
+
 (defn make-location-map
   "Returns a map of ids to location objects, one per location in the
    observation set."
   [observation source-conc sink-conc use-conc flow-conc rows cols scaled-rows scaled-cols]
   (let [n             (* rows cols)
-	scaled-n      (* scaled-rows scaled-cols)
-	flow-vals-map (extract-all-values observation flow-conc rows cols n)]
+        scaled-n      (* scaled-rows scaled-cols)
+        flow-vals-map (extract-all-values observation flow-conc rows cols n)]
     (println "Rows x Cols:" rows "x" cols)
     (println "Scaled-Rows x Scaled-Cols:" scaled-rows "x" scaled-cols)
     (println "Flow-vals-map length:" (count flow-vals-map))
     (seq2map
      (map (fn [[i j] source sink use]
-	    (struct-map location
-	      :id            [i j]
-	      :neighbors     (vec (get-neighbors [i j] scaled-rows scaled-cols))
-	      :source        source
-	      :sink          sink
-	      :use           use
-	      :flow-features (maphash identity #(% (+ (* i scaled-cols) j)) flow-vals-map)))
+            (struct-map location
+              :id            [i j]
+              :neighbors     (vec (get-neighbors [i j] scaled-rows scaled-cols))
+              :source        source
+              :sink          sink
+              :use           use
+              :flow-features (maphash identity #(% (+ (* i scaled-cols) j)) flow-vals-map)))
 	      ;;:carrier-cache (atom ()))) ;; FIXME make carrier-cache into a [] to save memory (do vecs save memory?)
-	  (for [i (range scaled-rows) j (range scaled-cols)] [i j])
-	  (or (extract-values-by-concept observation source-conc rows cols n) (replicate scaled-n rv-zero))
-	  (or (extract-values-by-concept observation sink-conc   rows cols n) (replicate scaled-n rv-zero))
-	  (or (extract-values-by-concept observation use-conc    rows cols n) (replicate scaled-n rv-zero)))
+          (for [i (range scaled-rows) j (range scaled-cols)] [i j])
+          (or (extract-values-by-concept observation source-conc rows cols n) (replicate scaled-n rv-zero))
+          (or (extract-values-by-concept observation sink-conc   rows cols n) (replicate scaled-n rv-zero))
+          (or (extract-values-by-concept observation use-conc    rows cols n) (replicate scaled-n rv-zero)))
      (fn [loc] [(:id loc) loc]))))

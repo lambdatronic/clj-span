@@ -3,3 +3,5 @@ pom.xml
 lib
 classes
 notes
+resources/viewshed_data.clj
+next_commit.msg
