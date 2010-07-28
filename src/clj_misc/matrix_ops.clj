@@ -172,7 +172,7 @@
 
 (defn get-neighbors
   "Return a sequence of neighboring points within the map bounds."
-  [[i j] rows cols]
+  [rows cols [i j]]
   (filter (p in-bounds? rows cols)
           (map #(vector (+ i %1) (+ j %2))
                [-1 -1 -1  0 0  1 1 1]

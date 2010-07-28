@@ -74,7 +74,7 @@
             (for [i (range rows) j (range cols) :let [id [i j]]]
               [id (struct-map location
                     :id            id
-                    :neighbors     (get-neighbors id rows cols)
+                    :neighbors     (get-neighbors rows cols id)
                     :source        (get-in source-layer id)
                     :sink          (get-in sink-layer   id)
                     :use           (get-in use-layer    id)
@@ -95,7 +95,7 @@
      (map (fn [[i j] source sink use]
             (struct-map location
               :id            [i j]
-              :neighbors     (vec (get-neighbors [i j] scaled-rows scaled-cols))
+              :neighbors     (vec (get-neighbors scaled-rows scaled-cols [i j]))
               :source        source
               :sink          sink
               :use           use
