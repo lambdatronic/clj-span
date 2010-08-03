@@ -35,14 +35,22 @@
   (:use [clj-misc.utils      :only (p &)]
         [clj-span.model-api  :only (distribute-flow service-carrier)]
         [clj-misc.randvars   :only (_0_ _+_ _*_ _d_ rv-min)]
-        [clj-misc.matrix-ops :only (filter-matrix-for-coords make-matrix map-matrix get-rows get-cols)]))
+        [clj-misc.matrix-ops :only (print-matrix filter-matrix-for-coords make-matrix map-matrix get-rows get-cols)]))
 
-(defmethod distribute-flow "Carbon"
+(defmethod distribute-flow "CO2Removed"
   [_ source-layer _ use-layer _]
   "The amount of carbon sequestration produced is distributed among
    the consumers (carbon emitters) according to their relative :use
    values."
   (println "Running Carbon flow model.")
+  (println "Source Layer info:")
+  (println "Rows:" (get-rows source-layer))
+  (println "Cols:" (get-cols source-layer))
+  (print-matrix source-layer)
+  (println "Use Layer info:")
+  (println "Rows:" (get-rows use-layer))
+  (println "Cols:" (get-cols use-layer))
+  (print-matrix use-layer)
   (let [cache-layer       (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly (atom ())))
         source-points     (filter-matrix-for-coords (p not= _0_) source-layer)
         use-points        (filter-matrix-for-coords (p not= _0_) use-layer)]
@@ -51,25 +59,27 @@
     (if (and (seq source-points) (seq use-points))
       (let [source-values     (map (p get-in source-layer) source-points)
             use-values        (map (p get-in use-layer)    use-points)
-            total-production  (reduce _+_ source-values)
-            total-consumption (reduce _+_ use-values)
-            percent-produced  (map #(_d_ % total-production) source-values)
-            source-use-ratio  (_d_ total-production total-consumption)]
-        (dorun (pmap
-                (fn [uid use-cap]
-                  (let [amount-usable (rv-min use-cap (_*_ use-cap source-use-ratio))]
-                    (reset! (get-in cache-layer uid)
-                            (doall
-                             (map (fn [sid source-percent]
-                                    (let [weight (_*_ source-percent amount-usable)]
-                                      (struct-map service-carrier
-                                        :source-id       sid
-                                        :route           nil
-                                        :possible-weight weight
-                                        :actual-weight   weight
-                                        :sink-effects    nil)))
-                                  source-points
-                                  percent-produced)))))
-                use-points
-                use-values))))
+            total-production  (do (println "Summing Source Values") (time (reduce _+_ source-values)))
+            total-consumption (do (println "Summing Use Values") (time (reduce _+_ use-values)))
+            percent-produced  (do (println "Calculating Source Percents") (time (map #(_d_ % total-production) source-values)))
+            source-use-ratio  (do (println "Computing Source/Use Ratio") (time (_d_ total-production total-consumption)))]
+        (println "Let's go store the carriers!")
+        (time (dorun (pmap
+                      (fn [uid use-cap]
+                        (let [amount-usable (rv-min use-cap (_*_ use-cap source-use-ratio))]
+                          (reset! (get-in cache-layer uid)
+                                  (doall
+                                   (map (fn [sid source-percent]
+                                          (let [weight (_*_ source-percent amount-usable)]
+                                            (struct-map service-carrier
+                                              :source-id       sid
+                                              :route           nil
+                                              :possible-weight weight
+                                              :actual-weight   weight
+                                              :sink-effects    nil)))
+                                        source-points
+                                        percent-produced)))))
+                      use-points
+                      use-values)))))
+    (println "Done storing carriers. Returning the cache-layer.")
     (map-matrix (& seq deref) cache-layer)))

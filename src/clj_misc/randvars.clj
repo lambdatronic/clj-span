@@ -80,12 +80,11 @@
 
 (defmethod to-continuous-randvar ::continuous-distribution [continuous-RV] continuous-RV)
   
-;; I should really make sure that all state values are rational.
 (defn make-randvar
   [rv-type num-states valid-states]
   (constraints-1.0 {:pre [(#{:discrete :continuous} rv-type)]})
   (let [discrete-RV (with-meta
-                      (zipmap (select-n-distinct num-states valid-states)
+                      (zipmap (map rationalize  (select-n-distinct num-states valid-states))
                               (map #(/ % 100.0) (select-n-summands num-states 100)))
                       disc-type)]
     (if (= rv-type :discrete)
@@ -133,7 +132,7 @@
         lower  (reduce + (map * states (rest probs)))]
     (/ (+ upper lower) 2)))
 
-(def rv-zero (with-meta (array-map 0 1) disc-type))
+(def rv-zero (with-meta (array-map 0 1.0) disc-type))
 (def _0_ rv-zero)
 
 ;;; testing functions below here
@@ -233,6 +232,7 @@
 
 (defn rv-add
   [X Y]
+  ;;(println "Adding" (count X) "by" (count Y) "RVs (" (type X) (type Y) ")")
   (rv-resample (rv-convolute + X Y)))
 (def _+_ rv-add)
 
@@ -344,6 +344,7 @@
 
 (defn rv-average
   [RVs]
+  ;;(println "Averaging" (count RVs) (type (last RVs)) "RVs...")
   (rv-scalar-divide (reduce rv-add RVs) (count RVs)))
 
 (defmulti rv-scale
