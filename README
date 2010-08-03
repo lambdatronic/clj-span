@@ -32,8 +32,9 @@ java -cp clj-span-standalone.jar clj_span.commandline \
      -trans-threshold    <double>   \
      -rv-max-states      <integer>  \
      -downscaling-factor <number>   \
-     -sink-type          <absolute|relative> \
-     -use-type           <absolute|relative> \
+     -source-type        <finite|infinite> \
+     -sink-type          <finite|infinite> \
+     -use-type           <finite|infinite> \
      -benefit-type       <rival|non-rival>   \
      -flow-model         <line-of-sight|proximity|carbon|sediment>
 
