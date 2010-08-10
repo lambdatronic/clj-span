@@ -172,8 +172,7 @@
      (let [num-values (count values)]
        (if (< num-values 2)
          (list values)
-         (let [partitions         (for [i (range 1 num-values)]
-                                    [(take i values) (drop i values)])
+         (let [partitions          (for [i (range 1 num-values)] (split-at i values))
                diffs-to-partitions (zipmap (map (p sum-discrepancy f) partitions)
                                            partitions)]
            (diffs-to-partitions (apply min (keys diffs-to-partitions))))))))
@@ -191,6 +190,7 @@
     ;; partitions until the total number is reached.
     (let [X*           (sort X)
           search-depth (int (/ (Math/log max-partitions) (Math/log 2)))]
+      ;;(nth (iterate #(mapcat (fn [p] (minimum-discrepancy-partition val p)) %)
       (nth (iterate (p mapcat (p minimum-discrepancy-partition val))
                     (list X*))
            search-depth))))
@@ -199,27 +199,26 @@
   "Returns a new random variable with <=*rv-max-states* states sampled from X."
   type)
 
-(defmethod rv-resample ::discrete-distribution
-  [X]
-  (if (<= (count X) *rv-max-states*)
-    X
-    (time (with-meta
-            (seq2map (time (partition-by-probs *rv-max-states* X))
-                     #(vector (/ (apply + (keys %)) (count %))
-                              (apply + (vals %))))
-            (meta X)))))
-
 ;;(defmethod rv-resample ::discrete-distribution
 ;;  [X]
-;;  (if-not (> (count X) *rv-max-states*)
+;;  (if (<= (count X) *rv-max-states*)
 ;;    X
-;;    (let [partition-size (Math/ceil (/ (dec (count X)) (dec *rv-max-states*)))]
-;;      (with-meta
-;;        (into {}
-;;              (map #(vector (/ (apply + (keys %)) (count %))
-;;                            (apply + (vals %)))
-;;                   (my-partition-all partition-size (sort X))))
-;;        (meta X)))))
+;;    (with-meta
+;;      (seq2map (partition-by-probs *rv-max-states* X)
+;;               #(vector (/ (apply + (keys %)) (count %))
+;;                        (apply + (vals %))))
+;;      (meta X))))
+
+(defmethod rv-resample ::discrete-distribution
+  [X]
+  (if-not (> (count X) *rv-max-states*)
+    X
+    (let [partition-size (Math/ceil (/ (dec (count X)) (dec *rv-max-states*)))]
+      (with-meta
+        (seq2map (my-partition-all partition-size (sort X))
+                 #(vector (/ (apply + (keys %)) (count %))
+                          (apply + (vals %))))
+        (meta X)))))
 
 (defmethod rv-resample ::continuous-distribution
   [X]
