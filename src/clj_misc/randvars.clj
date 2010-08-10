@@ -43,7 +43,7 @@
 ;;; _d  rv-scalar-divide
 
 (ns clj-misc.randvars
-  (:use [clj-misc.utils :only (p select-n-distinct select-n-summands my-partition-all constraints-1.0 mapmap)]))
+  (:use [clj-misc.utils :only (p my-partition-all constraints-1.0 mapmap seq2map dissoc-vec)]))
 
 (def *rv-max-states* 10)
 (defn reset-rv-max-states!
@@ -62,11 +62,37 @@
        (list total)
        (lazy-seq (cons total (successive-sums (+ total (first nums)) (rest nums)))))))
 
-(defn- successive-differences
+(defn successive-differences
   [nums]
   (if (< (count nums) 2)
     nums
     (cons (first nums) (map - (rest nums) nums))))
+
+(defn select-n-distinct
+  [n coll]
+  (if (>= n (count coll))
+    (vec coll)
+    (first
+     (nth (iterate (fn [[picks opts]]
+                     (let [idx (rand-int (count opts))]
+                       [(conj picks (opts idx))
+                        (dissoc-vec idx opts)]))
+                   [[] (vec coll)])
+          n))))
+
+(defn select-n-summands
+  "Returns a list of n numbers >= min-value, which add up to total.
+   If total is a double, the summands will be doubles.  The same goes
+   for integers."
+  [n total min-value]
+  (if (< n 2)
+    (list total)
+    (let [rand-fn   (if (integer? total) rand-int rand)
+          min-value (if (integer? total) (int min-value) min-value)
+          total     (- total (* n min-value))
+          leftovers (take n (iterate rand-fn total))
+          diffs     (map - leftovers (rest leftovers))]
+      (map (p + min-value) (cons (reduce - total diffs) diffs)))))
 
 (defmulti to-discrete-randvar type)
 
@@ -97,7 +123,7 @@
   (constraints-1.0 {:pre [(#{:discrete :continuous} rv-type)]})
   (let [discrete-RV (with-meta
                       (zipmap (map rationalize  (select-n-distinct num-states valid-states))
-                              (map #(/ % 100.0) (select-n-summands num-states 100)))
+                              (map #(/ % 100.0) (select-n-summands num-states 100 1)))
                       disc-type)]
     (if (= rv-type :discrete)
       discrete-RV
@@ -177,12 +203,11 @@
   [X]
   (if (<= (count X) *rv-max-states*)
     X
-    (with-meta
-      (into {}
-            (map #(vector (/ (apply + (keys %)) (count %))
-                          (apply + (vals %)))
-                 (partition-by-probs *rv-max-states* X)))
-      (meta X))))
+    (time (with-meta
+            (seq2map (time (partition-by-probs *rv-max-states* X))
+                     #(vector (/ (apply + (keys %)) (count %))
+                              (apply + (vals %))))
+            (meta X)))))
 
 ;;(defmethod rv-resample ::discrete-distribution
 ;;  [X]
@@ -479,9 +504,9 @@
 (defn rv-average
   [RVs]
   (if (seq RVs)
-    (rv-scalar-divide (reduce rv-add rv-zero RVs) (count RVs))))
-;;      (do (println "Averaging" numRVs (type (first RVs)) "RVs...")
-;;          (time (rv-scalar-divide (reduce rv-add rv-zero RVs) (count RVs)))))
+;;    (rv-scalar-divide (reduce rv-add rv-zero RVs) (count RVs))))
+    (do (println "Averaging" (count RVs) (type (first RVs)) "RVs...")
+        (time (rv-scalar-divide (reduce rv-add rv-zero RVs) (count RVs))))))
 
 (defmulti rv-scale
   (fn [rv scale-factor] (type rv)))
