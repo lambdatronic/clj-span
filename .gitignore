@@ -3,6 +3,7 @@ pom.xml
 lib
 classes
 notes
-resources/viewshed_data.clj
+resources
 next_commit.txt
 diff_with_aries.sh
+aries
