@@ -18,13 +18,17 @@
 ;;;-------------------------------------------------------------------
 ;;;
 ;;; This namespace defines the flood model.
+;;;
+;;; FIXME:
+;;;  1) optimize movement downstream after source goes to 0
+;;;  2) find a smarter way to compute the out of stream case in handle-sink-effects!
 
 (ns clj-span.flood-model
-  (:use [clj-span.params         :only (*trans-threshold*)]
-        [clj-span.model-api      :only (distribute-flow service-carrier)]
-        [clj-misc.utils          :only (mapmap seq2map seq2redundant-map euclidean-distance square-distance def- p &)]
-        [clj-misc.matrix-ops     :only (get-rows get-cols make-matrix filter-matrix-for-coords in-bounds? find-line-between map-matrix)]
-        [clj-misc.randvars       :only (_0_ _+_ _-_ _*_ _d_ -_ _* _d rv-min rv-mean rv-cdf-lookup)]
+  (:use [clj-span.model-api      :only (distribute-flow service-carrier)]
+        [clj-misc.utils          :only (seq2map seq2redundant-map euclidean-distance p & my->>)]
+        [clj-misc.matrix-ops     :only (get-rows get-cols make-matrix filter-matrix-for-coords
+                                        in-bounds? find-line-between map-matrix bitpack-route)]
+        [clj-misc.randvars       :only (_0_ _+_ _-_ _* *_ _d rv-lt? rv-convolutions rv-resample)]
         [clj-span.sediment-model :only (hydrosheds-delta-codes)]))
 
 (defn- move-points-into-stream-channel
@@ -45,7 +49,7 @@
                              conj)
           []))
 
-(defn- flood-activation-factors
+(defn- flood-activation-factors-complicated
   "Returns a map of each data-id (e.g. a sink or use location) to a
    number between 0.0 and 1.0, representing its relative position
    between the stream edge (1.0) and the floodplain boundary (0.0).
@@ -76,20 +80,91 @@
                           slope           (_d rise run-to-boundary)
                           elev-limit      (_+_ (_* slope run-to-data) (get-in elevation-layer in-stream-id))
                           elev-at-loc     (get-in elevation-layer data-id)]
-                      (if (rv-lt elev-at-loc elev-limit)
+                      (if (rv-lt? elev-at-loc elev-limit)
                         [data-id (- 1.0 (/ run-to-data run-to-boundary))])))))))
 
-(defn local-sink-effects
-  "FIXME: Something is not right with my computation of the sink-cap
-   upper bounds."
-  [sink-caps affected-sinks actual-weight]
-  (if (seq affected-sinks)
-    (seq2map affected-sinks
-             (let [total-sink-cap (reduce _+_ (map (& deref sink-caps) affected-sinks))]
-               (if (pos? (rv-gt actual-weight total-sink-cap))
-                 #(let [sink-cap @(sink-caps %)] [% sink-cap])
-                 (let [source-sink-ratio (_d_ actual-weight total-sink-cap)]
-                   #(let [sink-cap @(sink-caps %)] [% (_*_ sink-cap source-sink-ratio)])))))))
+(defn- flood-activation-factors
+  "Returns a map of each data-id (e.g. a sink or use location) to a
+   number between 0.0 and 1.0, representing its relative position
+   between the stream edge (1.0) and the floodplain boundary (0.0)."
+  [in-floodplain? elevation-layer in-stream-map]
+  (into {}
+        (for [in-stream-id (keys in-stream-map) data-id (in-stream-map in-stream-id)]
+          (if (= in-stream-id data-id)
+            ;; location is already in-stream, activation is 100%
+            [data-id 1.0]
+            ;; location is out-of-stream, activation is scaled
+            ;; by the relative distance between this location,
+            ;; the in-stream proxy location, and the nearest
+            ;; floodplain boundary
+            (let [loc-delta       (map - data-id in-stream-id)
+                  outside-id      (first (filter (& not in-floodplain?)
+                                                 (rest (iterate (p map + loc-delta) data-id))))
+                  inside-id       (map - outside-id loc-delta)
+                  boundary-id     (first (filter (& not in-floodplain?)
+                                                 (find-line-between inside-id outside-id)))
+                  run-to-boundary (euclidean-distance in-stream-id boundary-id)
+                  run-to-data     (euclidean-distance in-stream-id data-id)]
+              [data-id (- 1.0 (/ run-to-data run-to-boundary))])))))
+
+(defn- handle-sink-effects!
+  "Computes the amount sunk by each sink encountered either along an
+   out-of-stream flow path or within a floodplain if the carrier is
+   moving down a stream. Reduces the sink-caps for each sink which
+   captures some of the service medium. The sunk amount is based on
+   the relative capacity of each sink with respect to the others
+   encountered at the same time. Returns the actual-weight minus the
+   amount sunk and a map of the sink-ids to the amount each sinks."
+  [stream-bound? sink-map unsaturated-sink? sink-caps sink-AFs current-id actual-weight]
+   (if stream-bound?
+     (dosync
+      (if-let [affected-sinks (seq (filter unsaturated-sink? (sink-map current-id)))]
+        (let [convolutions         (rv-convolutions actual-weight
+                                                    (apply rv-convolutions
+                                                           (map (& deref sink-caps) affected-sinks)))
+              result-rv-type       (meta convolutions)
+              sink-effects-results (for [[[x unscaled-k-states] pxk] convolutions]
+                                     (let [k-states (map * unscaled-k-states (map sink-AFs affected-sinks))
+                                           k        (apply + k-states)]
+                                       (if (>= x k)
+                                         ;; all the sinks become saturated
+                                         [x k-states (map - unscaled-k-states k-states) pxk]
+                                         ;; distribute the source weight among the sinks by their relative sink value
+                                         (let [k-dist (map #(* x (/ % k)) k-states)]
+                                           [x k-dist (map - unscaled-k-states k-dist) pxk]))))
+              new-actual-weight    (rv-resample
+                                    (with-meta
+                                      (apply merge-with +
+                                             (map (fn [[x k-sunk k-left pxk]] {(- x (apply + k-sunk)) pxk})
+                                                  sink-effects-results))
+                                      result-rv-type))
+              new-sink-effects     (zipmap affected-sinks
+                                           (apply map
+                                                  #(rv-resample (with-meta (apply merge-with + %&) result-rv-type))
+                                                  (for [[_ k-sunk _ pxk] sink-effects-results]
+                                                    (map (fn [k] {k pxk}) k-sunk))))
+              new-sink-caps        (zipmap affected-sinks
+                                           (apply map
+                                                  #(rv-resample (with-meta (apply merge-with + %&) result-rv-type))
+                                                  (for [[_ _ k-left pxk] sink-effects-results]
+                                                    (map (fn [k] {k pxk}) k-left))))]
+          (doseq [sink-id affected-sinks]
+            (alter (sink-caps sink-id) (constantly (new-sink-caps sink-id))))
+          [new-actual-weight new-sink-effects])))
+     (dosync
+      (if-let [sink-cap-ref (sink-caps current-id)]
+        (let [sink-cap              (deref sink-cap-ref)
+              sink-AF               (sink-AFs current-id)
+              scaled-convolutions   (rv-convolutions actual-weight (_* sink-cap sink-AF))
+              unscaled-convolutions (rv-convolutions actual-weight sink-cap)
+              result-rv-type        (meta unscaled-convolutions)
+              new-actual-weight (apply merge-with + (map (fn [[[x k] pxk]] {(max (- x k) 0.0) pxk}) scaled-convolutions))
+              new-sink-effects  (apply merge-with + (map (fn [[[x k] pxk]] {(min x k)         pxk}) scaled-convolutions))
+              new-sink-cap      (apply merge-with + (map (fn [[[x k] pxk] [[_ k*] _]] {(- k* (min x k)) pxk})
+                                                         scaled-convolutions
+                                                         unscaled-convolutions))]
+          (alter sink-cap-ref (constantly (rv-resample (with-meta new-sink-cap result-rv-type))))
+          (map #(rv-resample (with-meta % result-rv-type)) [new-actual-weight new-sink-effects]))))))
 
 (defn- step-downstream!
   "Computes the state of the flood-carrier after it takes another step
@@ -97,37 +172,39 @@
    according to the remaining sink capacity at this location.  If it
    encounters a use location, a service-carrier is stored in the
    user's carrier-cache."
-  [cache-layer step-downstream in-stream? sink-map use-map sink-AFs use-AFs sink-caps
-   {:keys [source-id route possible-weight actual-weight sink-effects stream-bound?]}]
-  ;;[current-id source-ids source-fractions incoming-utilities sink-effects]
-  (when-let [new-id (step-downstream (peek route))]
+  [cache-layer step-downstream in-stream? unsaturated-sink? sink-map use-map sink-AFs use-AFs sink-caps
+   {:keys [route possible-weight actual-weight sink-effects stream-bound?] :as flood-carrier}]
+  (let [current-id (peek route)]
     (if stream-bound?
-      (let [unsaturated-sink?  (& (p not= _0_) deref sink-caps)
-            affected-sinks     (filter unsaturated-sink? (sink-map new-id))
-            sink-effects       (merge sink-effects (local-sink-effects sink-caps affected-sinks actual-weight))
-            ;; RESUME CODING HERE.
-            outgoing-utilities (if (seq affected-sinks) ; sinks encountered
-                                 (do
-                                   (doseq [sink-id affected-sinks]
-                                     (swap! (sink-caps sink-id) _-_ (sink-effects sink-id)))
-                                   (let [total-sunk   (reduce _+_ (map sink-effects affected-sinks))
-                                         out-fraction (-_ 1 (_d_ total-sunk total-incoming))]
-                                     (map (p _*_ out-fraction) incoming-utilities)))
-                                 incoming-utilities)]
-        (doseq [cache (map (p get-in cache-layer) (if (seq affected-sinks) (use-map new-id)))]
-          (swap! cache concat
-                 (map (fn [sid sfrac utility]
-                        (struct-map service-carrier
-                          :source-id       sid
-                          :route           nil
-                          :possible-weight _0_
-                          :actual-weight   utility
-                          :sink-effects    (mapmap identity (p _*_ sfrac) sink-effects)))
-                      source-ids
-                      source-fractions
-                      incoming-utilities)))
-        (when (< (rv-cdf-lookup (reduce _+_ _0_ outgoing-utilities) *trans-threshold*) 0.5)
-          [new-id source-ids source-fractions outgoing-utilities sink-effects]))))
+      ;; Place a copy of the flood-carrier in each affected user's
+      ;; carrier-cache.  Users only benefit from upstream sinks (so
+      ;; we're not using new-actual-weight and new-sink-effects here).
+      (if-let [affected-users (seq (use-map current-id))]
+        (let [bitpacked-carrier (assoc flood-carrier :route (bitpack-route route))]
+          (doseq [use-id affected-users]
+            (let [use-AF (use-AFs use-id)]
+              (swap! (get-in cache-layer use-id) conj
+                     (assoc bitpacked-carrier
+                       :possible-weight (*_ use-AF possible-weight)
+                       :actual-weight   (*_ use-AF actual-weight))))))))
+    ;; Compute the local sink-effects and the remaining
+    ;; actual-weight.  new-actual-weight and new-sink-effects will
+    ;; be nil if there are no sinks associated with this location.
+    (let [[new-actual-weight new-sink-effects] (handle-sink-effects! stream-bound?
+                                                                     sink-map
+                                                                     unsaturated-sink?
+                                                                     sink-caps
+                                                                     sink-AFs
+                                                                     current-id
+                                                                     actual-weight)]
+      ;; Continue until we run off the map, hit the ocean, or fall
+      ;; down an endorheic sink.
+      (if-let [new-id (step-downstream current-id)]
+        (assoc flood-carrier
+          :route         (conj route new-id)
+          :actual-weight (or new-actual-weight actual-weight)
+          :sink-effects  (merge sink-effects new-sink-effects)
+          :stream-bound? (in-stream? new-id))))))
 
 (defn- distribute-downstream!
   "Constructs a sequence of flood-carrier objects (one per source
@@ -135,7 +212,7 @@
    flood-carriers from the previous until they no longer have any
    water, fall off the map bounds, or hit an inland sink.  All the
    carriers are moved together in timesteps (more or less)."
-  [cache-layer step-downstream in-stream? source-layer
+  [cache-layer step-downstream in-stream? unsaturated-sink? source-layer
    source-points sink-map use-map sink-AFs use-AFs sink-caps]
   (println "Moving the flood-carriers downstream...")
   (doseq [_ (take-while seq (iterate
@@ -145,6 +222,7 @@
                                                 cache-layer
                                                 step-downstream
                                                 in-stream?
+                                                unsaturated-sink?
                                                 sink-map
                                                 use-map
                                                 sink-AFs
@@ -159,7 +237,7 @@
                                    :possible-weight source-weight
                                    :actual-weight   source-weight
                                    :sink-effects    {}
-                                   :stream-bound?   false))
+                                   :stream-bound?   (in-stream? %)))
                               source-points)))]
     (print "*") (flush))
   (println "\nAll done."))
@@ -190,8 +268,9 @@
           [sink-AFs use-AFs] (do (println "Computing sink and use flood-activation-factors...")
                                  (time (pmap (p flood-activation-factors in-floodplain? elevation-layer)
                                              [sink-map use-map])))
-          sink-caps          (seq2map sink-points (fn [id] [id (atom (get-in sink-layer id))]))]
-      (time (distribute-downstream! cache-layer step-downstream in-stream? source-layer
+          sink-caps          (seq2map sink-points (fn [id] [id (ref (get-in sink-layer id))]))
+          unsaturated-sink?  (fn [id] (not= _0_ (deref (sink-caps id))))]
+      (time (distribute-downstream! cache-layer step-downstream in-stream? unsaturated-sink? source-layer
                                     source-points sink-map use-map sink-AFs use-AFs sink-caps))
       (println "Simulation complete. Returning the cache-layer.")
       (map-matrix (& seq deref) cache-layer))))

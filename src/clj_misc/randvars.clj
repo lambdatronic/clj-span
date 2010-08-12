@@ -428,12 +428,12 @@
 (defn rv-lt?
   [X Y]
   (> (rv-lt X Y) 0.5))
-(def _<_ rv-lt)
+(def _<_ rv-lt?)
 
 (defn rv-gt?
   [X Y]
   (> (rv-gt X Y) 0.5))
-(def _>_ rv-gt)
+(def _>_ rv-gt?)
 
 (defn- rv-map
   "Returns the distribution of the random variable X with f applied to its range values."
@@ -505,6 +505,10 @@
 ;;    (rv-scalar-divide (reduce rv-add rv-zero RVs) (count RVs))))
     (do (println "Averaging" (count RVs) (type (first RVs)) "RVs...")
         (time (rv-scalar-divide (reduce rv-add rv-zero RVs) (count RVs))))))
+
+(defn rv-convolutions
+  [& Xs]
+  (reduce (p rv-convolute conj) (rv-map list (first Xs)) (rest Xs)))
 
 (defmulti rv-scale
   (fn [rv scale-factor] (type rv)))

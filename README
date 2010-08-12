@@ -5,8 +5,8 @@ clj-span is an implementation of the Service Path Attribution Networks
 Assessment.
 
 Using clj-span, you can run a collection of parameterizable SPAN flow
-simulation models (line-of-sight, proximity, carbon, and sediment
-currently) and visualize their results as map outputs.
+simulation models (line-of-sight, proximity, carbon, flood, and
+sediment currently) and visualize their results as map outputs.
 
 Copyright Gary W. Johnson (gwjohnso@uvm.edu) 2009,2010
 
@@ -36,7 +36,7 @@ java -cp clj-span-standalone.jar clj_span.commandline \
      -sink-type          <finite|infinite> \
      -use-type           <finite|infinite> \
      -benefit-type       <rival|non-rival>   \
-     -flow-model         <line-of-sight|proximity|carbon|sediment>
+     -flow-model         <line-of-sight|proximity|carbon|flood|sediment>
 
 
 * License
