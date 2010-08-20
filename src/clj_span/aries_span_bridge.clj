@@ -38,7 +38,8 @@
                            grid-columns
                            grid-extent?
                            get-shape
-                           get-spatial-extent))
+                           get-spatial-extent
+                           cell-dimensions))
 
 #_(refer 'corescience :only '(find-state
                               find-observation
@@ -61,6 +62,7 @@
          grid-extent?
          get-shape
          get-spatial-extent
+         cell-dimensions
          find-state
          find-observation
          get-state-map
@@ -202,7 +204,7 @@
 
 (defn- get-hydrosheds-layer
   [observation rows cols]
-  (let [hydrosheds-observation  (run-at-shape "aries/flood/flow-direction"
+  (let [hydrosheds-observation  (run-at-shape "core.models.flood/flow-direction"
                                               (get-shape (get-spatial-extent observation)))
         hydrosheds-native-rows  (grid-rows    hydrosheds-observation)
         hydrosheds-native-cols  (grid-columns hydrosheds-observation)
@@ -234,8 +236,9 @@
     ;; This version of SPAN only works for grid-based observations (i.e. raster maps).
     (assert (grid-extent? observation))
     (println "Unpacking observation into data-layers.")
-    (let [rows         (grid-rows    observation)
-          cols         (grid-columns observation)
+    (let [rows         (grid-rows       observation)
+          cols         (grid-columns    observation)
+          [w h]        (cell-dimensions observation)
           flow-model   (.getLocalName (get-observable-class observation))
           source-layer (layer-from-observation observation source-concept rows cols)
           sink-layer   (layer-from-observation observation sink-concept   rows cols)
@@ -244,6 +247,7 @@
                          (if (#{"Sediment" "FloodWaterMovement"} flow-model)
                            (assoc layer-map "Hydrosheds" (get-hydrosheds-layer observation rows cols))
                            layer-map))]
+      (println "Cell Dimensions in meters:" [w h] "\n")
       (println "Flow Parameters:")
       (println "flow-model         =" flow-model)
       (println "downscaling-factor =" downscaling-factor)
