@@ -9,7 +9,7 @@
     (def sink-layer k)
     (def use-layer u)
     (def flow-layers f)))
-  
+
 (defn test-run-flood
   []
   (run-span {:source-layer source-layer
