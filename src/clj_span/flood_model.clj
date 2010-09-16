@@ -118,6 +118,9 @@
    amount sunk and a map of the sink-ids to the amount each sinks."
   [stream-bound? sink-map unsaturated-sink? sink-caps sink-AFs current-id actual-weight]
    (if stream-bound?
+     ;; We're in the stream. Spread the collected source weights
+     ;; latitudinally among all sinks in the floodplain. Activation
+     ;; factors must be applied to the sinks before they are used.
      (dosync
       (if-let [affected-sinks (seq (filter unsaturated-sink? (sink-map current-id)))]
         (let [convolutions         (rv-convolutions actual-weight
@@ -152,6 +155,7 @@
           (doseq [sink-id affected-sinks]
             (alter (sink-caps sink-id) (constantly (new-sink-caps sink-id))))
           [new-actual-weight new-sink-effects])))
+     ;; Not in the stream. Only one source weight and one sink. Activation factors don't matter.
      (dosync
       (if-let [sink-cap-ref (sink-caps current-id)]
         (let [sink-cap              (deref sink-cap-ref)
