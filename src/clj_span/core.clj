@@ -54,11 +54,11 @@
                                         blocked-flow
                                         actual-flow)])
   (:require clj-span.flood-model
-            clj-span.water-model
             clj-span.carbon-model
             clj-span.sediment-model
             clj-span.proximity-model
-            clj-span.line-of-sight-model))
+            clj-span.line-of-sight-model
+            clj-span.surface-water-model))
 
 (defn zero-layer-below-threshold
   "Takes a two dimensional array of RVs and replaces all values which
