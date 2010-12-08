@@ -187,7 +187,7 @@
   [x y]
   (first (filter (p divides? x) (iterate (p + y) y))))
 
-(defn resample-matrix
+(defn resample-matrix-slow
   [new-rows new-cols aggregator-fn matrix]
   (constraints-1.0 {:pre [(every? #(and (pos? %) (integer? %)) [new-rows new-cols])]})
   (newline)
@@ -227,11 +227,33 @@
                                        (aggregator-fn (for [i-offset offset-range-rows j-offset offset-range-cols]
                                                         (get-in lcm-matrix [(+ i-base i-offset) (+ j-base j-offset)]))))))))))))
 
+(defn resample-matrix
+  [new-rows new-cols aggregator-fn matrix]
+  (let [orig-rows (get-rows matrix)
+        orig-cols (get-cols matrix)]
+    (cond (and (== orig-rows new-rows) (== orig-cols new-cols))
+          matrix
+
+          (and (<= new-rows orig-rows) (new-cols orig-cols))
+          (downsample-matrix new-rows new-cols aggregator-fn matrix)
+
+          :otherwise
+          (resample-matrix-slow new-rows new-cols aggregator-fn matrix))))
+
 (defn in-bounds?
   "Returns true if the point is within the map bounds defined by
    [0 rows] and [0 cols], inclusive below and exclusive above."
   [rows cols [i j]]
   (and (>= i 0) (>= j 0) (< i rows) (< j cols)))
+
+(defn on-bounds?
+  "Returns true if the point occurs anywhere on the bounds
+   [[0 rows][0 cols]]."
+  [rows cols [i j]]
+  (or (== i 0)
+      (== i (dec rows))
+      (== j 0)
+      (== j (dec cols))))
 
 (defn get-neighbors
   "Return a sequence of neighboring points within the map bounds."
