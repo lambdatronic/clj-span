@@ -23,7 +23,7 @@
 
 (ns clj-misc.matrix-ops
   (:use [clojure.set    :only (map-invert)]
-        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries)]))
+        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries magnitude)]))
 
 (defn get-rows [matrix] (count matrix))
 (defn get-cols [matrix] (count (first matrix)))
@@ -312,6 +312,13 @@
     (if (zero? max-val)
       matrix
       (map-matrix #(/ % max-val) matrix))))
+
+(defn find-point-at-dist-in-m
+  [id dir dist w h]
+  (let [step-size  (magnitude (map * dir [h w]))
+        num-steps  (/ dist step-size)
+        step-delta (map #(int (* num-steps %)) dir)]
+    (map + id step-delta)))
 
 (defn find-line-between
   "Returns the sequence of all points [i j] intersected by the line
