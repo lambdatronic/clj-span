@@ -42,8 +42,11 @@
                            cell-dimensions))
 
 #_(refer 'corescience :only '(find-state
-                              find-observation
+                              ;;find-observation
+                              ;; TODO remove this when it's not needed anymore
+                              collect-states
                               get-state-map
+                              get-dependent-states-map
                               get-observable-class))
 
 #_(refer 'modelling   :only '(probabilistic?
@@ -64,8 +67,10 @@
          get-spatial-extent
          cell-dimensions
          find-state
-         find-observation
+         ;;find-observation
+         collect-states
          get-state-map
+         get-dependent-states-map
          get-observable-class
          probabilistic?
          binary?
@@ -120,11 +125,11 @@
    represented as probability distributions {doubles -> doubles}.
    NaN state values are converted to 0s."
   [ds rows cols]
-  (println "Inside unpack-datasource!")
+  (println "Inside unpack-datasource!" rows cols)
   (let [n             (* rows cols)
         NaNs-to-zero  (p map #(if (Double/isNaN %) 0.0 %))
         get-midpoints #(map (fn [next prev] (/ (+ next prev) 2)) (rest %) %)]
-    (println "Checking datasource type...")
+    (println "Checking datasource type..." ds)
     (if (and (probabilistic? ds) (not (binary? ds)))
       (do (print "It's probabilistic...")
           (flush)
@@ -153,6 +158,7 @@
                   (with-meta (apply struct prob-dist (get-probabilities ds idx)) disc-type))))))
       ;; binary distributions and deterministic values (FIXME: NaNs become 0s currently. Is this good?)
       (do (println "It's deterministic.")
+          (println "DATASOURCE IS" ds)
           (for [value (NaNs-to-zero (get-data ds))]
             (with-meta (array-map value 1.0) disc-type))))))
 
@@ -200,6 +206,18 @@
   [observation concept rows cols]
   (when concept
     (println "Extracting" (.getLocalName concept) "layer.")
+    ;;(println "Observation:" observation)
+    ;;(println "Concept:" concept)
+    ;;(println "Find-Observation:" (find-observation observation concept) "\n\n")
+    ;;(println "State-Map:" (get-state-map (find-observation observation concept)) "\n\n")
+    ;;(println "Get-Obs1:" (get-obs observation))
+    ;;(println "Get-Obs2:" (get-obs (find-observation observation concept)))
+    ;;(println "Data-Source:" (.getDataSource (find-observation observation concept)) "\n\n")
+    ;;(println "Get-Obs Data-Source:" (.getDataSource (get-obs (find-observation observation concept))))
+    ;;(println "Find-State/Obs:" (find-state observation concept) "\n\n")
+    ;;(println "Dependencies:" (get-dependencies observation))
+    ;;(println "Contingencies:" (get-contingencies observation))
+    ;;(seq2matrix rows cols (unpack-datasource (first (.values (get-state-map (find-observation observation concept)))) rows cols))))
     (seq2matrix rows cols (unpack-datasource (find-state observation concept) rows cols))))
 
 (defn- layer-map-from-observation
@@ -210,7 +228,8 @@
   (when concept
     (mapmap (memfn getLocalName)
             #(seq2matrix rows cols (unpack-datasource % rows cols))
-            (get-state-map (find-observation observation concept)))))
+            ;;(get-state-map (find-observation observation concept)))))
+            (get-dependent-states-map observation concept))))
 
 (defn- get-hydrosheds-layer
   [observation rows cols]
@@ -246,18 +265,19 @@
     ;; This version of SPAN only works for grid-based observations (i.e. raster maps).
     (assert (grid-extent? observation))
     (println "Unpacking observation into data-layers.")
-    (let [rows         (grid-rows       observation)
-          cols         (grid-columns    observation)
-          cell-dims    (cell-dimensions observation) ;; [w h] in meters
-          flow-model   (.getLocalName (get-observable-class observation))
-          source-layer (layer-from-observation observation source-concept rows cols)
-          sink-layer   (layer-from-observation observation sink-concept   rows cols)
-          use-layer    (layer-from-observation observation use-concept    rows cols)
-          flow-layers  (let [layer-map (layer-map-from-observation observation flow-concept rows cols)]
-                         (if (#{"Sediment" "FloodWaterMovement"} flow-model)
-                           (assoc layer-map "Hydrosheds" (get-hydrosheds-layer observation rows cols))
-                           layer-map))]
-      (println "Cell Dimensions in meters:" cell-dims "\n")
+    ;; FIXME fv this is to address an issue before it shows up - to be removed
+    (collect-states observation)
+    (let [rows            (grid-rows       observation)
+          cols            (grid-columns    observation)
+          [cell-w cell-h] (cell-dimensions observation) ;; in meters
+          flow-model      (.getLocalName (get-observable-class observation))
+          source-layer    (layer-from-observation observation source-concept rows cols)
+          sink-layer      (layer-from-observation observation sink-concept   rows cols)
+          use-layer       (layer-from-observation observation use-concept    rows cols)
+          flow-layers     (let [layer-map (layer-map-from-observation observation flow-concept rows cols)]
+                            (if (#{"Sediment" "FloodWaterMovement"} flow-model)
+                              (assoc layer-map "Hydrosheds" (get-hydrosheds-layer observation rows cols))
+                              layer-map))]
       (println "Flow Parameters:")
       (println "flow-model         =" flow-model)
       (println "downscaling-factor =" downscaling-factor)
@@ -266,6 +286,8 @@
       (println "sink-threshold     =" sink-threshold)
       (println "use-threshold      =" use-threshold)
       (println "trans-threshold    =" trans-threshold)
+      (println "cell-width         =" cell-w "meters")
+      (println "cell-height        =" cell-h "meters")
       (println "source-type        =" source-type)
       (println "sink-type          =" sink-type)
       (println "use-type           =" use-type)
@@ -286,8 +308,8 @@
                     :use-threshold      use-threshold
                     :flow-layers        flow-layers
                     :trans-threshold    trans-threshold
-                    :cell-width         (first  cell-dims)
-                    :cell-height        (second cell-dims)
+                    :cell-width         cell-w
+                    :cell-height        cell-h
                     :rv-max-states      rv-max-states
                     :downscaling-factor downscaling-factor
                     :source-type        source-type
