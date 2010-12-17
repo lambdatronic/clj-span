@@ -54,6 +54,10 @@
   (filter (fn [id] (pred? (get-in matrix id)))
           (for [i (range (get-rows matrix)) j (range (get-cols matrix))] [i j])))
 
+(defn add-ids
+  [[a b] [c d]]
+  [(+ a c) (+ b d)])
+
 (defn subtract-ids
   [[a b] [c d]]
   [(- a c) (- b d)])
