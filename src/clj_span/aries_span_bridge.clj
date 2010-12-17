@@ -248,7 +248,7 @@
     (println "Unpacking observation into data-layers.")
     (let [rows         (grid-rows       observation)
           cols         (grid-columns    observation)
-          [w h]        (cell-dimensions observation) ;; in meters
+          cell-dims    (cell-dimensions observation) ;; [w h] in meters
           flow-model   (.getLocalName (get-observable-class observation))
           source-layer (layer-from-observation observation source-concept rows cols)
           sink-layer   (layer-from-observation observation sink-concept   rows cols)
@@ -257,7 +257,7 @@
                          (if (#{"Sediment" "FloodWaterMovement"} flow-model)
                            (assoc layer-map "Hydrosheds" (get-hydrosheds-layer observation rows cols))
                            layer-map))]
-      (println "Cell Dimensions in meters:" [w h] "\n")
+      (println "Cell Dimensions in meters:" cell-dims "\n")
       (println "Flow Parameters:")
       (println "flow-model         =" flow-model)
       (println "downscaling-factor =" downscaling-factor)
@@ -286,6 +286,8 @@
                     :use-threshold      use-threshold
                     :flow-layers        flow-layers
                     :trans-threshold    trans-threshold
+                    :cell-width         (first  cell-dims)
+                    :cell-height        (second cell-dims)
                     :rv-max-states      rv-max-states
                     :downscaling-factor downscaling-factor
                     :source-type        source-type
