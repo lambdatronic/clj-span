@@ -39,7 +39,7 @@ java -cp clj-span-standalone.jar clj_span.commandline \
      -sink-type          <finite|infinite> \
      -use-type           <finite|infinite> \
      -benefit-type       <rival|non-rival>   \
-     -flow-model         <line-of-sight|proximity|carbon|flood|surface-water|sediment|coastal-storm-protection>
+     -flow-model         <line-of-sight|proximity|carbon|flood|surface-water|sediment|coastal-storm-protection|subsistence-fisheries>
 
 * License
 
