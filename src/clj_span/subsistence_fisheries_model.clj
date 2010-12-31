@@ -19,156 +19,134 @@
 ;;;
 ;;; This namespace defines the subsistence-fisheries model.
 ;;;
+;;; Procedure:
+;;; 0. Setup source caches at all source points.
+;;; 1. For each use point, find its nearest path point and the closest shore point.
+;;; 2. Follow the path, using a closed list and the shore orientation as a shortest-distance heuristic.
+;;; 3. Make a map of these shore paths for each use point.
+;;; 4. Enter the water and start depleting the source caches.
+;;; 5. A fisherman will continue to work in the same area until either the source cache runs out or his demand is met.
+;;; 6. If the fisherman still has unmet demand after his source cache is depleted,
+;;;    radiate into all neighboring, fish-producing pixels, split the demand evenly (naive, I know), and continue.
+;;; 7. Once all demand is met, end the simulation and return the cache-layer.
 
 (ns clj-span.subsistence-fisheries-model
-  (:use [clj-span.params     :only (*trans-threshold*)]
-        [clj-span.model-api  :only (distribute-flow service-carrier)]
-        [clj-misc.utils      :only (seq2map p & angular-distance)]
+  (:use [clj-span.model-api  :only (distribute-flow service-carrier)]
+        [clj-misc.utils      :only (p
+                                    &
+                                    seq2map
+                                    mapmap
+                                    angular-distance
+                                    with-progress-bar
+                                    iterate-while-seq
+                                    shortest-path)]
         [clj-misc.matrix-ops :only (get-rows
                                     get-cols
                                     make-matrix
                                     map-matrix
-                                    add-ids
                                     subtract-ids
-                                    in-bounds?
-                                    on-bounds?
                                     filter-matrix-for-coords
                                     get-neighbors
-                                    find-point-at-dist-in-m
+                                    get-bearing
+                                    find-nearest
                                     find-line-between)]
-        [clj-misc.randvars   :only (_0_ _+_ rv-fn rv-above?)]))
+        [clj-misc.randvars   :only (_0_ _d *_ _*_ rv-fn)]))
 
-(defn handle-sink-effects
-  [current-id possible-weight actual-weight eco-sink-layer geo-sink-layer]
-  (let [eco-sink-cap     (get-in eco-sink-layer current-id)
-        geo-sink-cap     (get-in geo-sink-layer current-id)
-        eco-sink?        (not= _0_ eco-sink-cap)
-        geo-sink?        (not= _0_ geo-sink-cap)
-        post-geo-possible-weight (if geo-sink?
-                                   (rv-fn (fn [p g] (- p (min p g))) possible-weight geo-sink-cap)
-                                   possible-weight)
-        post-geo-actual-weight   (if geo-sink?
-                                   (rv-fn (fn [a g] (- a (min a g))) actual-weight geo-sink-cap)
-                                   actual-weight)
-        post-eco-actual-weight   (if (and eco-sink? (not= _0_ post-geo-actual-weight))
-                                   (rv-fn (fn [a e] (- a (min a e))) post-geo-actual-weight eco-sink-cap)
-                                   post-geo-actual-weight)
-        eco-sink-effects         (if (and eco-sink? (not= _0_ post-geo-actual-weight))
-                                   {current-id (rv-fn min post-geo-actual-weight eco-sink-cap)})]
-    [post-geo-possible-weight post-eco-actual-weight eco-sink-effects]))
+(defstruct fisherman :need :route :cache)
 
-(defn apply-local-effects!
-  [storm-orientation eco-sink-layer geo-sink-layer use-layer cache-layer rows cols
-   {:keys [route possible-weight actual-weight sink-effects] :as storm-carrier}]
-  (let [current-location  (peek route)
-        next-location     (add-ids current-location storm-orientation)
-        [new-possible-weight new-actual-weight new-sink-effects] (handle-sink-effects current-location
-                                                                                      possible-weight
-                                                                                      actual-weight
-                                                                                      eco-sink-layer
-                                                                                      geo-sink-layer)
-        post-sink-carrier (assoc storm-carrier
-                            :possible-weight new-possible-weight
-                            :actual-weight   new-actual-weight
-                            :sink-effects    (merge-with _+_ sink-effects new-sink-effects))]
-    (if (not= _0_ (get-in use-layer current-location))
-      (dosync (alter (get-in cache-layer current-location) conj post-sink-carrier)))
-    (if (and (in-bounds? rows cols next-location)
-             (rv-above? new-possible-weight *trans-threshold*))
-      (assoc post-sink-carrier :route (conj route next-location)))))
+;; FIXME: These fishermen are not constrained by distance and can only
+;;        travel through cells containing fish.
+(defn go-fish!
+  [fish-supply fish-left? rows cols {:keys [need route cache] :as fisherman}]
+  (dosync
+   (let [current-id       (peek route)
+         local-supply-ref (fish-supply current-id)
+         local-supply     (deref local-supply-ref)
+         need-remaining   (if (not= _0_ local-supply) ;; Check for fish locally.
+                            ;; There are fish here. Let's get some.
+                            (let [fish-caught    (rv-fn min local-supply need)
+                                  fish-remaining (rv-fn (fn [s n] (- s (min s n))) local-supply need)
+                                  need-remaining (rv-fn (fn [s n] (- n (min s n))) local-supply need)]
+                              ;; Reduce the local-supply-ref by this amount.
+                              (alter local-supply-ref (constantly fish-remaining))
+                              ;; Store a service-carrier in your cache.
+                              (alter cache conj (struct-map service-carrier
+                                                  :source-id       current-id
+                                                  :route           (rseq route)
+                                                  :possible-weight fish-caught
+                                                  :actual-weight   fish-caught))
+                              need-remaining)
+                            need)]
+     ;; On to the next.
+     (if (not= _0_ need-remaining)
+       (if-let [fishable-neighbors (seq (filter fish-left? (get-neighbors rows cols current-id)))]
+         (let [split-need (_d need-remaining (count fishable-neighbors))]
+           (for [id fishable-neighbors]
+             (assoc fisherman
+               :need  split-need
+               :route (conj route id)))))))))
 
-(defn distribute-wave-energy!
-  [storm-source-point storm-orientation storm-carriers get-next-orientation
-   eco-sink-layer geo-sink-layer use-layer cache-layer rows cols]
-  (println "Moving the wave energy toward the coast...")
-  (doseq [_ (take-while (& seq last)
-                        (iterate
-                         (fn [[storm-centerpoint storm-orientation storm-carriers]]
-                           (let [next-storm-centerpoint (add-ids storm-centerpoint storm-orientation)
-                                 next-storm-orientation (get-next-orientation next-storm-centerpoint storm-orientation)
-                                 next-storm-carriers    (doall (remove nil? (pmap (p apply-local-effects!
-                                                                                     storm-orientation
-                                                                                     eco-sink-layer
-                                                                                     geo-sink-layer
-                                                                                     use-layer
-                                                                                     cache-layer
-                                                                                     rows
-                                                                                     cols)
-                                                                                  storm-carriers)))]
-                             (if-not (on-bounds? rows cols storm-centerpoint)
-                               [next-storm-centerpoint next-storm-orientation next-storm-carriers])))
-                         [storm-source-point storm-orientation storm-carriers]))]
-    (print "*") (flush))
-  (println "\nAll done."))
+(defn send-forth-fishermen!
+  [fishermen source-kg rows cols]
+  (let [fish-supply (mapmap identity ref source-kg)
+        fish-left?  #(not= _0_ (deref (fish-supply %)))]
+    (println "Fishing time...")
+    (with-progress-bar
+      (iterate-while-seq
+       (p apply concat (p pmap (p go-fish! fish-supply fish-left? rows cols)))
+       fishermen))
+    (println "All done.")))
 
-(def storm-to-wave-orientations
-     {[ 0  1] [ 1  0]
-      [ 1  1] [ 1 -1]
-      [ 1  0] [ 0 -1]
-      [ 1 -1] [-1 -1]
-      [ 0 -1] [-1  0]
-      [-1 -1] [-1  1]
-      [-1  0] [ 0  1]
-      [-1  1] [ 1  1]})
+(defn make-fishermen
+  [use-kg fishing-routes cache-layer]
+  (map (fn [use-val route]
+         (struct-map fisherman
+           :need  use-val
+           :route route
+           :cache (get-in cache-layer (first route))))
+       use-kg
+       fishing-routes))
 
-(defn find-wave-line
-  [storm-source-point storm-orientation wave-width cell-width cell-height rows cols]
-  (let [wave-orientation (storm-to-wave-orientations storm-orientation) ;; 90 degrees left of storm-orientation
-        wave-reach       (/ wave-width 2)
-        wave-left-edge   (find-point-at-dist-in-m storm-source-point
-                                                  wave-orientation
-                                                  wave-reach
-                                                  cell-width
-                                                  cell-height)
-        wave-right-edge  (find-point-at-dist-in-m storm-source-point
-                                                  (map - wave-orientation)
-                                                  wave-reach
-                                                  cell-width
-                                                  cell-height)]
-    (filter (p in-bounds? rows cols) (find-line-between wave-left-edge wave-right-edge))))
-
-(defn get-storm-orientation
-  [on-track? rows cols id current-orientation]
-  (if-let [on-track-neighbors (seq (filter on-track? (get-neighbors rows cols id)))]
-    (let [orientation-deltas (seq2map (map #(subtract-ids % id) on-track-neighbors)
-                                      (fn [neighbor-orientation]
-                                        [(angular-distance current-orientation neighbor-orientation)
-                                         neighbor-orientation]))]
-      (orientation-deltas (apply min (keys orientation-deltas))))))
+(defn find-shortest-paths-to-coast
+  [path? fishing-spot? rows cols use-points]
+  (println "Finding paths to coast...")
+  (with-progress-bar
+    (pmap
+     #(let [path-root      (find-nearest path?         rows cols %)
+            fishing-spot   (find-nearest fishing-spot? rows cols %)
+            bearing        (get-bearing path-root fishing-spot)
+            follow-path    (fn [id] (filter path? (get-neighbors rows cols id)))
+            follow-bearing (fn [id neighbors] (let [neighbor-bearings  (map (fn [nid] (subtract-ids nid id)) neighbors)
+                                                    bearing-deviations (map (p angular-distance bearing) neighbor-bearings)
+                                                    min-deviation      (apply min bearing-deviations)]
+                                                (keys (filter (fn [[_ dev]] (== dev min-deviation))
+                                                              (zipmap neighbors bearing-deviations)))))]
+        (vec (concat (find-line-between % path-root)
+                     (rest (shortest-path path-root follow-path fishing-spot? follow-bearing)))))
+     use-points))
+  (println "All done."))
 
 (defmethod distribute-flow "SubsistenceFishAccessibility"
-  [_ cell-width cell-height source-layer _ use-layer {paths "Path"}]
+  [_ cell-width cell-height source-layer _ use-layer
+   {path-layer "Path", population-density-layer "PopulationDensity"}]
   (println "Running Subsistence Fisheries flow model.")
-  (let [rows          (get-rows source-layer)
-        cols          (get-cols source-layer)
-        cache-layer   (make-matrix rows cols (fn [_] (ref ())))
-        [source-points use-points] (pmap (p filter-matrix-for-coords (p not= _0_)) [source-layer use-layer])]
-    (println "Source points:" (count source-points))
-    (println "Use points:   " (count use-points))
-    ;; RESUME HERE
-    (let [storm-source-point   (first source-points) ;; we are only going to use one source point in this model
-          storm-name           (get-in storm-tracks-layer storm-source-point)
-          on-track?            #(= storm-name (get-in storm-tracks-layer %))
-          get-next-orientation (p get-storm-orientation on-track? rows cols)
-          storm-orientation    (get-next-orientation storm-source-point [0 -1]) ;; start the storm to the west
-          wave-line            (find-wave-line storm-source-point storm-orientation 100000 cell-width cell-height rows cols) ;; wave width = 100km
-          wave-height          (get-in source-layer storm-source-point)
-          storm-carriers       (map #(struct-map service-carrier
-                                       :source-id       %
-                                       :route           [%]
-                                       :possible-weight wave-height
-                                       :actual-weight   wave-height
-                                       :sink-effects    {})
-                                    wave-line)]
-      (distribute-wave-energy! storm-source-point
-                               storm-orientation
-                               storm-carriers
-                               get-next-orientation
-                               eco-sink-layer
-                               geo-sink-layer
-                               use-layer
-                               cache-layer
-                               rows
-                               cols)
+  (let [rows                (get-rows source-layer)
+        cols                (get-cols source-layer)
+        cache-layer         (make-matrix rows cols (fn [_] (ref ())))
+        [source-points use-points path-points] (pmap (p filter-matrix-for-coords (p not= _0_))
+                                                     [source-layer use-layer path-layer])]
+    (println "Source points: " (count source-points))
+    (println "Use points:    " (count use-points))
+    (let [km2-per-cell   (* cell-width cell-height (Math/pow 10.0 -6.0))
+          source-kg      (seq2map source-points (fn [id] [id (*_ km2-per-cell                                   ;; km^2
+                                                                 (get-in source-layer id))]))                   ;; kg/km^2*year
+          use-kg         (seq2map use-points    (fn [id] [id (*_ km2-per-cell                                   ;; km^2
+                                                                 (_*_ (get-in use-layer id)                     ;; kg/person*year
+                                                                      (get-in population-density-layer id)))])) ;; person/km^2
+          path?          (set path-points)
+          fishing-spot?  (set source-points)
+          fishing-routes (find-shortest-paths-to-coast path? fishing-spot? rows cols use-points)
+          fishermen      (make-fishermen use-kg fishing-routes cache-layer)]
+      (send-forth-fishermen! fishermen source-kg rows cols)
       (println "Simulation complete. Returning the cache-layer.")
       (map-matrix (& seq deref) cache-layer))))
