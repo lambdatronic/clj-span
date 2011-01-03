@@ -158,7 +158,6 @@
                   (with-meta (apply struct prob-dist (get-probabilities ds idx)) disc-type))))))
       ;; binary distributions and deterministic values (FIXME: NaNs become 0s currently. Is this good?)
       (do (println "It's deterministic.")
-          (println "DATASOURCE IS" ds)
           (for [value (NaNs-to-zero (get-data ds))]
             (with-meta (array-map value 1.0) disc-type))))))
 
@@ -206,30 +205,24 @@
   [observation concept rows cols]
   (when concept
     (println "Extracting" (.getLocalName concept) "layer.")
-    ;;(println "Observation:" observation)
-    ;;(println "Concept:" concept)
-    ;;(println "Find-Observation:" (find-observation observation concept) "\n\n")
-    ;;(println "State-Map:" (get-state-map (find-observation observation concept)) "\n\n")
-    ;;(println "Get-Obs1:" (get-obs observation))
-    ;;(println "Get-Obs2:" (get-obs (find-observation observation concept)))
-    ;;(println "Data-Source:" (.getDataSource (find-observation observation concept)) "\n\n")
-    ;;(println "Get-Obs Data-Source:" (.getDataSource (get-obs (find-observation observation concept))))
-    ;;(println "Find-State/Obs:" (find-state observation concept) "\n\n")
-    ;;(println "Dependencies:" (get-dependencies observation))
-    ;;(println "Contingencies:" (get-contingencies observation))
-    ;;(seq2matrix rows cols (unpack-datasource (first (.values (get-state-map (find-observation observation concept)))) rows cols))))
     (seq2matrix rows cols (unpack-datasource (find-state observation concept) rows cols))))
 
 (defn- layer-map-from-observation
   "Builds a map of {concept-names -> matrices}, where each concept's
    matrix is a rows x cols vector of vectors of the concept's state
    values in the observation."
-  [observation concept rows cols]
-  (when concept
-    (mapmap (memfn getLocalName)
-            #(seq2matrix rows cols (unpack-datasource % rows cols))
-            ;;(get-state-map (find-observation observation concept)))))
-            (get-dependent-states-map observation concept))))
+  [observation concepts rows cols]
+  (when (seq concepts)
+    (println "Extracting flow layers:" (map (memfn getLocalName) concepts))
+    (into {}
+          (map (fn [c] [(.getLocalName c)
+                        (seq2matrix rows cols (unpack-datasource (find-state observation c) rows cols))])
+               concepts))))
+;;    (let [concept-set (set concepts)]
+;;      (mapmap (memfn getLocalName)
+;;              #(seq2matrix rows cols (unpack-datasource % rows cols))
+;;              (filter (fn [[concept ds]] (contains? concept-set concept))
+;;                      (get-state-map observation))))))
 
 (defn- get-hydrosheds-layer
   [observation rows cols]
@@ -253,7 +246,7 @@
    flow-params map, the SPAN model will not be run, and instead the
    source, sink, use, and flow layers will be extracted from the
    observation and written to :save-file."
-  [observation-or-model-spec source-concept sink-concept use-concept flow-concept
+  [observation-or-model-spec source-concept sink-concept use-concept flow-concepts
    {:keys [source-threshold sink-threshold use-threshold trans-threshold
            rv-max-states downscaling-factor source-type sink-type use-type benefit-type
            result-type save-file]
@@ -274,7 +267,7 @@
           source-layer    (layer-from-observation observation source-concept rows cols)
           sink-layer      (layer-from-observation observation sink-concept   rows cols)
           use-layer       (layer-from-observation observation use-concept    rows cols)
-          flow-layers     (let [layer-map (layer-map-from-observation observation flow-concept rows cols)]
+          flow-layers     (let [layer-map (layer-map-from-observation observation flow-concepts rows cols)]
                             (if (#{"Sediment" "FloodWaterMovement"} flow-model)
                               (assoc layer-map "Hydrosheds" (get-hydrosheds-layer observation rows cols))
                               layer-map))]
