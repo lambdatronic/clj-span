@@ -28,7 +28,8 @@
   :route          ; byte array of directions from source-id to use-id or nil
   :possible-weight; amount of source-weight which reaches (and is used by) this use location disregarding sink-effects
   :actual-weight  ; amount of source-weight which reaches (and is used by) this use location including sink-effects
-  :sink-effects)  ; map of sink-ids to sink-effects on this flow path (decayed as necessary)
+  :sink-effects   ; map of sink-ids to sink-effects on this flow path (decayed as necessary)
+  :use-effects)   ; map of use-ids to rival use-effects on this flow path (decayed as necessary)
 
 (defmulti distribute-flow!
   "Service-specific flow distribution functions."
