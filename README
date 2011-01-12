@@ -23,22 +23,23 @@ Then simply place clj-span-standalone.jar on your classpath and fire
 up your JVM as follows:
 
 java -cp clj-span-standalone.jar clj_span.commandline \
-     -source-layer       <filepath> \
-     -sink-layer         <filepath> \
-     -use-layer          <filepath> \
-     -flow-layers        <filepath> \
-     -source-threshold   <double>   \
-     -sink-threshold     <double>   \
-     -use-threshold      <double>   \
-     -trans-threshold    <double>   \
-     -cell-width         <double>   \
-     -cell-height        <double>   \
-     -rv-max-states      <integer>  \
-     -downscaling-factor <number>   \
+     -source-layer       <filepath>        \
+     -sink-layer         <filepath>        \
+     -use-layer          <filepath>        \
+     -flow-layers        <filepath>        \
+     -source-threshold   <double>          \
+     -sink-threshold     <double>          \
+     -use-threshold      <double>          \
+     -trans-threshold    <double>          \
+     -cell-width         <double>          \
+     -cell-height        <double>          \
+     -rv-max-states      <integer>         \
+     -downscaling-factor <number>          \
      -source-type        <finite|infinite> \
      -sink-type          <finite|infinite> \
      -use-type           <finite|infinite> \
-     -benefit-type       <rival|non-rival>   \
+     -benefit-type       <rival|non-rival> \
+     -animation?         <true|false>      \
      -flow-model         <line-of-sight|proximity|carbon|flood|surface-water|sediment|coastal-storm-protection|subsistence-fisheries>
 
 * License

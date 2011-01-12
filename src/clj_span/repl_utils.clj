@@ -51,7 +51,8 @@
              :use-type :infinite
              :benefit-type :non-rival
              :flow-model "CoastalStormMovement"
-             :result-type :closure-map}))
+             :result-type :closure-map
+             :animation? true}))
 
 (defn test-run-fishing
   []
@@ -72,4 +73,5 @@
              :use-type :finite
              :benefit-type :rival
              :flow-model "SubsistenceFishAccessibility"
-             :result-type :closure-map}))
+             :result-type :closure-map
+             :animation? false}))

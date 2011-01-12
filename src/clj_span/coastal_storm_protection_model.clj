@@ -106,15 +106,14 @@
 (defn end-animation [panel] panel)
 
 (defn distribute-wave-energy!
-  [storm-source-point storm-orientation storm-carriers get-next-orientation
-   eco-sink-layer geo-sink-layer use-layer cache-layer rows cols]
+  [storm-source-point storm-orientation storm-carriers get-next-orientation eco-sink-layer
+   geo-sink-layer use-layer cache-layer possible-flow-layer actual-flow-layer animation? rows cols]
   (println "Moving the wave energy toward the coast...")
-  (let [possible-flow-layer    (make-matrix rows cols (fn [_] (ref _0_)))
-        actual-flow-layer      (make-matrix rows cols (fn [_] (ref _0_)))
-        possible-flow-animator (agent (draw-ref-layer "Possible Flow" possible-flow-layer :flow 1))
-        actual-flow-animator   (agent (draw-ref-layer "Actual Flow"   actual-flow-layer   :flow 1))]
-    (send-off possible-flow-animator run-animation)
-    (send-off actual-flow-animator   run-animation)
+  (let [possible-flow-animator (if animation? (agent (draw-ref-layer "Possible Flow" possible-flow-layer :flow 1)))
+        actual-flow-animator   (if animation? (agent (draw-ref-layer "Actual Flow"   actual-flow-layer   :flow 1)))]
+    (when animation?
+      (send-off possible-flow-animator run-animation)
+      (send-off actual-flow-animator   run-animation))
     (doseq [_ (take-while (& seq last)
                           (iterate
                            (fn [[storm-centerpoint storm-orientation storm-carriers]]
@@ -137,8 +136,9 @@
                                  (println "Location-dependent termination:" next-storm-orientation storm-centerpoint))))
                            [storm-source-point storm-orientation storm-carriers]))]
       (print "*") (flush))
-    (send-off possible-flow-animator end-animation)
-    (send-off actual-flow-animator   end-animation))
+    (when animation?
+      (send-off possible-flow-animator end-animation)
+      (send-off actual-flow-animator   end-animation)))
   (println "\nAll done."))
 
 (def storm-to-wave-orientations
@@ -187,12 +187,14 @@
 ;;        make the waves die down faster (since the sinks will be
 ;;        doubled).
 (defmethod distribute-flow "CoastalStormMovement"
-  [_ cell-width cell-height source-layer eco-sink-layer use-layer
+  [_ animation? cell-width cell-height source-layer eco-sink-layer use-layer
    {storm-track-layer "StormTrack", geo-sink-layer "GeomorphicFloodProtection"}]
   (println "Running Coastal Storm Protection flow model.")
-  (let [rows          (get-rows source-layer)
-        cols          (get-cols source-layer)
-        cache-layer   (make-matrix rows cols (fn [_] (ref ())))
+  (let [rows                (get-rows source-layer)
+        cols                (get-cols source-layer)
+        cache-layer         (make-matrix rows cols (fn [_] (ref ())))
+        possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
+        actual-flow-layer   (make-matrix rows cols (fn [_] (ref _0_)))
         source-points (filter-matrix-for-coords (p not= _0_) source-layer)]
     (println "Source points:" (count source-points))
     (let [storm-source-point   (first source-points) ;; we are only going to use one source point in this model
@@ -217,8 +219,13 @@
                                geo-sink-layer
                                use-layer
                                cache-layer
+                               possible-flow-layer
+                               actual-flow-layer
+                               animation?
                                rows
                                cols)
       (println "Users affected:" (count (filter (& seq deref) (matrix2seq cache-layer))))
       (println "Simulation complete. Returning the cache-layer.")
-      (map-matrix (& seq deref) cache-layer))))
+      [(map-matrix (& seq deref) cache-layer)
+       (map-matrix deref possible-flow-layer)
+       (map-matrix deref actual-flow-layer)])))

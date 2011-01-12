@@ -129,63 +129,63 @@
   (map-matrix #(reduce _+_ _0_ (map :actual-weight %)) cache-layer))
 (def actual-use (memoize actual-use))
 
-(defn- rerun-possible-route
-  [flow-model {:keys [source-id route possible-weight use-effects]}]
-  (let [route-ids (rseq (unbitpack-route source-id route))]
-    (zipmap route-ids
-            (map (p undecay flow-model)
-                 (if (empty? use-effects)
-                   (repeat possible-weight)
-                   ;;         (reductions
-                   ;;          #(_+_ %1 (get use-effects %2 _0_))
-                   ;;          possible-weight
-                   ;;          route-ids)
-                   (reduce
-                    ;;#(conj %1 (_+_ (peek %1) (get use-effects %2 _0_)))
-                    #(conj %1 (if-let [u (get use-effects %2)] (_+_ (peek %1) u) (peek %1)))
-                    [possible-weight]
-                    route-ids))
-                 (iterate inc 0)))))
-
-(defn- rerun-actual-route
-  [flow-model {:keys [source-id route actual-weight sink-effects use-effects] :or {use-effects {}} :as carrier}]
-  (if (empty? sink-effects)
-    (rerun-possible-route flow-model carrier)
-    (let [route-ids (rseq (unbitpack-route source-id route))]
-      (zipmap route-ids
-              (map (p undecay flow-model)
-                   ;;         (reductions
-                   ;;          #(reduce _+_ %1 (remove nil? ((juxt sink-effects use-effects) %2)))
-                   ;;          actual-weight
-                   ;;          route-ids)
-                   (reduce
-                    #(conj %1 (reduce _+_ (peek %1) (remove nil? [(sink-effects %2) (use-effects %2)])))
-                    ;;          #(conj %1 (reduce _+_ (peek %1) (remove nil? ((juxt sink-effects use-effects) %2))))
-                    [actual-weight]
-                    route-ids)
-                   (iterate inc 0))))))
-
-(defn possible-flow
-  [cache-layer flow-model]
-  (let [rows (get-rows cache-layer)
-        cols (get-cols cache-layer)]
-    (if-let [carriers-with-routes (seq (filter :route (apply concat (matrix2seq cache-layer))))]
-      (let [coord-map (apply merge-with _+_
-                             (with-progress-bar (pmap (p rerun-possible-route flow-model) carriers-with-routes)))]
-        (make-matrix rows cols #(get coord-map % _0_)))
-      (possible-source cache-layer))))
-(def possible-flow (memoize possible-flow))
-
-(defn actual-flow
-  [cache-layer flow-model]
-  (let [rows (get-rows cache-layer)
-        cols (get-cols cache-layer)]
-    (if-let [carriers-with-routes (seq (filter :route (apply concat (matrix2seq cache-layer))))]
-      (let [coord-map (apply merge-with _+_
-                             (with-progress-bar (pmap (p rerun-actual-route flow-model) carriers-with-routes)))]
-        (make-matrix rows cols #(get coord-map % _0_)))
-      (actual-source cache-layer))))
-(def actual-flow (memoize actual-flow))
+;;(defn- rerun-possible-route
+;;  [flow-model {:keys [source-id route possible-weight use-effects]}]
+;;  (let [route-ids (rseq (unbitpack-route source-id route))]
+;;    (zipmap route-ids
+;;            (map (p undecay flow-model)
+;;                 (if (empty? use-effects)
+;;                   (repeat possible-weight)
+;;                   ;;         (reductions
+;;                   ;;          #(_+_ %1 (get use-effects %2 _0_))
+;;                   ;;          possible-weight
+;;                   ;;          route-ids)
+;;                   (reduce
+;;                    ;;#(conj %1 (_+_ (peek %1) (get use-effects %2 _0_)))
+;;                    #(conj %1 (if-let [u (get use-effects %2)] (_+_ (peek %1) u) (peek %1)))
+;;                    [possible-weight]
+;;                    route-ids))
+;;                 (iterate inc 0)))))
+;;
+;;(defn- rerun-actual-route
+;;  [flow-model {:keys [source-id route actual-weight sink-effects use-effects] :or {use-effects {}} :as carrier}]
+;;  (if (empty? sink-effects)
+;;    (rerun-possible-route flow-model carrier)
+;;    (let [route-ids (rseq (unbitpack-route source-id route))]
+;;      (zipmap route-ids
+;;              (map (p undecay flow-model)
+;;                   ;;         (reductions
+;;                   ;;          #(reduce _+_ %1 (remove nil? ((juxt sink-effects use-effects) %2)))
+;;                   ;;          actual-weight
+;;                   ;;          route-ids)
+;;                   (reduce
+;;                    #(conj %1 (reduce _+_ (peek %1) (remove nil? [(sink-effects %2) (use-effects %2)])))
+;;                    ;;          #(conj %1 (reduce _+_ (peek %1) (remove nil? ((juxt sink-effects use-effects) %2))))
+;;                    [actual-weight]
+;;                    route-ids)
+;;                   (iterate inc 0))))))
+;;
+;;(defn possible-flow
+;;  [cache-layer flow-model]
+;;  (let [rows (get-rows cache-layer)
+;;        cols (get-cols cache-layer)]
+;;    (if-let [carriers-with-routes (seq (filter :route (apply concat (matrix2seq cache-layer))))]
+;;      (let [coord-map (apply merge-with _+_
+;;                             (with-progress-bar (pmap (p rerun-possible-route flow-model) (take 10 carriers-with-routes))))]
+;;        (make-matrix rows cols #(get coord-map % _0_)))
+;;      (possible-source cache-layer))))
+;;(def possible-flow (memoize possible-flow))
+;;
+;;(defn actual-flow
+;;  [cache-layer flow-model]
+;;  (let [rows (get-rows cache-layer)
+;;        cols (get-cols cache-layer)]
+;;    (if-let [carriers-with-routes (seq (filter :route (apply concat (matrix2seq cache-layer))))]
+;;      (let [coord-map (apply merge-with _+_
+;;                             (with-progress-bar (pmap (p rerun-actual-route flow-model) carriers-with-routes)))]
+;;        (make-matrix rows cols #(get coord-map % _0_)))
+;;      (actual-source cache-layer))))
+;;(def actual-flow (memoize actual-flow))
 
 (defn inaccessible-source
   "Returns a map of {location-id -> inaccessible-source}.
@@ -239,7 +239,7 @@
   "Returns a map of {location-id -> blocked-flow}.
    Blocked-flow is the amount of the possible-flow which cannot be
    realized due to upstream sinks or uses."
-  [cache-layer flow-model]
+  [possible-flow-layer actual-flow-layer]
   (map-matrix (p rv-fn (fn [p a] (max (- p a) 0.0)))
-              (possible-flow cache-layer flow-model)
-              (actual-flow   cache-layer flow-model)))
+              possible-flow-layer
+              actual-flow-layer))
