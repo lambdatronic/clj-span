@@ -23,7 +23,7 @@
 
 (ns clj-misc.matrix-ops
   (:use [clojure.set    :only (map-invert)]
-        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries magnitude)]))
+        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries magnitude between?)]))
 
 (defn get-rows [matrix] (count matrix))
 (defn get-cols [matrix] (count (first matrix)))
@@ -302,6 +302,11 @@
         (printf "%s" (get-in matrix [(- (dec rows) i) j])))
       (newline))))
 
+(defn rotate-2d-vec
+  [[x y] theta]
+  [(- (* x (Math/cos theta)) (* y (Math/sin theta)))
+   (+ (* x (Math/sin theta)) (* y (Math/cos theta)))])
+
 (defn matrix-mult
   "Returns a new matrix whose values are the element-by-element
    products of the values in A and B."
@@ -402,6 +407,32 @@
        (when (and (>= left 0)     (>= bottom 0)) (list [bottom left]))
        (when (and (<  right cols) (<  top rows)) (list [top right]))
        (when (and (<  right cols) (>= bottom 0)) (list [bottom right]))))))
+
+(defn get-line-fn
+  [[x1 y1] [x2 y2]]
+  (let [dx (- x2 x1)]
+    (if-not (zero? dx)
+      (let [m (/ (- y2 y1) dx)
+            b (- y1 (* m x1))]
+        (fn [x] (+ (* m x) b)))
+      (fn [x] nil))))
+
+(defn find-points-within-box
+  "Points must be specified in either clockwise or counterclockwise order."
+  [[x1 y1 :as A] [x2 y2 :as B] [x3 y3 :as C] [x4 y4 :as D]]
+  (let [min-x (min x1 x2 x3 x4)
+        max-x (max x1 x2 x3 x4)
+        min-y (min y1 y2 y3 y4)
+        max-y (max y1 y2 y3 y4)
+        f1    (get-line-fn A B)
+        f2    (get-line-fn B C)
+        f3    (get-line-fn C D)
+        f4    (get-line-fn D A)]
+    (apply concat
+           (for [x (range min-x (inc max-x))]
+             (let [[low-y high-y] (sort (filter (p between? min-y max-y)
+                                                (remove nil? [(f1 x) (f2 x) (f3 x) (f4 x)])))]
+               (range low-y (inc high-y)))))))
 
 (defn find-nearest
   [test? rows cols id]
