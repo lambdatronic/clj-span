@@ -430,9 +430,12 @@
         f4    (get-line-fn D A)]
     (apply concat
            (for [x (range min-x (inc max-x))]
-             (let [[low-y high-y] (sort (filter (p between? min-y max-y)
-                                                (remove nil? [(f1 x) (f2 x) (f3 x) (f4 x)])))]
-               (range low-y (inc high-y)))))))
+             (let [[low-y high-y] (sort
+                                   (map #(Math/round (float %))
+                                        (filter (p between? min-y max-y)
+                                                (distinct (remove nil?
+                                                                  [(f1 x) (f2 x) (f3 x) (f4 x)])))))]
+               (for [y (range low-y (inc (or high-y low-y)))] [x y]))))))
 
 (defn find-nearest
   [test? rows cols id]
