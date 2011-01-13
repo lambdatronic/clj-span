@@ -105,13 +105,13 @@
   (Thread/sleep *animation-sleep-ms*)
   (doto panel (.repaint)))
 
-(defn end-animation [panel] panel)
+(defn end-animation [panel] (.dispose panel))
 
 ;; FIXME: My simulation doesn't handle diagonally oriented waves
 ;;        properly. We need a better movement algorithm that sweeps
 ;;        out the cells correctly.
 (defn distribute-wave-energy!
-  [storm-source-point storm-orientation storm-carriers get-next-orientation eco-sink-layer
+  [storm-centerpoint storm-bearing storm-carriers get-next-bearing eco-sink-layer
    geo-sink-layer use-layer cache-layer possible-flow-layer actual-flow-layer animation? rows cols]
   (println "Moving the wave energy toward the coast...")
   (let [possible-flow-animator (if animation? (agent (draw-ref-layer "Possible Flow" possible-flow-layer :flow 1)))
@@ -121,11 +121,11 @@
       (send-off actual-flow-animator   run-animation))
     (doseq [_ (take-while (& seq last)
                           (iterate
-                           (fn [[storm-centerpoint storm-orientation storm-carriers]]
-                             (let [next-storm-centerpoint (add-ids storm-centerpoint storm-orientation)
-                                   next-storm-orientation (get-next-orientation next-storm-centerpoint storm-orientation)
+                           (fn [[storm-centerpoint storm-bearing storm-carriers]]
+                             (let [next-storm-centerpoint (add-ids storm-centerpoint storm-bearing)
+                                   next-storm-bearing     (get-next-bearing next-storm-centerpoint storm-bearing)
                                    next-storm-carriers    (doall (remove nil? (pmap (p apply-local-effects!
-                                                                                       storm-orientation
+                                                                                       storm-bearing
                                                                                        eco-sink-layer
                                                                                        geo-sink-layer
                                                                                        use-layer
@@ -135,11 +135,11 @@
                                                                                        rows
                                                                                        cols)
                                                                                     storm-carriers)))]
-                               (if (and next-storm-orientation
+                               (if (and next-storm-bearing
                                         (not (on-bounds? rows cols storm-centerpoint)))
-                                 [next-storm-centerpoint next-storm-orientation next-storm-carriers]
-                                 (println "Location-dependent termination:" next-storm-orientation storm-centerpoint))))
-                           [storm-source-point storm-orientation storm-carriers]))]
+                                 [next-storm-centerpoint next-storm-bearing next-storm-carriers]
+                                 (println "Location-dependent termination:" next-storm-bearing storm-centerpoint))))
+                           [storm-centerpoint storm-bearing storm-carriers]))]
       (print "*") (flush))
     (when animation?
       (send-off possible-flow-animator end-animation)
@@ -149,6 +149,7 @@
 
 (defn find-wave-cells
   [storm-centerpoint mean-storm-bearing wave-width wave-depth cell-width cell-height rows cols]
+  (print "Constructing the wave...") (flush)
   (let [mean-storm-bearing-reversed (map - mean-storm-bearing)
         wave-orientation            (rotate-2d-vec mean-storm-bearing (/ Math/PI -2)) ;; rotate 90 degrees left
         wave-reach                  (/ wave-width 2)
@@ -171,11 +172,13 @@
                                                              mean-storm-bearing-reversed
                                                              wave-depth
                                                              cell-width
-                                                             cell-height)]
-    (filter (p in-bounds? rows cols) (find-points-within-box wave-left-front-edge
-                                                             wave-right-front-edge
-                                                             wave-right-rear-edge
-                                                             wave-left-rear-edge))))
+                                                             cell-height)
+        wave-cells (filter (p in-bounds? rows cols) (find-points-within-box wave-left-front-edge
+                                                                            wave-right-front-edge
+                                                                            wave-right-rear-edge
+                                                                            wave-left-rear-edge))]
+    (println "done." (str "[" (count wave-cells) " cells]"))
+    wave-cells))
 
 (defn get-bearing-seq
   [get-next-bearing source-id initial-bearing]
@@ -193,12 +196,23 @@
 
 (defn determine-mean-storm-bearing
   [get-next-bearing storm-centerpoint storm-bearing rows cols]
+  (print "Determining wave orientation...") (flush)
   (let [search-distance        (int (/ (magnitude [rows cols]) 10.0)) ;; 1/10 # of cells on a diag across the matrix
         storm-bearing-reversed (get-next-bearing storm-centerpoint (map - storm-bearing))
         bearings-forward       (take search-distance (get-bearing-seq get-next-bearing storm-centerpoint storm-bearing))
         bearings-behind        (take search-distance (get-bearing-seq get-next-bearing storm-centerpoint storm-bearing-reversed))
-        storm-line-sample      (concat (reverse (map (p map -) bearings-behind)) bearings-forward)]
-    (mean-bearing storm-line-sample)))
+        storm-line-sample      (concat (reverse (map (p map -) bearings-behind)) bearings-forward)
+        mean-storm-bearing     (mean-bearing storm-line-sample)]
+    (println "done.")
+    mean-storm-bearing))
+
+(defn find-bearing-to-users
+  [storm-centerpoint use-points]
+  (print "Determining storm direction...") (flush)
+  (let [bearing-to-users (mean-bearing
+                          (map (p get-bearing storm-centerpoint) use-points))]
+    (println "done.")
+    bearing-to-users))
 
 (defn get-next-bearing
   [on-track? rows cols curr-id prev-bearing]
@@ -212,7 +226,6 @@
 ;; FIXME: find a way to specify these in the flow-params map.
 (def *wave-width* 100000) ;; in meters
 (def *wave-depth* 5000)   ;; in meters
-
 
 (defmethod distribute-flow "CoastalStormMovement"
   [_ animation? cell-width cell-height source-layer eco-sink-layer use-layer
@@ -230,8 +243,7 @@
     (let [storm-centerpoint  (first source-points)
           on-track?          #(not= _0_ (get-in storm-track-layer %))
           get-next-bearing   (p get-next-bearing on-track? rows cols)
-          bearing-to-users   (mean-bearing (map (p get-bearing storm-centerpoint) use-points))
-          storm-bearing      (get-next-bearing storm-centerpoint bearing-to-users)
+          storm-bearing      (get-next-bearing storm-centerpoint (find-bearing-to-users storm-centerpoint use-points))
           mean-storm-bearing (determine-mean-storm-bearing get-next-bearing storm-centerpoint storm-bearing rows cols)
           wave-cells         (find-wave-cells storm-centerpoint mean-storm-bearing *wave-width* *wave-depth*
                                               cell-width cell-height rows cols)
