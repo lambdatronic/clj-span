@@ -326,10 +326,13 @@
       matrix
       (map-matrix #(/ % max-val) matrix))))
 
+(defn dist-to-steps
+  [dir dist w h]
+  (/ dist (magnitude (map * dir [h w]))))
+
 (defn find-point-at-dist-in-m
   [id dir dist w h]
-  (let [step-size  (magnitude (map * dir [h w]))
-        num-steps  (/ dist step-size)
+  (let [num-steps  (dist-to-steps dir dist w h)
         step-delta (map #(int (* num-steps %)) dir)]
     (map + id step-delta)))
 

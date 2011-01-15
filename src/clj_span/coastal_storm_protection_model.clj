@@ -28,6 +28,23 @@
 ;;;  If users are encountered, store a carrier on the user and keep going (non-rival use).
 ;;;  If a carrier's possible-weight falls below the threshold, stop the carrier.
 ;;;  Exit when all carriers have finished moving.
+;;;
+;;; Scale Factors:
+;;;
+;;; If you double the resolution along both axes (i.e. 4x number of
+;;; cells), this will require:
+;;;
+;;;   4x memory and time to create cache, possible flow, and actual flow layers
+;;;   4x memory and time to find and store source and use points
+;;;   4x time to compute bearing to users
+;;;   2x time to compute mean-storm-bearing (for wave orientation)
+;;;   2x memory and time to generate wave carriers
+;;;   4x time and memory to run the wave simulation
+;;;   4x memory and time to show the flow animations
+;;;   4x memory and time to return result matrices
+;;;
+;;; Thus, this algorithm scales linearly in time and space
+;;; requirements with the number of cells analyzed.
 
 (ns clj-span.coastal-storm-protection-model
   (:use [clj-span.gui        :only (draw-ref-layer)]
@@ -48,16 +65,19 @@
                                     filter-matrix-for-coords
                                     get-bearing
                                     get-neighbors
+                                    dist-to-steps
                                     find-point-at-dist-in-m
-                                    find-points-within-box)]
-        [clj-misc.randvars   :only (_0_ _+_ *_ rv-fn rv-above?)]))
+                                    find-line-between)]
+        [clj-misc.randvars   :only (_0_ _+_ *_ _d rv-fn rv-above?)]))
 
 (defn handle-sink-effects
-  [current-id possible-weight actual-weight eco-sink-layer geo-sink-layer]
-  (let [eco-sink-cap     (get-in eco-sink-layer current-id)
-        geo-sink-cap     (get-in geo-sink-layer current-id)
-        eco-sink?        (not= _0_ eco-sink-cap)
-        geo-sink?        (not= _0_ geo-sink-cap)
+  [current-id possible-weight actual-weight eco-sink-layer geo-sink-layer km2-per-cell]
+  (let [eco-sink-height  (get-in eco-sink-layer current-id)
+        geo-sink-height  (get-in geo-sink-layer current-id)
+        eco-sink?        (not= _0_ eco-sink-height)
+        geo-sink?        (not= _0_ geo-sink-height)
+        eco-sink-cap     (if eco-sink? (*_ km2-per-cell eco-sink-height))
+        geo-sink-cap     (if geo-sink? (*_ km2-per-cell geo-sink-height))
         post-geo-possible-weight (if geo-sink?
                                    (rv-fn (fn [p g] (- p (min p g))) possible-weight geo-sink-cap)
                                    possible-weight)
@@ -68,51 +88,63 @@
                                    (rv-fn (fn [a e] (- a (min a e))) post-geo-actual-weight eco-sink-cap)
                                    post-geo-actual-weight)
         eco-sink-effects         (if (and eco-sink? (not= _0_ post-geo-actual-weight))
-                                   {current-id (rv-fn min post-geo-actual-weight eco-sink-cap)})
-        geo-sink-effects         (if geo-sink?
-                                   {current-id (rv-fn min possible-weight geo-sink-cap)})]
-    [post-geo-possible-weight post-eco-actual-weight eco-sink-effects geo-sink-effects]))
+                                   {current-id (rv-fn min post-geo-actual-weight eco-sink-cap)})]
+    [post-geo-possible-weight post-eco-actual-weight eco-sink-effects]))
+
+(defn handle-local-users!
+  [current-location use-layer cache-layer wave-cell-depth
+   {:keys [route possible-weight actual-weight] :as post-sink-carrier}]
+  (let [vulnerability-unscaled (get-in use-layer current-location)]
+    (if (not= _0_ vulnerability-unscaled)
+      (let [vulnerability             (_d vulnerability-unscaled wave-cell-depth)
+            possible-damage-inflicted (_*_ possible-weight vulnerability)
+            actual-damage-inflicted   (_*_ actual-weight   vulnerability)]
+        (dosync (alter (get-in cache-layer current-location) conj
+                       (assoc post-sink-carrier
+                         :route           (bitpack-route route)
+                         :possible-weight possible-damage-inflicted
+                         :actual-weight   actual-damage-inflicted)))))))
 
 (defn apply-local-effects!
   [storm-orientation eco-sink-layer geo-sink-layer use-layer cache-layer
-   possible-flow-layer actual-flow-layer rows cols
-   {:keys [route possible-weight actual-weight sink-effects use-effects] :as storm-carrier}]
+   possible-flow-layer actual-flow-layer km2-per-cell wave-cell-depth rows cols
+   {:keys [route possible-weight actual-weight sink-effects] :as storm-carrier}]
   (let [current-location (peek route)
         next-location    (add-ids current-location storm-orientation)
-        [new-possible-weight new-actual-weight new-sink-effects new-use-effects] (handle-sink-effects current-location
-                                                                                                      possible-weight
-                                                                                                      actual-weight
-                                                                                                      eco-sink-layer
-                                                                                                      geo-sink-layer)
+        [new-possible-weight new-actual-weight new-sink-effects] (handle-sink-effects current-location
+                                                                                      possible-weight
+                                                                                      actual-weight
+                                                                                      eco-sink-layer
+                                                                                      geo-sink-layer
+                                                                                      km2-per-cell)
         post-sink-carrier (assoc storm-carrier
                             :possible-weight new-possible-weight
                             :actual-weight   new-actual-weight
-                            :sink-effects    (merge-with _+_ sink-effects new-sink-effects)
-                            :use-effects     (merge-with _+_ use-effects  new-use-effects))]
+                            :sink-effects    (merge-with _+_ sink-effects new-sink-effects))]
     (dosync
      (alter (get-in possible-flow-layer current-location) _+_ possible-weight)
      (alter (get-in actual-flow-layer   current-location) _+_ actual-weight))
-    (if (not= _0_ (get-in use-layer current-location))
-      (dosync (alter (get-in cache-layer current-location) conj (assoc post-sink-carrier :route (bitpack-route route)))))
+    (handle-local-users! current-location use-layer cache-layer wave-cell-depth post-sink-carrier)
     (if (and (in-bounds? rows cols next-location)
              (rv-above? new-possible-weight *trans-threshold*))
       (assoc post-sink-carrier :route (conj route next-location)))))
 
 (def *animation-sleep-ms* 100)
 
+;; FIXME: This is really slow. Speed it up.
 (defn run-animation [panel]
   (send-off *agent* run-animation)
   (Thread/sleep *animation-sleep-ms*)
   (doto panel (.repaint)))
 
-(defn end-animation [panel] (.dispose panel))
+(defn end-animation [panel] panel)
 
 ;; FIXME: My simulation doesn't handle diagonally oriented waves
 ;;        properly. We need a better movement algorithm that sweeps
 ;;        out the cells correctly.
 (defn distribute-wave-energy!
-  [storm-centerpoint storm-bearing storm-carriers get-next-bearing eco-sink-layer
-   geo-sink-layer use-layer cache-layer possible-flow-layer actual-flow-layer animation? rows cols]
+  [storm-centerpoint storm-bearing storm-carriers get-next-bearing eco-sink-layer geo-sink-layer
+   use-layer cache-layer possible-flow-layer actual-flow-layer animation? km2-per-cell wave-cell-depth rows cols]
   (println "Moving the wave energy toward the coast...")
   (let [possible-flow-animator (if animation? (agent (draw-ref-layer "Possible Flow" possible-flow-layer :flow 1)))
         actual-flow-animator   (if animation? (agent (draw-ref-layer "Actual Flow"   actual-flow-layer   :flow 1)))]
@@ -132,6 +164,8 @@
                                                                                        cache-layer
                                                                                        possible-flow-layer
                                                                                        actual-flow-layer
+                                                                                       km2-per-cell
+                                                                                       wave-cell-depth
                                                                                        rows
                                                                                        cols)
                                                                                     storm-carriers)))]
@@ -147,36 +181,29 @@
   ;;(shutdown-agents)))
   (println "\nAll done."))
 
+(defn get-wave-cell-depth
+  [mean-storm-bearing wave-depth cell-width cell-height]
+  (let [wave-cell-depth (dist-to-steps mean-storm-bearing wave-depth cell-width cell-height)]
+    (println "Wave Cell Depth:" wave-cell-depth)
+    wave-cell-depth))
+
 (defn find-wave-cells
-  [storm-centerpoint mean-storm-bearing wave-width wave-depth cell-width cell-height rows cols]
+  [storm-centerpoint mean-storm-bearing wave-width cell-width cell-height rows cols]
   (print "Constructing the wave...") (flush)
-  (let [mean-storm-bearing-reversed (map - mean-storm-bearing)
-        wave-orientation            (rotate-2d-vec mean-storm-bearing (/ Math/PI -2)) ;; rotate 90 degrees left
-        wave-reach                  (/ wave-width 2)
-        wave-left-front-edge        (find-point-at-dist-in-m storm-centerpoint
-                                                             wave-orientation
-                                                             wave-reach
-                                                             cell-width
-                                                             cell-height)
-        wave-right-front-edge       (find-point-at-dist-in-m storm-centerpoint
-                                                             (map - wave-orientation)
-                                                             wave-reach
-                                                             cell-width
-                                                             cell-height)
-        wave-left-rear-edge         (find-point-at-dist-in-m wave-left-front-edge
-                                                             mean-storm-bearing-reversed
-                                                             wave-depth
-                                                             cell-width
-                                                             cell-height)
-        wave-right-rear-edge        (find-point-at-dist-in-m wave-right-front-edge
-                                                             mean-storm-bearing-reversed
-                                                             wave-depth
-                                                             cell-width
-                                                             cell-height)
-        wave-cells (filter (p in-bounds? rows cols) (find-points-within-box wave-left-front-edge
-                                                                            wave-right-front-edge
-                                                                            wave-right-rear-edge
-                                                                            wave-left-rear-edge))]
+  (let [wave-orientation (rotate-2d-vec mean-storm-bearing (/ Math/PI -2)) ;; rotate 90 degrees left
+        wave-reach       (/ wave-width 2)
+        wave-left-edge   (find-point-at-dist-in-m storm-centerpoint
+                                                  wave-orientation
+                                                  wave-reach
+                                                  cell-width
+                                                  cell-height)
+        wave-right-edge  (find-point-at-dist-in-m storm-centerpoint
+                                                  (map - wave-orientation)
+                                                  wave-reach
+                                                  cell-width
+                                                  cell-height)
+        wave-cells       (filter (p in-bounds? rows cols)
+                                 (find-line-between wave-left-edge wave-right-edge))]
     (println "done." (str "[" (count wave-cells) " cells]"))
     wave-cells))
 
@@ -201,11 +228,13 @@
         storm-bearing-reversed (get-next-bearing storm-centerpoint (map - storm-bearing))
         bearings-forward       (take search-distance (get-bearing-seq get-next-bearing storm-centerpoint storm-bearing))
         bearings-behind        (take search-distance (get-bearing-seq get-next-bearing storm-centerpoint storm-bearing-reversed))
-        storm-line-sample      (concat (reverse (map (p map -) bearings-behind)) bearings-forward)
-        mean-storm-bearing     (mean-bearing storm-line-sample)]
-    (println "done.")
+        storm-track-sample     (concat (reverse (map (p map -) bearings-behind)) bearings-forward)
+        mean-storm-bearing     (mean-bearing storm-track-sample)]
+    (println "done." (str "[" (count storm-track-sample) " samples]"))
     mean-storm-bearing))
 
+;; FIXME: It would be good to have a faster way to compute
+;;        this. Perhaps a sampling method?
 (defn find-bearing-to-users
   [storm-centerpoint use-points]
   (print "Determining storm direction...") (flush)
@@ -223,7 +252,7 @@
                                       bearing-to-neighbor]))]
       (bearing-changes (apply min (keys bearing-changes))))))
 
-;; FIXME: find a way to specify these in the flow-params map.
+;; FIXME: Make these a function of the source value.
 (def *wave-width* 100000) ;; in meters
 (def *wave-depth* 5000)   ;; in meters
 
@@ -245,29 +274,30 @@
           get-next-bearing   (p get-next-bearing on-track? rows cols)
           storm-bearing      (get-next-bearing storm-centerpoint (find-bearing-to-users storm-centerpoint use-points))
           mean-storm-bearing (determine-mean-storm-bearing get-next-bearing storm-centerpoint storm-bearing rows cols)
-          wave-cells         (find-wave-cells storm-centerpoint mean-storm-bearing *wave-width* *wave-depth*
-                                              cell-width cell-height rows cols)
+          wave-cells         (find-wave-cells storm-centerpoint mean-storm-bearing *wave-width* cell-width cell-height rows cols)
+          wave-cell-depth    (get-wave-cell-depth mean-storm-bearing *wave-depth* cell-width cell-height)
           km2-per-cell       (* cell-width cell-height (Math/pow 10.0 -6.0))
-          wave-energy        (*_ km2-per-cell (get-in source-layer storm-centerpoint))
+          wave-energy        (*_ (* km2-per-cell wave-cell-depth) (get-in source-layer storm-centerpoint))
           storm-carriers     (map #(struct-map service-carrier
                                      :source-id       %
                                      :route           [%]
                                      :possible-weight wave-energy
                                      :actual-weight   wave-energy
-                                     :sink-effects    {}
-                                     :use-effects     {})
+                                     :sink-effects    {})
                                   wave-cells)]
       (distribute-wave-energy! storm-centerpoint
                                storm-bearing
                                storm-carriers
                                get-next-bearing
-                               (map-matrix (p *_ km2-per-cell) eco-sink-layer)
-                               (map-matrix (p *_ km2-per-cell) geo-sink-layer)
+                               eco-sink-layer
+                               geo-sink-layer
                                use-layer
                                cache-layer
                                possible-flow-layer
                                actual-flow-layer
                                animation?
+                               km2-per-cell
+                               wave-cell-depth
                                rows
                                cols)
       (println "Users affected:" (count (filter (& seq deref) (matrix2seq cache-layer))))
