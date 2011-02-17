@@ -29,6 +29,15 @@
                                        filter-matrix-for-coords get-neighbors on-bounds? matrix2seq)]
         [clj-misc.randvars      :only (_0_ _+_ *_ _d rv-fn rv-min rv-above?)]))
 
+(defn flatland-search
+  [elevation-layer rows cols lowest-neighbors neighbors local-id]
+  (let [known-ids        (set (cons local-id neighbors))
+        downhill-options (map #(remove known-ids (get-neighbors rows cols %)) lowest-neighbors)
+        downhill-mins    (for [ids downhill-options]
+                           (reduce rv-min (map (p get-in elevation-layer) ids)))
+        min-elev         (reduce rv-min downhill-mins)]
+    (get (zipmap downhill-mins lowest-neighbors) min-elev)))
+
 ;; FIXME: What happens on flat stretches of stream?
 (defn step-downstream
   [in-stream? elevation-layer rows cols id]
@@ -36,8 +45,14 @@
     (let [in-stream-neighbors (filter in-stream? (get-neighbors rows cols id))
           neighbor-elevs      (map (p get-in elevation-layer) in-stream-neighbors)
           local-elev          (get-in elevation-layer id)
-          min-elev            (reduce rv-min local-elev neighbor-elevs)]
-      (first (filter #(= min-elev (get-in elevation-layer %)) in-stream-neighbors)))))
+          min-elev            (reduce rv-min local-elev neighbor-elevs)
+          lowest-neighbors    (filter #(= min-elev (get-in elevation-layer %)) in-stream-neighbors)]
+      (if (seq lowest-neighbors)
+        (if (not= min-elev local-elev)
+          (first lowest-neighbors))))))
+;;          (if (== (count lowest-neighbors) 1)
+;;            (first lowest-neighbors)
+;;            (flatland-search elevation-layer rows cols lowest-neighbors in-stream-neighbors id)))))))
 (def step-downstream (memoize step-downstream))
 
 ;; FIXME: What happens on flat stretches of ground?
@@ -50,11 +65,17 @@
    nil."
   [elevation-layer rows cols id]
   (if-not (on-bounds? rows cols id)
-    (let [neighbors      (get-neighbors rows cols id)
-          neighbor-elevs (map (p get-in elevation-layer) neighbors)
-          local-elev     (get-in elevation-layer id)
-          min-elev       (reduce rv-min local-elev neighbor-elevs)]
-      (first (filter #(= min-elev (get-in elevation-layer %)) neighbors)))))
+    (let [neighbors          (get-neighbors rows cols id)
+          neighbor-elevs     (map (p get-in elevation-layer) neighbors)
+          local-elev         (get-in elevation-layer id)
+          min-elev           (reduce rv-min local-elev neighbor-elevs)
+          lowest-neighbors   (filter #(= min-elev (get-in elevation-layer %)) neighbors)]
+      (if (seq lowest-neighbors)
+        (if (not= min-elev local-elev)
+          (first lowest-neighbors))))))
+;;          (if (== (count lowest-neighbors) 1)
+;;            (first lowest-neighbors)
+;;            (flatland-search elevation-layer rows cols lowest-neighbors neighbors id)))))))
 (def step-downhill (memoize step-downhill))
 
 (defn handle-use-effects!
@@ -148,7 +169,7 @@
             :sink-effects    (merge-with _+_ sink-effects new-sink-effects)
             :stream-bound?   (in-stream? next-id)))))))
 
-(def *animation-sleep-ms* 100)
+(def *animation-sleep-ms* 1000)
 
 ;; FIXME: This is really slow. Speed it up.
 (defn run-animation [panel]
@@ -168,33 +189,37 @@
    carriers in stream channels.  All the carriers are moved together
    in timesteps (more or less)."
   [cache-layer possible-flow-layer actual-flow-layer animation?
-   source-points source-layer mm2-per-cell sink-caps possible-use-caps
+   source-layer mm2-per-cell sink-caps possible-use-caps
    actual-use-caps in-stream? stream-intakes elevation-layer rows
    cols]
   (println "Moving the surface water carriers downhill and downstream...")
   (let [possible-flow-animator (if animation? (agent (draw-ref-layer "Possible Flow" possible-flow-layer :flow 1)))
         actual-flow-animator   (if animation? (agent (draw-ref-layer "Actual Flow"   actual-flow-layer   :flow 1)))]
-    (when animation?
-      (send-off possible-flow-animator run-animation)
-      (send-off actual-flow-animator   run-animation))
+    ;;    (when animation?
+    ;;      (send-off possible-flow-animator run-animation)
+    ;;      (send-off actual-flow-animator   run-animation))
     (with-progress-bar
       (iterate-while-seq
        (fn [surface-water-carriers]
-         (pmap (p to-the-ocean!
-                  cache-layer
-                  possible-flow-layer
-                  actual-flow-layer
-                  sink-caps
-                  possible-use-caps
-                  actual-use-caps
-                  in-stream?
-                  stream-intakes
-                  mm2-per-cell
-                  (* mm2-per-cell *trans-threshold*)
-                  elevation-layer
-                  rows
-                  cols)
-               surface-water-carriers))
+         (println "Carriers:" (count surface-water-carriers))
+         ;;(.repaint @possible-flow-animator)
+         ;;(.repaint @actual-flow-animator)
+         (time
+          (pmap (p to-the-ocean!
+                   cache-layer
+                   possible-flow-layer
+                   actual-flow-layer
+                   sink-caps
+                   possible-use-caps
+                   actual-use-caps
+                   in-stream?
+                   stream-intakes
+                   mm2-per-cell
+                   (* mm2-per-cell *trans-threshold*)
+                   elevation-layer
+                   rows
+                   cols)
+                surface-water-carriers)))
        (map
         #(let [source-weight (*_ mm2-per-cell (get-in source-layer %))]
            (struct-map service-carrier
@@ -204,10 +229,10 @@
              :actual-weight   source-weight
              :sink-effects    {}
              :stream-bound?   (in-stream? %)))
-        source-points)))
-    (when animation?
-      (send-off possible-flow-animator end-animation)
-      (send-off actual-flow-animator   end-animation))))
+        (filter-matrix-for-coords (p not= _0_) source-layer))))))
+;;    (when animation?
+;;      (send-off possible-flow-animator end-animation)
+;;      (send-off actual-flow-animator   end-animation))))
 
 (defn find-nearest-stream-point-lazily
   [in-stream? rows cols id]
@@ -235,13 +260,19 @@
            (recur (find-bounding-box rows cols bounding-box))))))))
 
 (defn find-nearest-stream-points
-  [in-stream? rows cols use-points]
+  [in-stream? rows cols use-layer]
   (println "Finding nearest stream points to all users...")
-  (let [claimed-intakes (ref (set (map in-stream? use-points)))
+  (let [use-points      (filter-matrix-for-coords (p not= _0_) use-layer)
+        claimed-intakes (ref (set (map in-stream? use-points)))
         stream-intakes  (with-progress-bar
                           (pmap (p find-nearest-stream-point in-stream? claimed-intakes rows cols)
                                 use-points))]
     (dissoc (zipmap stream-intakes use-points) nil)))
+
+(defn make-buckets
+  [mm2-per-cell layer]
+  (let [active-points (filter-matrix-for-coords (p not= _0_) layer)]
+    (seq2map active-points (fn [id] [id (ref (*_ mm2-per-cell (get-in layer id)))]))))
 
 (defmethod distribute-flow "SurfaceWaterMovement"
   [_ animation? cell-width cell-height source-layer sink-layer use-layer
@@ -251,24 +282,23 @@
         cols                (get-cols source-layer)
         cache-layer         (make-matrix rows cols (fn [_] (ref ())))
         possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
-        actual-flow-layer   (make-matrix rows cols (fn [_] (ref _0_)))
-        [source-points sink-points use-points stream-points] (pmap (p filter-matrix-for-coords (p not= _0_))
-                                                                   [source-layer sink-layer use-layer stream-layer])]
-    (println "Source points:" (count source-points))
-    (println "Sink points:  " (count sink-points))
-    (println "Use points:   " (count use-points))
-    (println "Stream points:" (count stream-points))
+        actual-flow-layer   (make-matrix rows cols (fn [_] (ref _0_)))]
+    ;;        [source-points sink-points use-points stream-points] (pmap (p filter-matrix-for-coords (p not= _0_))
+    ;;                                                                   [source-layer sink-layer use-layer stream-layer])]
+    ;;    (println "Source points:" (count source-points))
+    ;;    (println "Sink points:  " (count sink-points))
+    ;;    (println "Use points:   " (count use-points))
+    ;;    (println "Stream points:" (count stream-points))
     (let [mm2-per-cell       (* cell-width cell-height 1000000)
-          sink-caps          (seq2map sink-points (fn [id] [id (ref (*_ mm2-per-cell (get-in sink-layer id)))]))
-          possible-use-caps  (seq2map use-points  (fn [id] [id (ref (*_ mm2-per-cell (get-in use-layer  id)))]))
-          actual-use-caps    (seq2map use-points  (fn [id] [id (ref (*_ mm2-per-cell (get-in use-layer  id)))]))
-          in-stream?         (& not nil? (set stream-points))
-          stream-intakes     (find-nearest-stream-points in-stream? rows cols use-points)]
+          sink-caps          (make-buckets mm2-per-cell sink-layer)
+          possible-use-caps  (make-buckets mm2-per-cell use-layer)
+          actual-use-caps    (mapmap identity (& ref deref) possible-use-caps)
+          in-stream?         #(not= _0_ (get-in stream-layer %))
+          stream-intakes     (find-nearest-stream-points in-stream? rows cols use-layer)]
       (propagate-runoff! cache-layer
                          possible-flow-layer
                          actual-flow-layer
                          animation?
-                         source-points
                          source-layer
                          mm2-per-cell
                          sink-caps
