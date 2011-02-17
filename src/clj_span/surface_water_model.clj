@@ -24,38 +24,32 @@
   (:use [clj-span.model-api     :only (distribute-flow service-carrier)]
         [clj-span.gui           :only (draw-ref-layer)]
         [clj-span.params        :only (*trans-threshold*)]
-        [clj-misc.utils         :only (seq2map mapmap with-progress-bar iterate-while-seq p &)]
+        [clj-misc.utils         :only (seq2map mapmap with-progress-bar iterate-while-seq
+                                       memoize-by-first-arg p &)]
         [clj-misc.matrix-ops    :only (get-rows get-cols make-matrix map-matrix find-bounding-box
-                                       filter-matrix-for-coords get-neighbors on-bounds? matrix2seq)]
+                                       filter-matrix-for-coords get-neighbors on-bounds? matrix2seq
+                                       subtract-ids)]
         [clj-misc.randvars      :only (_0_ _+_ *_ _d rv-fn rv-min rv-above?)]))
 
-(defn flatland-search
-  [elevation-layer rows cols lowest-neighbors neighbors local-id]
-  (let [known-ids        (set (cons local-id neighbors))
-        downhill-options (map #(remove known-ids (get-neighbors rows cols %)) lowest-neighbors)
-        downhill-mins    (for [ids downhill-options]
-                           (reduce rv-min (map (p get-in elevation-layer) ids)))
-        min-elev         (reduce rv-min downhill-mins)]
-    (get (zipmap downhill-mins lowest-neighbors) min-elev)))
-
-;; FIXME: What happens on flat stretches of stream?
 (defn step-downstream
-  [in-stream? elevation-layer rows cols id]
+  [id in-stream? elevation-layer rows cols prev-bearing]
   (if-not (on-bounds? rows cols id)
     (let [in-stream-neighbors (filter in-stream? (get-neighbors rows cols id))
           neighbor-elevs      (map (p get-in elevation-layer) in-stream-neighbors)
           local-elev          (get-in elevation-layer id)
           min-elev            (reduce rv-min local-elev neighbor-elevs)
-          lowest-neighbors    (filter #(= min-elev (get-in elevation-layer %)) in-stream-neighbors)]
+          prev-id             (subtract-ids id prev-bearing)
+          lowest-neighbors    (filter #(and (not= prev-id %)
+                                            (= min-elev (get-in elevation-layer %)))
+                                      in-stream-neighbors)]
       (if (seq lowest-neighbors)
-        (if (not= min-elev local-elev)
-          (first lowest-neighbors))))))
-;;          (if (== (count lowest-neighbors) 1)
-;;            (first lowest-neighbors)
-;;            (flatland-search elevation-layer rows cols lowest-neighbors in-stream-neighbors id)))))))
-(def step-downstream (memoize step-downstream))
+        (let [bearing-changes (seq2map lowest-neighbors
+                                       #(let [bearing-to-neighbor (subtract-ids % id)]
+                                          [(angular-distance prev-bearing bearing-to-neighbor)
+                                           %]))]
+          (bearing-changes (apply min (keys bearing-changes))))))))
+(def step-downstream (memoize-by-first-arg step-downstream))
 
-;; FIXME: What happens on flat stretches of ground?
 (defn step-downhill
   "Returns the steepest downhill neighboring cell from id within the
    bounds [[0 rows] [0 cols]].  If id is lower than all of its
@@ -63,20 +57,23 @@
    steepest downhill slope, returns the first one found.  If the
    current id is located on the bounds [[0 rows][0 cols]], returns
    nil."
-  [elevation-layer rows cols id]
+  [id elevation-layer rows cols prev-bearing]
   (if-not (on-bounds? rows cols id)
-    (let [neighbors          (get-neighbors rows cols id)
-          neighbor-elevs     (map (p get-in elevation-layer) neighbors)
-          local-elev         (get-in elevation-layer id)
-          min-elev           (reduce rv-min local-elev neighbor-elevs)
-          lowest-neighbors   (filter #(= min-elev (get-in elevation-layer %)) neighbors)]
+    (let [neighbors        (get-neighbors rows cols id)
+          neighbor-elevs   (map (p get-in elevation-layer) neighbors)
+          local-elev       (get-in elevation-layer id)
+          min-elev         (reduce rv-min local-elev neighbor-elevs)
+          prev-id          (subtract-ids id prev-bearing)
+          lowest-neighbors (filter #(and (not= prev-id %)
+                                         (= min-elev (get-in elevation-layer %)))
+                                   neighbors)]
       (if (seq lowest-neighbors)
-        (if (not= min-elev local-elev)
-          (first lowest-neighbors))))))
-;;          (if (== (count lowest-neighbors) 1)
-;;            (first lowest-neighbors)
-;;            (flatland-search elevation-layer rows cols lowest-neighbors neighbors id)))))))
-(def step-downhill (memoize step-downhill))
+        (let [bearing-changes (seq2map lowest-neighbors
+                                       #(let [bearing-to-neighbor (subtract-ids % id)]
+                                          [(angular-distance prev-bearing bearing-to-neighbor)
+                                           %]))]
+          (bearing-changes (apply min (keys bearing-changes))))))))
+(def step-downhill (memoize-by-first-arg step-downhill))
 
 (defn handle-use-effects!
   "Computes the amount sunk by each sink encountered along an
@@ -139,7 +136,9 @@
   [cache-layer possible-flow-layer actual-flow-layer sink-caps possible-use-caps actual-use-caps
    in-stream? stream-intakes mm2-per-cell trans-threshold-volume elevation-layer rows cols
    {:keys [route possible-weight actual-weight sink-effects stream-bound?] :as surface-water-carrier}]
-  (let [current-id (peek route)]
+  (let [current-id (peek route)
+        prev-id    (route (- (count route) 2))
+        bearing    (subtract-ids current-id prev-id)]
     (dosync
      (alter (get-in possible-flow-layer current-id) _+_ (_d possible-weight mm2-per-cell))
      (alter (get-in actual-flow-layer   current-id) _+_ (_d actual-weight   mm2-per-cell)))
@@ -154,7 +153,7 @@
                                                                          mm2-per-cell
                                                                          surface-water-carrier)]
         (if (rv-above? new-possible-weight trans-threshold-volume)
-          (if-let [next-id (step-downstream in-stream? elevation-layer rows cols current-id)]
+          (if-let [next-id (step-downstream current-id in-stream? elevation-layer rows cols bearing)]
             (assoc surface-water-carrier
               :route           (conj route next-id)
               :possible-weight new-possible-weight
@@ -162,7 +161,7 @@
       (let [[new-actual-weight new-sink-effects] (handle-sink-effects! current-id
                                                                        actual-weight
                                                                        sink-caps)]
-        (if-let [next-id (step-downhill elevation-layer rows cols current-id)]
+        (if-let [next-id (step-downhill current-id elevation-layer rows cols bearing)]
           (assoc surface-water-carrier
             :route           (conj route next-id)
             :actual-weight   new-actual-weight
