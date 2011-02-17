@@ -25,7 +25,7 @@
         [clj-span.gui           :only (draw-ref-layer)]
         [clj-span.params        :only (*trans-threshold*)]
         [clj-misc.utils         :only (seq2map mapmap with-progress-bar iterate-while-seq
-                                       memoize-by-first-arg p &)]
+                                       memoize-by-first-arg angular-distance p &)]
         [clj-misc.matrix-ops    :only (get-rows get-cols make-matrix map-matrix find-bounding-box
                                        filter-matrix-for-coords get-neighbors on-bounds? matrix2seq
                                        subtract-ids)]
