@@ -31,6 +31,7 @@
                                        subtract-ids)]
         [clj-misc.randvars      :only (_0_ _+_ *_ _d rv-fn rv-min rv-above?)]))
 
+;; FIXME: Somehow this still doesn't terminate correctly for some carriers.
 (defn step-downstream
   [id in-stream? elevation-layer rows cols prev-bearing]
   (if-not (on-bounds? rows cols id)
@@ -38,18 +39,21 @@
           neighbor-elevs      (map (p get-in elevation-layer) in-stream-neighbors)
           local-elev          (get-in elevation-layer id)
           min-elev            (reduce rv-min local-elev neighbor-elevs)
-          prev-id             (subtract-ids id prev-bearing)
+          prev-id             (if prev-bearing (subtract-ids id prev-bearing))
           lowest-neighbors    (filter #(and (not= prev-id %)
                                             (= min-elev (get-in elevation-layer %)))
                                       in-stream-neighbors)]
       (if (seq lowest-neighbors)
-        (let [bearing-changes (seq2map lowest-neighbors
-                                       #(let [bearing-to-neighbor (subtract-ids % id)]
-                                          [(angular-distance prev-bearing bearing-to-neighbor)
-                                           %]))]
-          (bearing-changes (apply min (keys bearing-changes))))))))
+        (if prev-bearing
+          (let [bearing-changes (seq2map lowest-neighbors
+                                         #(let [bearing-to-neighbor (subtract-ids % id)]
+                                            [(angular-distance prev-bearing bearing-to-neighbor)
+                                             %]))]
+            (bearing-changes (apply min (keys bearing-changes))))
+          (first lowest-neighbors))))))
 (def step-downstream (memoize-by-first-arg step-downstream))
 
+;; FIXME: Somehow this still doesn't terminate correctly for some carriers.
 (defn step-downhill
   "Returns the steepest downhill neighboring cell from id within the
    bounds [[0 rows] [0 cols]].  If id is lower than all of its
@@ -63,16 +67,18 @@
           neighbor-elevs   (map (p get-in elevation-layer) neighbors)
           local-elev       (get-in elevation-layer id)
           min-elev         (reduce rv-min local-elev neighbor-elevs)
-          prev-id          (subtract-ids id prev-bearing)
+          prev-id          (if prev-bearing (subtract-ids id prev-bearing))
           lowest-neighbors (filter #(and (not= prev-id %)
                                          (= min-elev (get-in elevation-layer %)))
                                    neighbors)]
       (if (seq lowest-neighbors)
-        (let [bearing-changes (seq2map lowest-neighbors
-                                       #(let [bearing-to-neighbor (subtract-ids % id)]
-                                          [(angular-distance prev-bearing bearing-to-neighbor)
-                                           %]))]
-          (bearing-changes (apply min (keys bearing-changes))))))))
+        (if prev-bearing
+          (let [bearing-changes (seq2map lowest-neighbors
+                                         #(let [bearing-to-neighbor (subtract-ids % id)]
+                                            [(angular-distance prev-bearing bearing-to-neighbor)
+                                             %]))]
+            (bearing-changes (apply min (keys bearing-changes))))
+          (first lowest-neighbors))))))
 (def step-downhill (memoize-by-first-arg step-downhill))
 
 (defn handle-use-effects!
@@ -137,8 +143,8 @@
    in-stream? stream-intakes mm2-per-cell trans-threshold-volume elevation-layer rows cols
    {:keys [route possible-weight actual-weight sink-effects stream-bound?] :as surface-water-carrier}]
   (let [current-id (peek route)
-        prev-id    (route (- (count route) 2))
-        bearing    (subtract-ids current-id prev-id)]
+        prev-id    (peek (pop route))
+        bearing    (if prev-id (subtract-ids current-id prev-id))]
     (dosync
      (alter (get-in possible-flow-layer current-id) _+_ (_d possible-weight mm2-per-cell))
      (alter (get-in actual-flow-layer   current-id) _+_ (_d actual-weight   mm2-per-cell)))
