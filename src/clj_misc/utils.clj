@@ -354,13 +354,13 @@
         num-width (count (str total))
         frac-done (/ got total)
         num-chars (Math/round (* (- width 1.0) frac-done))]
-    (printf (str "|%-" width "s| Completed %" num-width "s of %s (%.2f%%)\r")
+    (printf (str "|%-" width "s| Completed %" num-width "s of %s (%.1f%%)\r")
             (str (apply str (take num-chars (repeat char))) \>) got total (* 100.0 frac-done))
     (flush)))
 
 (defmacro with-progress-bar-cool
   [total body]
-  `(let [step# (int (* 0.01 ~total))]
+  `(let [step# (max 1 (int (* 0.001 ~total)))]
      (reduce (fn [done# _#]
                (progress-bar done# ~total 25 \=)
                (+ done# step#))
