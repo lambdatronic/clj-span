@@ -355,7 +355,7 @@
         frac-done (/ got total)
         num-chars (Math/round (* (- width 1.0) frac-done))]
     (printf (str "|%-" width "s| Completed %" num-width "s of %s (%.2f%%)\r")
-            (str (apply str (repeat num-chars char)) \>) got total (* 100.0 frac-done))
+            (str (apply str (take num-chars (repeat char))) \>) got total (* 100.0 frac-done))
     (flush)))
 
 (defmacro with-progress-bar-cool
