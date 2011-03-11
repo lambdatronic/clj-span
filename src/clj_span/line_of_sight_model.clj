@@ -34,7 +34,7 @@
 
 (ns clj-span.line-of-sight-model
   (:use [clj-span.params     :only (*trans-threshold*)]
-        [clj-misc.utils      :only (euclidean-distance p & def- between? with-progress-bar*)]
+        [clj-misc.utils      :only (euclidean-distance p & def- between? with-progress-bar-cool)]
         [clj-misc.matrix-ops :only (make-matrix
                                     map-matrix
                                     get-rows
@@ -182,15 +182,16 @@
         km2-per-cell           (* cell-width cell-height (Math/pow 10.0 -6.0))
         to-meters              (fn [[i j]] [(* i cell-height) (* j cell-width)])
         possible-flow-animator (if animation? (agent (draw-ref-layer "Possible Flow" possible-flow-layer :flow 1)))
-        actual-flow-animator   (if animation? (agent (draw-ref-layer "Actual Flow"   actual-flow-layer   :flow 1)))]
+        actual-flow-animator   (if animation? (agent (draw-ref-layer "Actual Flow"   actual-flow-layer   :flow 1)))
+        num-view-lines         (* (count source-points) (count use-points))]
     (when animation?
       (send-off possible-flow-animator run-animation)
       (send-off actual-flow-animator   run-animation))
     (println "Source points:" (count source-points))
     (println "Use points:   " (count use-points))
-    (println "Scanning view lines...")
-    (with-progress-bar*
-      1000
+    (println "Scanning" num-view-lines "view lines...")
+    (with-progress-bar-cool
+      num-view-lines
       (pmap (p raycast!
                (map-matrix #(*_ km2-per-cell %) source-layer)
                (map-matrix #(*_ km2-per-cell %) sink-layer)
