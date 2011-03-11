@@ -343,7 +343,7 @@
 (defmacro with-progress-bar*
   [step body]
   `(do
-     (dorun (map #(do (print "*") (flush) %) (take-nth ~step ~body)))
+     (dorun (map (fn [v#] (print "*") (flush) v#) (take-nth ~step ~body)))
      (newline)))
 
 (defn iterate-while-seq
