@@ -136,17 +136,18 @@
   [source-layer sink-layer use-layer cache-layer possible-flow-layer
    actual-flow-layer to-meters rows cols source-id]
   (let [source-value (get-in source-layer source-id)]
-    (doseq [frontier (take-while (& seq remove-nil-val-entries)
-                                 (iterate (p expand-frontier sink-layer to-meters rows cols)
-                                          {source-id (progress-carrier source-id
-                                                                       sink-layer
-                                                                       to-meters
-                                                                       (struct-map service-carrier
-                                                                         :source-id       source-id
-                                                                         :route           []
-                                                                         :possible-weight source-value
-                                                                         :actual-weight   source-value
-                                                                         :sink-effects    {}))}))]
+    (doseq [frontier (take-while seq
+                                 (map remove-nil-val-entries
+                                      (iterate (p expand-frontier sink-layer to-meters rows cols)
+                                               {source-id (progress-carrier source-id
+                                                                            sink-layer
+                                                                            to-meters
+                                                                            (struct-map service-carrier
+                                                                              :source-id       source-id
+                                                                              :route           []
+                                                                              :possible-weight source-value
+                                                                              :actual-weight   source-value
+                                                                              :sink-effects    {}))})))]
       (doseq [frontier-element frontier]
         (store-carrier! use-layer
                         cache-layer
