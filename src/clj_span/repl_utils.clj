@@ -140,7 +140,7 @@
              :benefit-type :rival
              :flow-model "SurfaceWaterMovement"
              :result-type :closure-map
-             :animation? false}))
+             :animation? true}))
 
 (defn test-run-carbon
   []

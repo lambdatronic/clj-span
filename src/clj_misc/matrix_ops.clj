@@ -499,6 +499,10 @@
 
 (defn find-nearest
   [test? rows cols id]
+  (some first (map (p filter test?) (take-while seq (iterate (p find-bounding-box rows cols) (list id))))))
+
+(defn find-nearest-boring
+  [test? rows cols id]
   (if (test? id)
     id
     (loop [bounding-box (get-neighbors rows cols id)]

@@ -184,6 +184,7 @@
       (send-off actual-flow-animator   run-animation))
     (println "Projecting" (count source-points) "search bubbles...")
     (with-progress-bar-cool
+      :drop
       (count source-points)
       (pmap (p distribute-gaussian!
                source-layer

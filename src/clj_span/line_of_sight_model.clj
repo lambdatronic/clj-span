@@ -198,6 +198,7 @@
       (send-off actual-flow-animator   run-animation))
     (println "Scanning" num-view-lines "view lines...")
     (with-progress-bar-cool
+      :drop
       num-view-lines
       (pmap (p raycast!
                source-layer
