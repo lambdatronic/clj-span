@@ -2,8 +2,6 @@ pom.xml
 *jar
 lib
 classes
-notes
-resources
 next_commit.txt
 diff_with_aries.sh
 aries
