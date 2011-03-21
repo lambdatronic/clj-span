@@ -83,7 +83,7 @@
          run-at-location)
 
 (defn save-span-layers
-  [filename source-layer sink-layer use-layer flow-layers]
+  [filename source-layer sink-layer use-layer flow-layers cell-width cell-height]
   (let [dummy-map   {:theoretical-source  (constantly {})
                      :inaccessible-source (constantly {})
                      :possible-source     (constantly {})
@@ -106,7 +106,9 @@
                 *print-dup* true]
         (doseq [layer [source-layer sink-layer use-layer]]
           (prn (if layer (map-matrix to-hash-map layer))))
-        (prn (mapmap identity #(map-matrix to-hash-map %) flow-layers))))
+        (prn (mapmap identity #(map-matrix to-hash-map %) flow-layers))
+        (prn cell-width)
+        (prn cell-height)))
     dummy-map))
 
 (defn read-span-layers
@@ -117,8 +119,10 @@
       (let [source-layer (read)
             sink-layer   (read)
             use-layer    (read)
-            flow-layers  (read)]
-        [source-layer sink-layer use-layer flow-layers]))))
+            flow-layers  (read)
+            cell-width   (read)
+            cell-height  (read)]
+        [source-layer sink-layer use-layer flow-layers cell-width cell-height]))))
 
 (defn- unpack-datasource
   "Returns a seq of length n of the values in ds,
@@ -300,7 +304,7 @@
       (Thread/sleep 10000)
       (if (string? save-file)
         (do (println "Writing extracted SPAN layers to" save-file "and exiting early.")
-            (save-span-layers save-file source-layer sink-layer use-layer flow-layers))
+            (save-span-layers save-file source-layer sink-layer use-layer flow-layers cell-w cell-h))
         (run-span (remove-nil-val-entries
                    {:source-layer       source-layer
                     :source-threshold   source-threshold
