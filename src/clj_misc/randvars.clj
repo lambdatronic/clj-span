@@ -41,15 +41,6 @@
 ;;; _-  rv-scalar-subtract
 ;;; _*  rv-scalar-multiply
 ;;; _d  rv-scalar-divide
-;;;
-;;; rv-fn, rv-min, rv-max,
-;;; cont-type, disc-type successive-sums, draw, make-randvar, rv-above?, rv-below?,
-;;; rv-intensive-sampler, rv-mean, rv-pos
-;;;
-;;; Currently used, but probably not in the future:
-;;; *rv-max-states*, reset-rv-max-states,
-;;; rv-zero-ish?, rv-convolutions, rv-resample
-
 
 (ns clj-misc.randvars
   (:use [clj-misc.utils :only (p my-partition-all constraints-1.0 mapmap seq2map dissoc-vec)]))
