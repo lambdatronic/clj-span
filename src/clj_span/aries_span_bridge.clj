@@ -165,6 +165,14 @@
           (for [value (NaNs-to-zero (get-data ds))]
             (with-meta (array-map value 1.0) disc-type))))))
 
+(defn fuzzy-variance
+  [probs bounds mean]
+  (let [second-moment (* 1/3 (reduce + (map (fn [p1 p2 bp] (* (Math/pow bp 3) (- p1 p2)))
+                                            (cons 0 probs)
+                                            (concat probs [0])
+                                            bounds)))]
+    (- second-moment (* mean mean))))
+
 (defmethod unpack-datasource :varprop
   [_ ds rows cols]
   (println "Inside unpack-datasource!" rows cols)
@@ -188,7 +196,7 @@
                   (for [idx (range n)]
                     (if-let [probs (get-probabilities ds idx)]
                       (let [mean (reduce + (map * midpoints probs))
-                            var  (reduce + (map (fn [x p] (* (- x mean) p)) midpoints probs))]
+                            var  (fuzzy-variance probs bounds mean)]
                         (fuzzy-number mean var))
                       _0_)))))
             ;; discrete distributions
@@ -198,7 +206,7 @@
                 (for [idx (range n)]
                   (if-let [probs (get-probabilities ds idx)]
                     (let [mean (reduce + (map * states probs))
-                          var  (reduce + (map (fn [x p] (* (- x mean) p)) states probs))]
+                          var  (reduce + (map (fn [x p] (* (Math/pow (- x mean) 2) p)) states probs))]
                       (fuzzy-number mean var))
                     _0_))))))
       ;; binary distributions and deterministic values
