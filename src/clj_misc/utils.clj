@@ -421,3 +421,17 @@
         val
         (when-let [val* (f val (first coll))]
           (recur val* (rest coll)))))))
+
+(defn successive-sums
+  ([nums]
+     (successive-sums (first nums) (rest nums)))
+  ([total nums]
+     (if (empty? nums)
+       (list total)
+       (lazy-seq (cons total (successive-sums (+ total (first nums)) (rest nums)))))))
+
+(defn successive-differences
+  [nums]
+  (if (< (count nums) 2)
+    nums
+    (cons (first nums) (map - (rest nums) nums))))

@@ -43,7 +43,7 @@
 ;;; _d  rv-scalar-divide
 
 (ns clj-misc.randvars
-  (:use [clj-misc.utils :only (p my-partition-all constraints-1.0 mapmap seq2map dissoc-vec)]))
+  (:use [clj-misc.utils :only (p my-partition-all constraints-1.0 mapmap seq2map dissoc-vec successive-sums successive-differences)]))
 
 (def *rv-max-states* 10)
 (defn reset-rv-max-states!
@@ -53,20 +53,6 @@
 
 (def cont-type {:type ::continuous-distribution})
 (def disc-type {:type ::discrete-distribution})
-
-(defn successive-sums
-  ([nums]
-     (successive-sums (first nums) (rest nums)))
-  ([total nums]
-     (if (empty? nums)
-       (list total)
-       (lazy-seq (cons total (successive-sums (+ total (first nums)) (rest nums)))))))
-
-(defn successive-differences
-  [nums]
-  (if (< (count nums) 2)
-    nums
-    (cons (first nums) (map - (rest nums) nums))))
 
 (defn select-n-distinct
   [n coll]
