@@ -29,14 +29,14 @@
 ;;;& _0_ rv-zero
 ;;;& _+_ rv-add
 ;;;& _-_ rv-subtract
-;;; _*_ rv-multiply !!!
-;;; _d_ rv-divide  !!!
+;;;& _*_ rv-multiply !!!
+;;;& _d_ rv-divide  !!!
 ;;;& _<_ rv-lt?
 ;;;& _>_ rv-gt?
 ;;;&  +_ scalar-rv-add
 ;;;&  -_ scalar-rv-subtract
 ;;;&  *_ scalar-rv-multiply
-;;;  d_ scalar-rv-divide  !!!
+;;;&  d_ scalar-rv-divide  !!!
 ;;;& _+  rv-scalar-add
 ;;;& _-  rv-scalar-subtract
 ;;;& _*  rv-scalar-multiply
@@ -75,17 +75,19 @@
   (fuzzy-number (- mx my) (+ vx vy)))
 (def _-_ rv-subtract)
 
-;;(defn rv-multiply
-;;  "Returns the product of two FuzzyNumbers."
-;;  [{mx :mean, vx :var} {my :mean, vy :var}]
-;;  (fuzzy-number ? ?))
-;;(def _*_ rv-multiply)
+(defn rv-multiply
+  "Returns the product of two FuzzyNumbers."
+  [{mx :mean, vx :var} {my :mean, vy :var}]
+  (fuzzy-number (* mx my) (+ (* vx vy) (* mx mx vy) (* my my vx))))
+(def _*_ rv-multiply)
 
-;;(defn rv-divide
-;;  "Returns the quotient of two FuzzyNumbers."
-;;  [{mx :mean, vx :var} {my :mean, vy :var}]
-;;  (fuzzy-number ? ?))
-;;(def _d_ rv-divide)
+(declare d_)
+
+(defn rv-divide
+  "Returns the quotient of two FuzzyNumbers."
+  [X Y]
+  (_*_ X (d_ 1 Y)))
+(def _d_ rv-divide)
 
 (defn scalar-rv-add
   "Returns the sum of a constant and a FuzzyNumber."
@@ -105,11 +107,11 @@
   (fuzzy-number (* x (:mean Y)) (* x x (:var Y))))
 (def *_ scalar-rv-multiply)
 
-;;(defn scalar-rv-divide
-;;  "Returns the quotient of a constant and a FuzzyNumber."
-;;  [x Y]
-;;  (fuzzy-number ? ?))
-;;(def d_ scalar-rv-divide)
+(defn scalar-rv-divide
+  "Returns the quotient of a constant and a FuzzyNumber."
+  [x {:keys [mean var]}]
+  (fuzzy-number (/ x mean) (/ (* x x var) (Math/pow mean 4))))
+(def d_ scalar-rv-divide)
 
 (defn rv-scalar-add
   "Returns the sum of a FuzzyNumber and a constant."
@@ -181,7 +183,10 @@
 (defn rv-sum
   "Returns the sum of a sequence of FuzzyNumbers using _+_."
   [Xs]
-  (cond (== (count Xs) 1)
+  (cond (empty? Xs)
+        _0_
+
+        (== (count Xs) 1)
         (first Xs)
 
         (<= (count Xs) 20)
@@ -246,4 +251,4 @@
   "Extracts a deterministic value from a FuzzyNumber by modelling it
    as a normal distribution."
   [X]
-  (+ (* (marsaglia-normal) (:var X)) (:mean X)))
+  (+ (* (marsaglia-normal) (Math/sqrt (:var X))) (:mean X)))
