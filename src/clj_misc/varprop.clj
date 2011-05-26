@@ -45,6 +45,7 @@
 ;;;& rv-min
 ;;;& rv-max
 ;;;& draw
+;;;& draw-repeatedly
 ;;;& rv-above?
 ;;;& rv-below?
 ;;;& rv-intensive-sampler
@@ -252,3 +253,13 @@
    as a normal distribution."
   [X]
   (+ (* (marsaglia-normal) (Math/sqrt (:var X))) (:mean X)))
+
+(defn draw-repeatedly
+  "Takes a fuzzy number X, and returns an infinite lazy sequence of normally-distributed,
+pseudo-random numbers that match the parameters of X, (or a finite sequence of length n, if
+an integer n is provided)."
+  ([{:keys [mean var]}] 
+     (let [sigma (Math/sqrt var)]
+       (map #(+ (* sigma %) mean) (repeatedly marsaglia-normal))))
+  ([n X]
+     (take n (draw-repeatedly X))))
