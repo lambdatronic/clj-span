@@ -435,3 +435,15 @@
   (if (< (count nums) 2)
     nums
     (cons (first nums) (map - (rest nums) nums))))
+
+(defn replace-all
+  [smap form]
+  (if (coll? form)
+    (let [new-form (map (p replace-all smap) form)]
+      (cond (list?   form) new-form
+            (vector? form) (vec new-form)
+            (map?    form) (into {} new-form)
+            (set?    form) (set new-form)))
+    (if-let [new-val (smap form)]
+      new-val
+      form)))

@@ -41,7 +41,7 @@
 ;;;& _-  rv-scalar-subtract
 ;;;& _*  rv-scalar-multiply
 ;;;& _d  rv-scalar-divide
-;;; rv-fn !!!
+;;;& rv-fn !!!
 ;;;& rv-min
 ;;;& rv-max
 ;;;& draw
@@ -52,7 +52,7 @@
 ;;;& rv-mean
 
 (ns clj-misc.varprop
-  (:use [clj-misc.utils :only [my-partition-all]]))
+  (:use [clj-misc.utils :only [my-partition-all replace-all]]))
 
 (defrecord FuzzyNumber [mean var])
 
@@ -138,9 +138,31 @@
   (fuzzy-number (/ (:mean X) y) (/ (:var X) y y)))
 (def _d rv-scalar-divide)
 
-;;(defn rv-fn
-;;  [f X Y]
-;;  ???)
+(def fuzzy-arithmetic-mapping
+  '{0   _0_
+    0.0 _0_
+    +   _+_
+    -   _-_
+    *   _*_
+    /   _d_
+    <   _<_
+    >   _>_
+    min rv-min
+    max rv-max})
+
+(defn fuzzify-fn
+  [f]
+  (if-let [new-f (fuzzy-arithmetic-mapping f)]
+    new-f
+    (if (list? f)
+      (let [[lambda args & body] f]
+        (if (and (= lambda 'fn) (vector? args))
+          `(~lambda ~args ~@(replace-all fuzzy-arithmetic-mapping body))))
+      f)))
+
+(defmacro rv-fn
+  [f X Y]
+  `(~(fuzzify-fn f) ~X ~Y))
 
 (defn rv-lt?
   "Compares two FuzzyNumbers and returns true if P(X < Y) > 0.5."
