@@ -27,7 +27,7 @@
         [clj-span.params     :only (*source-type*
                                     *sink-type*
                                     *use-type*)]
-        [clj-misc.randvars   :only (_0_ _+_ _* *_ rv-fn rv-min)]
+        [clj-misc.randvars   :only (_0_ _+_ _* *_ rv-fn _min_)]
         [clj-misc.matrix-ops :only (get-rows
                                     get-cols
                                     matrix2seq
@@ -86,7 +86,7 @@
             per-sink-limit (if (*source-type* :finite)
                              total-source
                              (_* total-source num-users))]
-        (map-matrix #(if (= _0_ %) _0_ (rv-min (*_ max-flowpaths %) per-sink-limit)) sink-layer)))))
+        (map-matrix #(if (= _0_ %) _0_ (_min_ (*_ max-flowpaths %) per-sink-limit)) sink-layer)))))
 (def theoretical-sink (memoize theoretical-sink))
 
 (defn actual-sink

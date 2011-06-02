@@ -22,34 +22,6 @@
 ;;; {state -> probability}.  Both discrete and continuous random
 ;;; variables are supported.  Continuous RVs are represented using
 ;;; samples from their cumulative distribution functions (CDFs).
-;;;
-;;; This library also provides some shorthand abbreviations for many
-;;; of the arithmetic functions:
-;;;
-;;;& _0_ rv-zero
-;;;& _+_ rv-add
-;;;& _-_ rv-subtract
-;;;& _*_ rv-multiply !!!
-;;;& _d_ rv-divide  !!!
-;;;& _<_ rv-lt?
-;;;& _>_ rv-gt?
-;;;&  +_ scalar-rv-add
-;;;&  -_ scalar-rv-subtract
-;;;&  *_ scalar-rv-multiply
-;;;&  d_ scalar-rv-divide  !!!
-;;;& _+  rv-scalar-add
-;;;& _-  rv-scalar-subtract
-;;;& _*  rv-scalar-multiply
-;;;& _d  rv-scalar-divide
-;;;& rv-fn !!!
-;;;& rv-min
-;;;& rv-max
-;;;& draw
-;;;& draw-repeatedly
-;;;& rv-above?
-;;;& rv-below?
-;;;& rv-intensive-sampler
-;;;& rv-mean
 
 (ns clj-misc.varprop
   (:use [clj-misc.utils :only [my-partition-all replace-all]]))
@@ -61,96 +33,217 @@
   [mean var]
   (FuzzyNumber. mean var))
 
-(def rv-zero (fuzzy-number 0.0 0.0))
-(def _0_ rv-zero)
+(def _0_ (fuzzy-number 0.0 0.0))
 
-(defn rv-add
+(defn _+_
   "Returns the sum of two FuzzyNumbers."
   [{mx :mean, vx :var} {my :mean, vy :var}]
   (fuzzy-number (+ mx my) (+ vx vy)))
-(def _+_ rv-add)
 
-(defn rv-subtract
+(defn _-_
   "Returns the difference of two FuzzyNumbers."
   [{mx :mean, vx :var} {my :mean, vy :var}]
   (fuzzy-number (- mx my) (+ vx vy)))
-(def _-_ rv-subtract)
 
-(defn rv-multiply
+(defn _*_
   "Returns the product of two FuzzyNumbers."
   [{mx :mean, vx :var} {my :mean, vy :var}]
   (fuzzy-number (* mx my) (+ (* vx vy) (* mx mx vy) (* my my vx))))
-(def _*_ rv-multiply)
 
 (declare d_)
 
-(defn rv-divide
+(defn _d_
   "Returns the quotient of two FuzzyNumbers."
   [X Y]
   (_*_ X (d_ 1 Y)))
-(def _d_ rv-divide)
 
-(defn scalar-rv-add
-  "Returns the sum of a constant and a FuzzyNumber."
-  [x Y]
-  (fuzzy-number (+ x (:mean Y)) (:var Y)))
-(def +_ scalar-rv-add)
-
-(defn scalar-rv-subtract
-  "Returns the difference of a constant and a FuzzyNumber."
-  [x Y]
-  (fuzzy-number (- x (:mean Y)) (:var Y)))
-(def -_ scalar-rv-subtract)
-
-(defn scalar-rv-multiply
-  "Returns the product of a constant and a FuzzyNumber."
-  [x Y]
-  (fuzzy-number (* x (:mean Y)) (* x x (:var Y))))
-(def *_ scalar-rv-multiply)
-
-(defn scalar-rv-divide
-  "Returns the quotient of a constant and a FuzzyNumber."
-  [x {:keys [mean var]}]
-  (fuzzy-number (/ x mean) (/ (* x x var) (Math/pow mean 4))))
-(def d_ scalar-rv-divide)
-
-(defn rv-scalar-add
+(defn _+
   "Returns the sum of a FuzzyNumber and a constant."
   [X y]
   (fuzzy-number (+ (:mean X) y) (:var X)))
-(def _+ rv-scalar-add)
 
-(defn rv-scalar-subtract
+(defn _-
   "Returns the difference of a FuzzyNumber and a constant."
   [X y]
   (fuzzy-number (- (:mean X) y) (:var X)))
-(def _- rv-scalar-subtract)
 
-(defn rv-scalar-multiply
+(defn _*
   "Returns the product of a FuzzyNumber and a constant."
   [X y]
   (fuzzy-number (* (:mean X) y) (* (:var X) y y)))
-(def _* rv-scalar-multiply)
 
-(defn rv-scalar-divide
+(defn _d
   "Returns the quotient of a FuzzyNumber and a constant."
   [X y]
   (fuzzy-number (/ (:mean X) y) (/ (:var X) y y)))
-(def _d rv-scalar-divide)
+
+(defn +_
+  "Returns the sum of a constant and a FuzzyNumber."
+  [x Y]
+  (fuzzy-number (+ x (:mean Y)) (:var Y)))
+
+(defn -_
+  "Returns the difference of a constant and a FuzzyNumber."
+  [x Y]
+  (fuzzy-number (- x (:mean Y)) (:var Y)))
+
+(defn *_
+  "Returns the product of a constant and a FuzzyNumber."
+  [x Y]
+  (fuzzy-number (* x (:mean Y)) (* x x (:var Y))))
+
+(defn d_
+  "Returns the quotient of a constant and a FuzzyNumber."
+  [x {:keys [mean var]}]
+  (fuzzy-number (/ x mean) (/ (* x x var) (Math/pow mean 4))))
+
+(defn _<_
+  "Compares two FuzzyNumbers and returns true if P(X < Y) > 0.5."
+  [X Y]
+  (< (:mean X) (:mean Y)))
+
+(defn _>_
+  "Compares two FuzzyNumbers and returns true if P(X > Y) > 0.5."
+  [X Y]
+  (> (:mean X) (:mean Y)))
+
+(defn _<
+  "Compares a FuzzyNumber and a scalar and returns true if P(X < y) > 0.5."
+  [X y]
+  (< (:mean X) y))
+
+(defn _>
+  "Compares a FuzzyNumber and a scalar and returns true if P(X > y) > 0.5."
+  [X y]
+  (> (:mean X) y))
+
+(defn <_
+  "Compares a scalar and a FuzzyNumber and returns true if P(Y > x) > 0.5."
+  [x Y]
+  (< x (:mean Y)))
+
+(defn >_
+  "Compares a scalar and a FuzzyNumber and returns true if P(Y < x) > 0.5."
+  [x Y]
+  (> x (:mean Y)))
+
+(defn _min_
+  "Returns the smaller of two FuzzyNumbers using _<_."
+  [X Y]
+  (if (_<_ X Y) X Y))
+
+(defn _max_
+  "Returns the greater of two FuzzyNumbers using _>_."
+  [X Y]
+  (if (_>_ X Y) X Y))
+
+(defn _min
+  "Returns the smaller of a FuzzyNumber and a scalar using _<."
+  [X y]
+  (if (_< X y) X y))
+
+(defn _max
+  "Returns the greater of a FuzzyNumber and a scalar using _>."
+  [X y]
+  (if (_> X y) X y))
+
+(defn min_
+  "Returns the smaller of a scalar and a FuzzyNumber using <_."
+  [x Y]
+  (if (<_ x Y) x Y))
+
+(defn max_
+  "Returns the greater of a scalar and a FuzzyNumber using >_."
+  [x Y]
+  (if (>_ x Y) x Y))
+
+(defmulti ?+?
+  "Returns the sum of two values, which may be FuzzyNumbers or constants. Uses reflection."
+  (fn [X Y] [(:type X) (:type Y)]))
+
+(defmethod ?+? [FuzzyNumber FuzzyNumber] [X Y] (_+_ X Y))
+(defmethod ?+? [FuzzyNumber Number]      [X Y] (_+  X Y))
+(defmethod ?+? [Number      FuzzyNumber] [X Y] ( +_ X Y))
+(defmethod ?+? [Number      Number]      [X Y] ( +  X Y))
+
+(defmulti ?-?
+  "Returns the difference of two values, which may be FuzzyNumbers or constants. Uses reflection."
+  (fn [X Y] [(:type X) (:type Y)]))
+
+(defmethod ?-? [FuzzyNumber FuzzyNumber] [X Y] (_-_ X Y))
+(defmethod ?-? [FuzzyNumber Number]      [X Y] (_-  X Y))
+(defmethod ?-? [Number      FuzzyNumber] [X Y] ( -_ X Y))
+(defmethod ?-? [Number      Number]      [X Y] ( -  X Y))
+
+(defmulti ?*?
+  "Returns the product of two values, which may be FuzzyNumbers or constants. Uses reflection."
+  (fn [X Y] [(:type X) (:type Y)]))
+
+(defmethod ?*? [FuzzyNumber FuzzyNumber] [X Y] (_*_ X Y))
+(defmethod ?*? [FuzzyNumber Number]      [X Y] (_*  X Y))
+(defmethod ?*? [Number      FuzzyNumber] [X Y] ( *_ X Y))
+(defmethod ?*? [Number      Number]      [X Y] ( *  X Y))
+
+(defmulti ?d?
+  "Returns the quotient of two values, which may be FuzzyNumbers or constants. Uses reflection."
+  (fn [X Y] [(:type X) (:type Y)]))
+
+(defmethod ?d? [FuzzyNumber FuzzyNumber] [X Y] (_d_ X Y))
+(defmethod ?d? [FuzzyNumber Number]      [X Y] (_d  X Y))
+(defmethod ?d? [Number      FuzzyNumber] [X Y] ( d_ X Y))
+(defmethod ?d? [Number      Number]      [X Y] ( /  X Y))
+
+(defmulti ?<?
+  "Compares two values, which may be FuzzyNumbers of constants, and returns true if X < Y. Uses reflection."
+  (fn [X Y] [(:type X) (:type Y)]))
+
+(defmethod ?<? [FuzzyNumber FuzzyNumber] [X Y] (_<_ X Y))
+(defmethod ?<? [FuzzyNumber Number]      [X Y] (_<  X Y))
+(defmethod ?<? [Number      FuzzyNumber] [X Y] ( <_ X Y))
+(defmethod ?<? [Number      Number]      [X Y] ( <  X Y))
+
+(defmulti ?>?
+  "Compares two values, which may be FuzzyNumbers of constants, and returns true if X > Y. Uses reflection."
+  (fn [X Y] [(:type X) (:type Y)]))
+
+(defmethod ?>? [FuzzyNumber FuzzyNumber] [X Y] (_>_ X Y))
+(defmethod ?>? [FuzzyNumber Number]      [X Y] (_>  X Y))
+(defmethod ?>? [Number      FuzzyNumber] [X Y] ( >_ X Y))
+(defmethod ?>? [Number      Number]      [X Y] ( >  X Y))
+
+(defmulti ?min?
+  "Returns the smaller of two values, which may be FuzzyNumbers or constants. Uses reflection."
+  (fn [X Y] [(:type X) (:type Y)]))
+
+(defmethod ?min? [FuzzyNumber FuzzyNumber] [X Y] (_min_ X Y))
+(defmethod ?min? [FuzzyNumber Number]      [X Y] (_min  X Y))
+(defmethod ?min? [Number      FuzzyNumber] [X Y] ( min_ X Y))
+(defmethod ?min? [Number      Number]      [X Y] ( min  X Y))
+
+(defmulti ?max?
+  "Returns the larger of two values, which may be FuzzyNumbers or constants. Uses reflection."
+  (fn [X Y] [(:type X) (:type Y)]))
+
+(defmethod ?max? [FuzzyNumber FuzzyNumber] [X Y] (_max_ X Y))
+(defmethod ?max? [FuzzyNumber Number]      [X Y] (_max  X Y))
+(defmethod ?max? [Number      FuzzyNumber] [X Y] ( max_ X Y))
+(defmethod ?max? [Number      Number]      [X Y] ( max  X Y))
 
 (def fuzzy-arithmetic-mapping
   '{0   _0_
     0.0 _0_
-    +   _+_
-    -   _-_
-    *   _*_
-    /   _d_
-    <   _<_
-    >   _>_
-    min rv-min
-    max rv-max})
+    +   ?+?
+    -   ?-?
+    *   ?*?
+    /   ?d?
+    <   ?<?
+    >   ?>?
+    min ?min?
+    max ?max?})
 
 (defn fuzzify-fn
+  "Transforms f into its fuzzy arithmetic equivalent, using the
+   mappings defined in fuzzy-arithmetic-mapping."
   [f]
   (if-let [new-f (fuzzy-arithmetic-mapping f)]
     new-f
@@ -161,42 +254,11 @@
       f)))
 
 (defmacro rv-fn
+  "Transforms f into its fuzzy arithmetic equivalent, fuzzy-f, and
+   calls (fuzzy-f X Y). Uses reflection on the types of X and Y as
+   well as any numeric values used in f."
   [f X Y]
   `(~(fuzzify-fn f) ~X ~Y))
-
-(defn rv-lt?
-  "Compares two FuzzyNumbers and returns true if P(X < Y) > 0.5."
-  [X Y]
-  (< (:mean X) (:mean Y)))
-(def _<_ rv-lt?)
-
-(defn rv-gt?
-  "Compares two FuzzyNumbers and returns true if P(X > Y) > 0.5."
-  [X Y]
-  (> (:mean X) (:mean Y)))
-(def _>_ rv-gt?)
-
-(defn rv-below?
-  "Compares a FuzzyNumber and a scalar and returns true if P(X < y) > 0.5."
-  [X y]
-  (< (:mean X) y))
-(def _< rv-below?)
-
-(defn rv-above?
-  "Compares a FuzzyNumber and a scalar and returns true if P(X > y) > 0.5."
-  [X y]
-  (> (:mean X) y))
-(def _> rv-below?)
-
-(defn rv-min
-  "Returns the smaller of two FuzzyNumbers using _<_."
-  [X Y]
-  (if (_<_ X Y) X Y))
-
-(defn rv-max
-  "Returns the greater of two FuzzyNumbers using _>_."
-  [X Y]
-  (if (_>_ X Y) X Y))
 
 (defn rv-mean
   "Returns the mean of a FuzzyNumber."
@@ -277,10 +339,11 @@
   (+ (* (marsaglia-normal) (Math/sqrt (:var X))) (:mean X)))
 
 (defn draw-repeatedly
-  "Takes a fuzzy number X, and returns an infinite lazy sequence of normally-distributed,
-pseudo-random numbers that match the parameters of X, (or a finite sequence of length n, if
-an integer n is provided)."
-  ([{:keys [mean var]}] 
+  "Takes a fuzzy number X, and returns an infinite lazy sequence of
+   normally-distributed, pseudo-random numbers that match the
+   parameters of X, (or a finite sequence of length n, if an integer n
+   is provided)."
+  ([{:keys [mean var]}]
      (let [sigma (Math/sqrt var)]
        (map #(+ (* sigma %) mean) (repeatedly marsaglia-normal))))
   ([n X]

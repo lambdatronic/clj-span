@@ -447,3 +447,29 @@
     (if-let [new-val (smap form)]
       new-val
       form)))
+
+(defn select-n-distinct
+  [n coll]
+  (if (>= n (count coll))
+    (vec coll)
+    (first
+     (nth (iterate (fn [[picks opts]]
+                     (let [idx (rand-int (count opts))]
+                       [(conj picks (opts idx))
+                        (dissoc-vec idx opts)]))
+                   [[] (vec coll)])
+          n))))
+
+(defn select-n-summands
+  "Returns a list of n numbers >= min-value, which add up to total.
+   If total is a double, the summands will be doubles.  The same goes
+   for integers."
+  [n total min-value]
+  (if (< n 2)
+    (list total)
+    (let [rand-fn   (if (integer? total) rand-int rand)
+          min-value (if (integer? total) (int min-value) min-value)
+          total     (- total (* n min-value))
+          leftovers (take n (iterate rand-fn total))
+          diffs     (map - leftovers (rest leftovers))]
+      (map (p + min-value) (cons (reduce - total diffs) diffs)))))
