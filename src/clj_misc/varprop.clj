@@ -159,7 +159,7 @@
 
 (defmulti ?+?
   "Returns the sum of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(:type X) (:type Y)]))
+  (fn [X Y] [(type X) (type Y)]))
 
 (defmethod ?+? [FuzzyNumber FuzzyNumber] [X Y] (_+_ X Y))
 (defmethod ?+? [FuzzyNumber Number]      [X Y] (_+  X Y))
@@ -168,7 +168,7 @@
 
 (defmulti ?-?
   "Returns the difference of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(:type X) (:type Y)]))
+  (fn [X Y] [(type X) (type Y)]))
 
 (defmethod ?-? [FuzzyNumber FuzzyNumber] [X Y] (_-_ X Y))
 (defmethod ?-? [FuzzyNumber Number]      [X Y] (_-  X Y))
@@ -177,7 +177,7 @@
 
 (defmulti ?*?
   "Returns the product of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(:type X) (:type Y)]))
+  (fn [X Y] [(type X) (type Y)]))
 
 (defmethod ?*? [FuzzyNumber FuzzyNumber] [X Y] (_*_ X Y))
 (defmethod ?*? [FuzzyNumber Number]      [X Y] (_*  X Y))
@@ -186,7 +186,7 @@
 
 (defmulti ?d?
   "Returns the quotient of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(:type X) (:type Y)]))
+  (fn [X Y] [(type X) (type Y)]))
 
 (defmethod ?d? [FuzzyNumber FuzzyNumber] [X Y] (_d_ X Y))
 (defmethod ?d? [FuzzyNumber Number]      [X Y] (_d  X Y))
@@ -195,7 +195,7 @@
 
 (defmulti ?<?
   "Compares two values, which may be FuzzyNumbers of constants, and returns true if X < Y. Uses reflection."
-  (fn [X Y] [(:type X) (:type Y)]))
+  (fn [X Y] [(type X) (type Y)]))
 
 (defmethod ?<? [FuzzyNumber FuzzyNumber] [X Y] (_<_ X Y))
 (defmethod ?<? [FuzzyNumber Number]      [X Y] (_<  X Y))
@@ -204,7 +204,7 @@
 
 (defmulti ?>?
   "Compares two values, which may be FuzzyNumbers of constants, and returns true if X > Y. Uses reflection."
-  (fn [X Y] [(:type X) (:type Y)]))
+  (fn [X Y] [(type X) (type Y)]))
 
 (defmethod ?>? [FuzzyNumber FuzzyNumber] [X Y] (_>_ X Y))
 (defmethod ?>? [FuzzyNumber Number]      [X Y] (_>  X Y))
@@ -213,7 +213,7 @@
 
 (defmulti ?min?
   "Returns the smaller of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(:type X) (:type Y)]))
+  (fn [X Y] [(type X) (type Y)]))
 
 (defmethod ?min? [FuzzyNumber FuzzyNumber] [X Y] (_min_ X Y))
 (defmethod ?min? [FuzzyNumber Number]      [X Y] (_min  X Y))
@@ -222,7 +222,7 @@
 
 (defmulti ?max?
   "Returns the larger of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(:type X) (:type Y)]))
+  (fn [X Y] [(type X) (type Y)]))
 
 (defmethod ?max? [FuzzyNumber FuzzyNumber] [X Y] (_max_ X Y))
 (defmethod ?max? [FuzzyNumber Number]      [X Y] (_max  X Y))
