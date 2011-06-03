@@ -230,9 +230,7 @@
 (defmethod ?max? [Number      Number]      [X Y] ( max  X Y))
 
 (def fuzzy-arithmetic-mapping
-  '{0   _0_
-    0.0 _0_
-    +   ?+?
+  '{+   ?+?
     -   ?-?
     *   ?*?
     /   ?d?
@@ -257,8 +255,8 @@
   "Transforms f into its fuzzy arithmetic equivalent, fuzzy-f, and
    calls (fuzzy-f X Y). Uses reflection on the types of X and Y as
    well as any numeric values used in f."
-  [f X Y]
-  `(~(fuzzify-fn f) ~X ~Y))
+  [f & args]
+  `(~(fuzzify-fn f) ~@args))
 
 (defn rv-mean
   "Returns the mean of a FuzzyNumber."
