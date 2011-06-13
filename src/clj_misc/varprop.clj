@@ -63,6 +63,34 @@
   ([X Y & more]
      (reduce _d_ (_d_ X Y) more)))
 
+(defn _<_
+  "Compares two or more FuzzyNumbers and returns true if P(X_i < X_i+1) > 0.5 for all i in [1,n]."
+  ([X Y]
+     (< (:mean X) (:mean Y)))
+  ([X Y & more]
+     (every? (fn [[X Y]] (_<_ X Y)) (partition 2 1 (list* X Y more)))))
+
+(defn _>_
+  "Compares two or more FuzzyNumbers and returns true if P(X_i > X_i+1) > 0.5 for all i in [1,n]."
+  ([X Y]
+     (> (:mean X) (:mean Y)))
+  ([X Y & more]
+     (every? (fn [[X Y]] (_>_ X Y)) (partition 2 1 (list* X Y more)))))
+
+(defn _min_
+  "Returns the smallest of two or more FuzzyNumbers using _<_."
+  ([X Y]
+     (if (_<_ X Y) X Y))
+  ([X Y & more]
+     (reduce _min_ (_min_ X Y) more)))
+
+(defn _max_
+  "Returns the greatest of two or more FuzzyNumbers using _>_."
+  ([X Y]
+     (if (_>_ X Y) X Y))
+  ([X Y & more]
+     (reduce _max_ (_max_ X Y) more)))
+
 (defn _+
   "Returns the sum of a FuzzyNumber and one or more scalars."
   ([X y]
@@ -90,6 +118,38 @@
      (fuzzy-number (/ (:mean X) y) (/ (:var X) y y)))
   ([X y & more]
      (reduce _d (_d X y) more)))
+
+(defn _<
+  "Compares a FuzzyNumber and one or more scalars and returns true if
+   P(X < y_1) > 0.5 and all ys are in monotonically increasing order."
+  ([X y]
+     (< (:mean X) y))
+  ([X y & more]
+     (and (_< X y)
+          (apply < (cons y more)))))
+
+(defn _>
+  "Compares a FuzzyNumber and one or more scalars and returns true if
+   P(X > y_1) > 0.5 and all ys are in monotonically decreasing order."
+  ([X y]
+     (> (:mean X) y))
+  ([X y & more]
+     (and (_> X y)
+          (apply > (cons y more)))))
+
+(defn _min
+  "Returns the smallest of a FuzzyNumber and one or more scalars using _<."
+  ([X y]
+     (if (_< X y) X y))
+  ([X y & more]
+     (_min X (reduce min y more))))
+
+(defn _max
+  "Returns the greatest of a FuzzyNumber and one or more scalars using _>."
+  ([X y]
+     (if (_> X y) X y))
+  ([X y & more]
+     (_max X (reduce max y more))))
 
 (defn +_
   "Returns the sum of a scalar and one or more FuzzyNumbers."
@@ -119,38 +179,6 @@
   ([x Y & more]
      (reduce _d_ (d_ x Y) more)))
 
-(defn _<_
-  "Compares two or more FuzzyNumbers and returns true if P(X_i < X_i+1) > 0.5 for all i in [1,n]."
-  ([X Y]
-     (< (:mean X) (:mean Y)))
-  ([X Y & more]
-     (every? (fn [[X Y]] (_<_ X Y)) (partition 2 1 (list* X Y more)))))
-
-(defn _>_
-  "Compares two or more FuzzyNumbers and returns true if P(X_i > X_i+1) > 0.5 for all i in [1,n]."
-  ([X Y]
-     (> (:mean X) (:mean Y)))
-  ([X Y & more]
-     (every? (fn [[X Y]] (_>_ X Y)) (partition 2 1 (list* X Y more)))))
-
-(defn _<
-  "Compares a FuzzyNumber and one or more scalars and returns true if
-   P(X < y_1) > 0.5 and all ys are in monotonically increasing order."
-  ([X y]
-     (< (:mean X) y))
-  ([X y & more]
-     (and (_< X y)
-          (apply < (cons y more)))))
-
-(defn _>
-  "Compares a FuzzyNumber and one or more scalars and returns true if
-   P(X > y_1) > 0.5 and all ys are in monotonically decreasing order."
-  ([X y]
-     (> (:mean X) y))
-  ([X y & more]
-     (and (_> X y)
-          (apply > (cons y more)))))
-
 (defn <_
   "Compares a scalar and one or more FuzzyNumbers and returns true if
    P(Y > x) > 0.5 and all Ys are in monotonically increasing order by
@@ -170,34 +198,6 @@
   ([x Y & more]
      (and (>_ x Y)
           (apply _>_ (cons Y more)))))
-
-(defn _min_
-  "Returns the smallest of two or more FuzzyNumbers using _<_."
-  ([X Y]
-     (if (_<_ X Y) X Y))
-  ([X Y & more]
-     (reduce _min_ (_min_ X Y) more)))
-
-(defn _max_
-  "Returns the greatest of two or more FuzzyNumbers using _>_."
-  ([X Y]
-     (if (_>_ X Y) X Y))
-  ([X Y & more]
-     (reduce _max_ (_max_ X Y) more)))
-
-(defn _min
-  "Returns the smallest of a FuzzyNumber and one or more scalars using _<."
-  ([X y]
-     (if (_< X y) X y))
-  ([X y & more]
-     (_min X (reduce min y more))))
-
-(defn _max
-  "Returns the greatest of a FuzzyNumber and one or more scalars using _>."
-  ([X y]
-     (if (_> X y) X y))
-  ([X y & more]
-     (_max X (reduce max y more))))
 
 (defn min_
   "Returns the smallest of a scalar and one or more FuzzyNumbers using <_."
