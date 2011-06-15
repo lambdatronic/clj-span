@@ -18,10 +18,8 @@
 ;;;-------------------------------------------------------------------
 ;;;
 ;;; This namespace defines functions for creating, querying, and
-;;; manipulating random variables, which are defined to be maps of
-;;; {state -> probability}.  Both discrete and continuous random
-;;; variables are supported.  Continuous RVs are represented using
-;;; samples from their cumulative distribution functions (CDFs).
+;;; manipulating fuzzy numbers, which are defined to be pairs of [mean
+;;; var].
 
 (ns clj-misc.varprop
   (:use [clj-misc.utils :only [my-partition-all replace-all]]))
@@ -36,198 +34,284 @@
 (def _0_ (fuzzy-number 0.0 0.0))
 
 (defn _+_
-  "Returns the sum of two FuzzyNumbers."
-  [{mx :mean, vx :var} {my :mean, vy :var}]
-  (fuzzy-number (+ mx my) (+ vx vy)))
+  "Returns the sum of two or more FuzzyNumbers."
+  ([X Y]
+     (fuzzy-number (+ (:mean X) (:mean Y)) (+ (:var X) (:var Y))))
+  ([X Y & more]
+     (reduce _+_ (_+_ X Y) more)))
 
 (defn _-_
-  "Returns the difference of two FuzzyNumbers."
-  [{mx :mean, vx :var} {my :mean, vy :var}]
-  (fuzzy-number (- mx my) (+ vx vy)))
+  "Returns the difference of two or more FuzzyNumbers."
+  ([X Y]
+     (fuzzy-number (- (:mean X) (:mean Y)) (+ (:var X) (:var Y))))
+  ([X Y & more]
+     (reduce _-_ (_-_ X Y) more)))
 
 (defn _*_
-  "Returns the product of two FuzzyNumbers."
-  [{mx :mean, vx :var} {my :mean, vy :var}]
-  (fuzzy-number (* mx my) (+ (* vx vy) (* mx mx vy) (* my my vx))))
+  "Returns the product of two or more FuzzyNumbers."
+  ([{mx :mean, vx :var} {my :mean, vy :var}]
+     (fuzzy-number (* mx my) (+ (* vx vy) (* mx mx vy) (* my my vx))))
+  ([X Y & more]
+     (reduce _*_ (_*_ X Y) more)))
 
 (declare d_)
 
 (defn _d_
-  "Returns the quotient of two FuzzyNumbers."
-  [X Y]
-  (_*_ X (d_ 1 Y)))
-
-(defn _+
-  "Returns the sum of a FuzzyNumber and a constant."
-  [X y]
-  (fuzzy-number (+ (:mean X) y) (:var X)))
-
-(defn _-
-  "Returns the difference of a FuzzyNumber and a constant."
-  [X y]
-  (fuzzy-number (- (:mean X) y) (:var X)))
-
-(defn _*
-  "Returns the product of a FuzzyNumber and a constant."
-  [X y]
-  (fuzzy-number (* (:mean X) y) (* (:var X) y y)))
-
-(defn _d
-  "Returns the quotient of a FuzzyNumber and a constant."
-  [X y]
-  (fuzzy-number (/ (:mean X) y) (/ (:var X) y y)))
-
-(defn +_
-  "Returns the sum of a constant and a FuzzyNumber."
-  [x Y]
-  (fuzzy-number (+ x (:mean Y)) (:var Y)))
-
-(defn -_
-  "Returns the difference of a constant and a FuzzyNumber."
-  [x Y]
-  (fuzzy-number (- x (:mean Y)) (:var Y)))
-
-(defn *_
-  "Returns the product of a constant and a FuzzyNumber."
-  [x Y]
-  (fuzzy-number (* x (:mean Y)) (* x x (:var Y))))
-
-(defn d_
-  "Returns the quotient of a constant and a FuzzyNumber."
-  [x {:keys [mean var]}]
-  (fuzzy-number (/ x mean) (/ (* x x var) (Math/pow mean 4))))
+  "Returns the quotient of two or more FuzzyNumbers."
+  ([X Y]
+     (_*_ X (d_ 1 Y)))
+  ([X Y & more]
+     (reduce _d_ (_d_ X Y) more)))
 
 (defn _<_
-  "Compares two FuzzyNumbers and returns true if P(X < Y) > 0.5."
-  [X Y]
-  (< (:mean X) (:mean Y)))
+  "Compares two or more FuzzyNumbers and returns true if P(X_i < X_i+1) > 0.5 for all i in [1,n]."
+  ([X Y]
+     (< (:mean X) (:mean Y)))
+  ([X Y & more]
+     (every? (fn [[X Y]] (_<_ X Y)) (partition 2 1 (list* X Y more)))))
 
 (defn _>_
-  "Compares two FuzzyNumbers and returns true if P(X > Y) > 0.5."
-  [X Y]
-  (> (:mean X) (:mean Y)))
-
-(defn _<
-  "Compares a FuzzyNumber and a scalar and returns true if P(X < y) > 0.5."
-  [X y]
-  (< (:mean X) y))
-
-(defn _>
-  "Compares a FuzzyNumber and a scalar and returns true if P(X > y) > 0.5."
-  [X y]
-  (> (:mean X) y))
-
-(defn <_
-  "Compares a scalar and a FuzzyNumber and returns true if P(Y > x) > 0.5."
-  [x Y]
-  (< x (:mean Y)))
-
-(defn >_
-  "Compares a scalar and a FuzzyNumber and returns true if P(Y < x) > 0.5."
-  [x Y]
-  (> x (:mean Y)))
+  "Compares two or more FuzzyNumbers and returns true if P(X_i > X_i+1) > 0.5 for all i in [1,n]."
+  ([X Y]
+     (> (:mean X) (:mean Y)))
+  ([X Y & more]
+     (every? (fn [[X Y]] (_>_ X Y)) (partition 2 1 (list* X Y more)))))
 
 (defn _min_
-  "Returns the smaller of two FuzzyNumbers using _<_."
-  [X Y]
-  (if (_<_ X Y) X Y))
+  "Returns the smallest of two or more FuzzyNumbers using _<_."
+  ([X Y]
+     (if (_<_ X Y) X Y))
+  ([X Y & more]
+     (reduce _min_ (_min_ X Y) more)))
 
 (defn _max_
-  "Returns the greater of two FuzzyNumbers using _>_."
-  [X Y]
-  (if (_>_ X Y) X Y))
+  "Returns the greatest of two or more FuzzyNumbers using _>_."
+  ([X Y]
+     (if (_>_ X Y) X Y))
+  ([X Y & more]
+     (reduce _max_ (_max_ X Y) more)))
+
+(defn _+
+  "Returns the sum of a FuzzyNumber and one or more scalars."
+  ([X y]
+     (fuzzy-number (+ (:mean X) y) (:var X)))
+  ([X y & more]
+     (reduce _+ (_+ X y) more)))
+
+(defn _-
+  "Returns the difference of a FuzzyNumber and one or more scalars."
+  ([X y]
+     (fuzzy-number (- (:mean X) y) (:var X)))
+  ([X y & more]
+     (reduce _- (_- X y) more)))
+
+(defn _*
+  "Returns the product of a FuzzyNumber and one or more scalars."
+  ([X y]
+     (fuzzy-number (* (:mean X) y) (* (:var X) y y)))
+  ([X y & more]
+     (reduce _* (_* X y) more)))
+
+(defn _d
+  "Returns the quotient of a FuzzyNumber and one or more scalars."
+  ([X y]
+     (fuzzy-number (/ (:mean X) y) (/ (:var X) y y)))
+  ([X y & more]
+     (reduce _d (_d X y) more)))
+
+(defn _<
+  "Compares a FuzzyNumber and one or more scalars and returns true if
+   P(X < y_1) > 0.5 and all ys are in monotonically increasing order."
+  ([X y]
+     (< (:mean X) y))
+  ([X y & more]
+     (and (_< X y)
+          (apply < (cons y more)))))
+
+(defn _>
+  "Compares a FuzzyNumber and one or more scalars and returns true if
+   P(X > y_1) > 0.5 and all ys are in monotonically decreasing order."
+  ([X y]
+     (> (:mean X) y))
+  ([X y & more]
+     (and (_> X y)
+          (apply > (cons y more)))))
 
 (defn _min
-  "Returns the smaller of a FuzzyNumber and a scalar using _<."
-  [X y]
-  (if (_< X y) X y))
+  "Returns the smallest of a FuzzyNumber and one or more scalars using _<."
+  ([X y]
+     (if (_< X y) X y))
+  ([X y & more]
+     (_min X (reduce min y more))))
 
 (defn _max
-  "Returns the greater of a FuzzyNumber and a scalar using _>."
-  [X y]
-  (if (_> X y) X y))
+  "Returns the greatest of a FuzzyNumber and one or more scalars using _>."
+  ([X y]
+     (if (_> X y) X y))
+  ([X y & more]
+     (_max X (reduce max y more))))
+
+(defn +_
+  "Returns the sum of a scalar and one or more FuzzyNumbers."
+  ([x Y]
+     (fuzzy-number (+ x (:mean Y)) (:var Y)))
+  ([x Y & more]
+     (reduce _+_ (+_ x Y) more)))
+
+(defn -_
+  "Returns the difference of a scalar and one or more FuzzyNumbers."
+  ([x Y]
+     (fuzzy-number (- x (:mean Y)) (:var Y)))
+  ([x Y & more]
+     (reduce _-_ (-_ x Y) more)))
+
+(defn *_
+  "Returns the product of a scalar and one or more FuzzyNumbers."
+  ([x Y]
+     (fuzzy-number (* x (:mean Y)) (* x x (:var Y))))
+  ([x Y & more]
+     (reduce _*_ (*_ x Y) more)))
+
+(defn d_
+  "Returns the quotient of a scalar and one or more FuzzyNumbers."
+  ([x {:keys [mean var]}]
+     (fuzzy-number (/ x mean) (/ (* x x var) (Math/pow mean 4))))
+  ([x Y & more]
+     (reduce _d_ (d_ x Y) more)))
+
+(defn <_
+  "Compares a scalar and one or more FuzzyNumbers and returns true if
+   P(Y > x) > 0.5 and all Ys are in monotonically increasing order by
+   _<_."
+  ([x Y]
+     (< x (:mean Y)))
+  ([x Y & more]
+     (and (<_ x Y)
+          (apply _<_ (cons Y more)))))
+
+(defn >_
+  "Compares a scalar and one or more FuzzyNumbers and returns true if
+   P(Y < x) > 0.5 and all Ys are in monotonically decreasing order by
+   _>_."
+  ([x Y]
+     (> x (:mean Y)))
+  ([x Y & more]
+     (and (>_ x Y)
+          (apply _>_ (cons Y more)))))
 
 (defn min_
-  "Returns the smaller of a scalar and a FuzzyNumber using <_."
-  [x Y]
-  (if (<_ x Y) x Y))
+  "Returns the smallest of a scalar and one or more FuzzyNumbers using <_."
+  ([x Y]
+     (if (<_ x Y) x Y))
+  ([x Y & more]
+     (min_ x (reduce _min_ Y more))))
 
 (defn max_
-  "Returns the greater of a scalar and a FuzzyNumber using >_."
-  [x Y]
-  (if (>_ x Y) x Y))
+  "Returns the greatest of a scalar and one or more FuzzyNumbers using >_."
+  ([x Y]
+     (if (>_ x Y) x Y))
+  ([x Y & more]
+     (max_ x (reduce _max_ Y more))))
 
 (defmulti ?+?
-  "Returns the sum of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(type X) (type Y)]))
+  "Returns the sum of two or more values, which may be FuzzyNumbers or scalars. Uses reflection."
+  (fn [X Y & more] (if (seq more)
+                     :more
+                     [(type X) (type Y)])))
 
-(defmethod ?+? [FuzzyNumber FuzzyNumber] [X Y] (_+_ X Y))
-(defmethod ?+? [FuzzyNumber Number]      [X Y] (_+  X Y))
-(defmethod ?+? [Number      FuzzyNumber] [X Y] ( +_ X Y))
-(defmethod ?+? [Number      Number]      [X Y] ( +  X Y))
+(defmethod ?+? [FuzzyNumber FuzzyNumber] [X Y & _] (_+_ X Y))
+(defmethod ?+? [FuzzyNumber Number]      [X Y & _] (_+  X Y))
+(defmethod ?+? [Number      FuzzyNumber] [X Y & _] ( +_ X Y))
+(defmethod ?+? [Number      Number]      [X Y & _] ( +  X Y))
+(defmethod ?+? :more [X Y & more] (reduce ?+? (?+? X Y) more))
 
 (defmulti ?-?
-  "Returns the difference of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(type X) (type Y)]))
+  "Returns the difference of two or more values, which may be FuzzyNumbers or scalars. Uses reflection."
+  (fn [X Y & more] (if (seq more)
+                     :more
+                     [(type X) (type Y)])))
 
-(defmethod ?-? [FuzzyNumber FuzzyNumber] [X Y] (_-_ X Y))
-(defmethod ?-? [FuzzyNumber Number]      [X Y] (_-  X Y))
-(defmethod ?-? [Number      FuzzyNumber] [X Y] ( -_ X Y))
-(defmethod ?-? [Number      Number]      [X Y] ( -  X Y))
+(defmethod ?-? [FuzzyNumber FuzzyNumber] [X Y & _] (_-_ X Y))
+(defmethod ?-? [FuzzyNumber Number]      [X Y & _] (_-  X Y))
+(defmethod ?-? [Number      FuzzyNumber] [X Y & _] ( -_ X Y))
+(defmethod ?-? [Number      Number]      [X Y & _] ( -  X Y))
+(defmethod ?-? :more [X Y & more] (reduce ?-? (?-? X Y) more))
 
 (defmulti ?*?
-  "Returns the product of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(type X) (type Y)]))
+  "Returns the product of two or more values, which may be FuzzyNumbers or scalars. Uses reflection."
+  (fn [X Y & more] (if (seq more)
+                     :more
+                     [(type X) (type Y)])))
 
-(defmethod ?*? [FuzzyNumber FuzzyNumber] [X Y] (_*_ X Y))
-(defmethod ?*? [FuzzyNumber Number]      [X Y] (_*  X Y))
-(defmethod ?*? [Number      FuzzyNumber] [X Y] ( *_ X Y))
-(defmethod ?*? [Number      Number]      [X Y] ( *  X Y))
+(defmethod ?*? [FuzzyNumber FuzzyNumber] [X Y & _] (_*_ X Y))
+(defmethod ?*? [FuzzyNumber Number]      [X Y & _] (_*  X Y))
+(defmethod ?*? [Number      FuzzyNumber] [X Y & _] ( *_ X Y))
+(defmethod ?*? [Number      Number]      [X Y & _] ( *  X Y))
+(defmethod ?*? :more [X Y & more] (reduce ?*? (?*? X Y) more))
 
 (defmulti ?d?
-  "Returns the quotient of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(type X) (type Y)]))
+  "Returns the quotient of two or more values, which may be FuzzyNumbers or scalars. Uses reflection."
+  (fn [X Y & more] (if (seq more)
+                     :more
+                     [(type X) (type Y)])))
 
-(defmethod ?d? [FuzzyNumber FuzzyNumber] [X Y] (_d_ X Y))
-(defmethod ?d? [FuzzyNumber Number]      [X Y] (_d  X Y))
-(defmethod ?d? [Number      FuzzyNumber] [X Y] ( d_ X Y))
-(defmethod ?d? [Number      Number]      [X Y] ( /  X Y))
+(defmethod ?d? [FuzzyNumber FuzzyNumber] [X Y & _] (_d_ X Y))
+(defmethod ?d? [FuzzyNumber Number]      [X Y & _] (_d  X Y))
+(defmethod ?d? [Number      FuzzyNumber] [X Y & _] ( d_ X Y))
+(defmethod ?d? [Number      Number]      [X Y & _] ( /  X Y))
+(defmethod ?d? :more [X Y & more] (reduce ?d? (?d? X Y) more))
 
 (defmulti ?<?
-  "Compares two values, which may be FuzzyNumbers of constants, and returns true if X < Y. Uses reflection."
-  (fn [X Y] [(type X) (type Y)]))
+  "Compares two or more values, which may be FuzzyNumbers or
+   scalars, and returns true if X_i < X_i+1 for all i in [1,n]. Uses
+   reflection."
+  (fn [X Y & more] (if (seq more)
+                     :more
+                     [(type X) (type Y)])))
 
-(defmethod ?<? [FuzzyNumber FuzzyNumber] [X Y] (_<_ X Y))
-(defmethod ?<? [FuzzyNumber Number]      [X Y] (_<  X Y))
-(defmethod ?<? [Number      FuzzyNumber] [X Y] ( <_ X Y))
-(defmethod ?<? [Number      Number]      [X Y] ( <  X Y))
+(defmethod ?<? [FuzzyNumber FuzzyNumber] [X Y & _] (_<_ X Y))
+(defmethod ?<? [FuzzyNumber Number]      [X Y & _] (_<  X Y))
+(defmethod ?<? [Number      FuzzyNumber] [X Y & _] ( <_ X Y))
+(defmethod ?<? [Number      Number]      [X Y & _] ( <  X Y))
+(defmethod ?<? :more [X Y & more] (every? (fn [[X Y]] (?<? X Y)) (partition 2 1 (list* X Y more))))
 
 (defmulti ?>?
-  "Compares two values, which may be FuzzyNumbers of constants, and returns true if X > Y. Uses reflection."
-  (fn [X Y] [(type X) (type Y)]))
+  "Compares two or more values, which may be FuzzyNumbers or
+   scalars, and returns true if X_i > X_i+1 for all i in [1,n]. Uses
+   reflection."
+  (fn [X Y & more] (if (seq more)
+                     :more
+                     [(type X) (type Y)])))
 
-(defmethod ?>? [FuzzyNumber FuzzyNumber] [X Y] (_>_ X Y))
-(defmethod ?>? [FuzzyNumber Number]      [X Y] (_>  X Y))
-(defmethod ?>? [Number      FuzzyNumber] [X Y] ( >_ X Y))
-(defmethod ?>? [Number      Number]      [X Y] ( >  X Y))
+(defmethod ?>? [FuzzyNumber FuzzyNumber] [X Y & _] (_>_ X Y))
+(defmethod ?>? [FuzzyNumber Number]      [X Y & _] (_>  X Y))
+(defmethod ?>? [Number      FuzzyNumber] [X Y & _] ( >_ X Y))
+(defmethod ?>? [Number      Number]      [X Y & _] ( >  X Y))
+(defmethod ?>? :more [X Y & more] (every? (fn [[X Y]] (?>? X Y)) (partition 2 1 (list* X Y more))))
 
 (defmulti ?min?
-  "Returns the smaller of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(type X) (type Y)]))
+  "Returns the smallest of two or more values, which may be FuzzyNumbers or scalars. Uses reflection."
+  (fn [X Y & more] (if (seq more)
+                     :more
+                     [(type X) (type Y)])))
 
-(defmethod ?min? [FuzzyNumber FuzzyNumber] [X Y] (_min_ X Y))
-(defmethod ?min? [FuzzyNumber Number]      [X Y] (_min  X Y))
-(defmethod ?min? [Number      FuzzyNumber] [X Y] ( min_ X Y))
-(defmethod ?min? [Number      Number]      [X Y] ( min  X Y))
+(defmethod ?min? [FuzzyNumber FuzzyNumber] [X Y & _] (_min_ X Y))
+(defmethod ?min? [FuzzyNumber Number]      [X Y & _] (_min  X Y))
+(defmethod ?min? [Number      FuzzyNumber] [X Y & _] ( min_ X Y))
+(defmethod ?min? [Number      Number]      [X Y & _] ( min  X Y))
+(defmethod ?min? :more [X Y & more] (reduce ?min? (?min? X Y) more))
 
 (defmulti ?max?
-  "Returns the larger of two values, which may be FuzzyNumbers or constants. Uses reflection."
-  (fn [X Y] [(type X) (type Y)]))
+  "Returns the largest of two or more values, which may be FuzzyNumbers or scalars. Uses reflection."
+  (fn [X Y & more] (if (seq more)
+                     :more
+                     [(type X) (type Y)])))
 
-(defmethod ?max? [FuzzyNumber FuzzyNumber] [X Y] (_max_ X Y))
-(defmethod ?max? [FuzzyNumber Number]      [X Y] (_max  X Y))
-(defmethod ?max? [Number      FuzzyNumber] [X Y] ( max_ X Y))
-(defmethod ?max? [Number      Number]      [X Y] ( max  X Y))
+(defmethod ?max? [FuzzyNumber FuzzyNumber] [X Y & _] (_max_ X Y))
+(defmethod ?max? [FuzzyNumber Number]      [X Y & _] (_max  X Y))
+(defmethod ?max? [Number      FuzzyNumber] [X Y & _] ( max_ X Y))
+(defmethod ?max? [Number      Number]      [X Y & _] ( max  X Y))
+(defmethod ?max? :more [X Y & more] (reduce ?max? (?max? X Y) more))
 
 (def fuzzy-arithmetic-mapping
   '{+   ?+?
@@ -253,10 +337,10 @@
 
 (defmacro rv-fn
   "Transforms f into its fuzzy arithmetic equivalent, fuzzy-f, and
-   calls (fuzzy-f X Y). Uses reflection on the types of X and Y as
-   well as any numeric values used in f."
-  [f & args]
-  `(~(fuzzify-fn f) ~@args))
+   calls (apply fuzzy-f Xs). Uses reflection on the types of Xs as
+   well as any numeric literal values used in f."
+  [f & Xs]
+  `(~(fuzzify-fn f) ~@Xs))
 
 (defn rv-mean
   "Returns the mean of a FuzzyNumber."
