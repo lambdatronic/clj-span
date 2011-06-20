@@ -282,7 +282,7 @@
   "Returns the distribution of f of two random variables X and Y."
   [f X Y]
   (with-meta
-    (into {} (filter (fn [[x p]] (> p 0.0)) (rv-convolute* f X Y)))
+    (into {} (filter (fn [[_ p]] (pos? p)) (rv-convolute* f X Y)))
     (if (or (= ::continuous-distribution (type X))
             (= ::continuous-distribution (type Y)))
       cont-type
@@ -290,21 +290,25 @@
 
 ;; -------------------- Begin arithmetic functions --------------------
 
+(defn rv-fn
+  [f X Y]
+  (rv-resample (rv-convolute f X Y)))
+
 (defn _+_
   [X Y]
-  (rv-resample (rv-convolute + X Y)))
+  (rv-fn + X Y))
 
 (defn _-_
   [X Y]
-  (rv-resample (rv-convolute - X Y)))
+  (rv-fn - X Y))
 
 (defn _*_
   [X Y]
-  (rv-resample (rv-convolute * X Y)))
+  (rv-fn * X Y))
 
 (defn _d_
   [X Y]
-  (rv-resample (rv-convolute (fn [x y] (if (zero? y) Double/NaN (/ x y))) X Y)))
+  (rv-fn / X Y))
 
 (defn _<_
   [X Y]
@@ -347,6 +351,8 @@
   ;;"Return F_X(x) = P(X<x)."
   (fn [X y] (type X)))
 
+;;; FIXME: Potential bug if y is Double/NaN
+
 (defmethod rv-cdf-lookup ::discrete-distribution
   [X y]
   (rv-cdf-lookup (to-continuous-randvar X) y))
@@ -357,7 +363,6 @@
     (X (apply min above-y))
     1.0))
 
-;;; FIXME: Potential bug if y is Double/NaN
 (defn _<
   [X y]
   (> (rv-cdf-lookup X y) 0.5))
@@ -407,10 +412,6 @@
   (if (>_ x Y) x Y))
 
 ;; -------------------- Begin arithmetic functions --------------------
-
-(defn rv-fn
-  [f X Y]
-  (rv-resample (rv-convolute f X Y)))
 
 (defmulti rv-mean
   "Returns the mean value of a random variable X."
