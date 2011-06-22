@@ -1,0 +1,93 @@
+<html>
+  <head>
+    <title>clj-span.params - clj-span nil API documentation</title>
+    <link href="static/favicon.png" rel="icon" />
+    <link href="static/favicon.png" rel="shortcut icon" />
+    <link media="all" type="text/css" href="static/clojure.css" rel="stylesheet" />
+    <link media="all" type="text/css" href="static/wiki.css" rel="stylesheet" />
+    <link media="all" type="text/css" href="static/internal.css" rel="stylesheet" />
+    <!-- TODO: are we using these (from clojure.org)? If so, add the files -->
+    <script src="file/view/code_highlighter.js" type="text/javascript"></script>
+    <script src="file/view/clojure.js" type="text/javascript"></script>
+    <style>.menuWrapper{height: 36px;}</style>
+    <!--[if lte IE 6]>
+    <link rel="stylesheet" href="http://www.wikispaces.com/_/2009051601/s/internal_ie.css" type="text/css" />
+    <![endif]-->
+  </head>
+<!--
+This document was auto-generated from the source by the clojure autodoc system.
+To report errors or ask questions about the overall documentation structure, formatting,
+etc., contact Tom Faulhaber (google mail name: tomfaulhaber).
+For errors in the documentation of a particular namespace, contact the author of that
+namespace.
+-->
+  <body>
+    <div id="AllContentContainer">
+      <div id="Header">
+	<a id="Logo" href="index.html"><img alt="Clojure" height="100" width="100" src="static/clojure-icon.gif" /></a>
+	<h1><a title="page header title" id="page-header" href="index.html">clj-span</a></h1>
+      </div>
+      <div id="leftcolumn"><div style="text-align: center;"></div>
+<div class="menu">
+  <div class="WikiCustomNav WikiElement wiki">
+    <span class="toc-header"><span id="project-name">clj-span</span> <span id="version"></span> API</span><br />
+    <ul>
+      <li><a class="wiki_link" href="index.html">Overview</a></li>
+      <li><a class="wiki_link" href="api-index.html">API Index</a></li>
+    </ul>
+    <span class="toc-header">Namespaces</span>
+    <ul id="left-sidebar-list">
+      <li><a href="clj-misc.matrix-ops-api.html" class="wiki_link">clj-misc.matrix-ops</a></li><li><a href="clj-misc.memtest-api.html" class="wiki_link">clj-misc.memtest</a></li><li><a href="clj-misc.point-algebra-api.html" class="wiki_link">clj-misc.point-algebra</a></li><li><a href="clj-misc.randvars-api.html" class="wiki_link">clj-misc.randvars</a></li><li><a href="clj-misc.stats-api.html" class="wiki_link">clj-misc.stats</a></li><li><a href="clj-misc.utils-api.html" class="wiki_link">clj-misc.utils</a></li><li><a href="clj-misc.varprop-api.html" class="wiki_link">clj-misc.varprop</a></li><li><a href="clj-span.agents-api.html" class="wiki_link">clj-span.agents</a></li><li><a href="clj-span.analyzer-api.html" class="wiki_link">clj-span.analyzer</a></li><li><a href="clj-span.aries-span-bridge-api.html" class="wiki_link">clj-span.aries-span-bridge</a></li><li><a href="clj-span.commandline-api.html" class="wiki_link">clj-span.commandline</a></li><li><a href="clj-span.core-api.html" class="wiki_link">clj-span.core</a></li><li><a href="clj-span.gui-api.html" class="wiki_link">clj-span.gui</a></li><li><a href="clj-span.interface-api.html" class="wiki_link">clj-span.interface</a></li><li><a href="clj-span.model-lang-api.html" class="wiki_link">clj-span.model-lang</a></li><li><a href="clj-span.models.carbon-api.html" class="wiki_link">clj-span.models.carbon</a></li><li><a href="clj-span.models.coastal-storm-protection-api.html" class="wiki_link">clj-span.models.coastal-storm-protection</a></li><li><a href="clj-span.models.flood-water-api.html" class="wiki_link">clj-span.models.flood-water</a></li><li><a href="clj-span.models.line-of-sight-api.html" class="wiki_link">clj-span.models.line-of-sight</a></li><li><a href="clj-span.models.proximity-api.html" class="wiki_link">clj-span.models.proximity</a></li><li><a href="clj-span.models.sediment-api.html" class="wiki_link">clj-span.models.sediment</a></li><li><a href="clj-span.models.subsistence-fisheries-api.html" class="wiki_link">clj-span.models.subsistence-fisheries</a></li><li><a href="clj-span.models.surface-water-api.html" class="wiki_link">clj-span.models.surface-water</a></li><li><a href="clj-span.models.surface-water-topologic-api.html" class="wiki_link">clj-span.models.surface-water-topologic</a></li><li><a href="clj-span.models.water-api.html" class="wiki_link">clj-span.models.water</a></li><li><a href="clj-span.params-api.html" class="wiki_link">clj-span.params</a></li><li><a href="clj-span.repl-utils-api.html" class="wiki_link">clj-span.repl-utils</a></li><li><a href="clj-span.worldgen-api.html" class="wiki_link">clj-span.worldgen</a></li>
+    </ul>
+    
+    <a href="http://clojure.org" class="wiki_link">Clojure Home</a>
+  </div>
+</div>
+</div>
+      <div id="rightcolumn">
+	<div id="Content">
+	  <div class="contentBox"><div class="innerContentBox">
+              <div id="content_view" class="wiki wikiPage">
+                <div id="right-sidebar"><div id="toc">
+  <h1 class="nopad">Table of Contents</h1>
+  <div style="margin-left: 1em;" class="toc-section">
+    <a href="#toc0">Overview</a>
+    
+    <br />
+  </div>
+</div>
+</div>
+                <div id="content-tag"><h1 id="overview">API for <span id="namespace-name">clj-span.params</span>
+  - <span id="header-project">clj-span</span> <span id="header-version"></span> (<span id="header-status"></span>)
+  </h1>
+
+<br />Usage:
+<pre>
+(ns your-namespace
+  (:require <span id="long-name">clj-span.params</span>))
+</pre><pre>
+</pre><h2>Overview</h2>
+<pre id="namespace-docstr"></pre>
+
+
+<br />
+<h2>Public Variables and Functions</h2>
+
+
+
+</div>
+              </div>
+            </div>
+          </div>
+	</div>
+	<div id="foot">
+	  <div style="text-align: center;" id="copyright">No copyright info </div>
+	</div>
+      </div>
+      <div id="DesignedBy">Logo &amp; site design by <a title="Visit Tom Hickey's website." href="http://www.tomhickey.com">Tom Hickey</a>.<br />
+      Clojure auto-documentation system by Tom Faulhaber.</div>
+    </div>
+    <!-- /AllContentContainer -->
+  </body>
+
+</html>
