@@ -26,7 +26,7 @@
         [clj-misc.utils         :only (seq2map mapmap iterate-while-seq with-message
                                        memoize-by-first-arg angular-distance p & def-)]
         [clj-misc.matrix-ops    :only (get-neighbors on-bounds? subtract-ids find-nearest)]
-        [clj-misc.randvars      :only (_0_ _+_ *_ _d rv-fn rv-min rv-above?)]))
+        [clj-misc.randvars      :only (_0_ _+_ *_ _d rv-fn _min_ _>)]))
 
 (defn- lowest-neighbors
   [id in-stream? elevation-layer rows cols]
@@ -38,7 +38,7 @@
                            (get-neighbors rows cols id))
           local-elev     (get-in elevation-layer id)
           neighbor-elevs (map (p get-in elevation-layer) neighbors)
-          min-elev       (reduce rv-min local-elev neighbor-elevs)]
+          min-elev       (reduce _min_ local-elev neighbor-elevs)]
       (filter #(= min-elev (get-in elevation-layer %)) neighbors))))
 (def- lowest-neighbors (memoize-by-first-arg lowest-neighbors))
 
@@ -148,7 +148,7 @@
                                                                          cache-layer
                                                                          mm2-per-cell
                                                                          surface-water-carrier)]
-        (if (rv-above? new-possible-weight trans-threshold-volume)
+        (if (_> new-possible-weight trans-threshold-volume)
           (if-let [next-id (find-next-step current-id in-stream? elevation-layer rows cols bearing)]
             (assoc surface-water-carrier
               :route           (conj route next-id)

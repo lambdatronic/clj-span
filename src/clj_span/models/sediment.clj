@@ -37,7 +37,7 @@
                                     with-progress-bar-cool euclidean-distance)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? add-ids subtract-ids find-nearest
                                     find-line-between rotate-2d-vec find-point-at-dist-in-m)]
-        [clj-misc.randvars   :only (_0_ _+_ *_ _d rv-fn rv-min)]))
+        [clj-misc.randvars   :only (_0_ _+_ *_ _d rv-fn _min_)]))
 
 (defn- lowest-neighbors
   [id in-stream? elevation-layer rows cols]
@@ -49,7 +49,7 @@
                            (get-neighbors rows cols id))
           local-elev     (get-in elevation-layer id)
           neighbor-elevs (map (p get-in elevation-layer) neighbors)
-          min-elev       (reduce rv-min local-elev neighbor-elevs)]
+          min-elev       (reduce _min_ local-elev neighbor-elevs)]
       (filter #(= min-elev (get-in elevation-layer %)) neighbors))))
 (def- lowest-neighbors (memoize-by-first-arg lowest-neighbors))
 

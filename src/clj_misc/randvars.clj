@@ -484,12 +484,12 @@
 (defn rv-zero-above-scalar
   "Sets all values greater than y in the random variable X to 0."
   [X y]
-  (rv-convolute #(if (> %2 %1) 0.0 %2) (make-randvar :discrete 1 [y]) X))
+  (rv-map #(if (> %1 y) 0.0 %1) X))
 
 (defn rv-zero-below-scalar
   "Sets all values less than y in the random variable X to 0."
   [X y]
-  (rv-convolute #(if (< %2 %1) 0.0 %2) (make-randvar :discrete 1 [y]) X))
+  (rv-map #(if (< %1 y) 0.0 %1) X))
 
 (defn rv-pos
   "Sets all negative values in X to 0."
