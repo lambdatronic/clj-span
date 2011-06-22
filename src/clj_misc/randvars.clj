@@ -31,6 +31,16 @@
 
 ;; -------------------- Begin utility functions --------------------
 
+;; (defrecord ContinuousRV [])
+
+;; (defrecord DiscreteRV [])
+
+;; (defn continuous-rv []
+;;   (ContinuousRV. ))
+
+;; (defn discrete-rv []
+;;   (DiscreteRV. ))
+
 (def *rv-max-states* 10) ;; sensible default
 
 (defn reset-rv-max-states!
@@ -47,7 +57,7 @@
 (defmethod to-discrete-randvar ::continuous-distribution
   [continuous-RV]
   (with-meta
-    (let [sorted-RV (sort-by key continuous-RV)]
+    (let [sorted-RV (sort continuous-RV)]
       (zipmap (keys sorted-RV)
               (successive-differences (vals sorted-RV))))
     disc-type))
@@ -59,7 +69,7 @@
 (defmethod to-continuous-randvar ::discrete-distribution
   [discrete-RV]
   (with-meta
-    (let [sorted-RV (sort-by key discrete-RV)]
+    (let [sorted-RV (sort discrete-RV)]
       (zipmap (keys sorted-RV)
               (successive-sums (vals sorted-RV))))
     cont-type))
@@ -109,7 +119,7 @@
     ;; (NPP), which is NP-complete. Scheisse.  I'll apply the
     ;; differencing algorithm repeatedly to successively smaller
     ;; partitions until the total number is reached.
-    (let [X*           (sort-by key X)
+    (let [X*           (sort X)
           search-depth (int (/ (Math/log max-partitions) (Math/log 2)))]
       ;;(nth (iterate #(mapcat (fn [p] (minimum-discrepancy-partition val p)) %)
       (nth (iterate (p mapcat (p minimum-discrepancy-partition val))
@@ -136,7 +146,7 @@
 ;;    X
 ;;    (let [partition-size (Math/ceil (/ (dec (count X)) (dec *rv-max-states*)))]
 ;;      (with-meta
-;;        (seq2map (my-partition-all partition-size (sort-by key X))
+;;        (seq2map (my-partition-all partition-size (sort X))
 ;;                 #(vector (/ (apply + (keys %)) (count %))
 ;;                          (apply + (vals %))))
 ;;        (meta X)))))
@@ -146,7 +156,7 @@
   (if-not (> (count X) *rv-max-states*)
     X
     (let [step-size (Math/ceil (/ (dec (count X)) (dec *rv-max-states*)))]
-      (with-meta (into {} (take-nth step-size (sort-by key X))) (meta X)))))
+      (with-meta (into {} (take-nth step-size (sort X))) (meta X)))))
 
 ;; -------------------- Begin rv-convolute functions --------------------
 
@@ -222,7 +232,7 @@
 
 (defn rv-convolute-4
   [f X Y]
-  (let [convolution (sort-by key (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
+  (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
         all-unique  (reduce (fn [acc [v2 p2 :as n]]
                               (let [[v1 p1] (peek acc)]
                                 (if (== v1 v2)
@@ -234,7 +244,7 @@
 
 #_(defn rv-convolute-5
     [f X Y]
-    (let [convolution (sort-by key (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
+    (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
           all-unique  (reduce (fn [acc [v2 p2 :as n]]
                                 (let [last-idx (dec (count acc))
                                       [v1 p1]  (acc last-idx)]
@@ -351,17 +361,14 @@
   ;;"Return F_X(x) = P(X<x)."
   (fn [X y] (type X)))
 
-;;; FIXME: Potential bug if y is Double/NaN
-
 (defmethod rv-cdf-lookup ::discrete-distribution
   [X y]
-  (rv-cdf-lookup (to-continuous-randvar X) y))
+  (reduce + (map second (filter #(< (first %) y) X))))
 
+;;; FIXME: stub
 (defmethod rv-cdf-lookup ::continuous-distribution
   [X y]
-  (if-let [above-y (seq (filter #(>= % y) (keys X)))]
-    (X (apply min above-y))
-    1.0))
+  0.5)
 
 (defn _<
   [X y]
@@ -424,7 +431,7 @@
 ;; This returns the average of the upper and lower bounds for the mean
 (defmethod rv-mean ::continuous-distribution
   [X]
-  (let [X*     (sort-by key X)
+  (let [X*     (sort X)
         states (keys X*)
         probs  (successive-differences (vals X*))
         upper  (reduce + (map * states probs))
@@ -452,21 +459,21 @@
   (let [frac-sum (reduce + (map second coverage))]
     (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
 
-(defn draw
-  "Extracts a value from X using a uniform distribution."
-  [X]
-  (let [roll (rand)
-        X*   (to-continuous-randvar X)]
-    (apply min (filter #(< roll (X* %)) (keys X*)))))
-
 (defn draw-repeatedly
+  "Extracts values from X using a uniform distribution."
   ([X]
-     (let [X*     (to-continuous-randvar X)
-           states (keys X*)]
-       (repeatedly (fn [] (let [roll (rand)]
-                            (apply min (filter #(< roll (X* %)) states)))))))
+     (repeatedly #(loop [r (rand), X* X]
+                    (let [[x p] (first X*)]
+                      (if (<= r p)
+                        x
+                        (recur (- r p)
+                               (rest X*)))))))
   ([n X]
      (take n (draw-repeatedly X))))
+
+(defn draw
+  [X]
+  (first (draw-repeatedly X)))
 
 ;; -------------------- Begin unused functions --------------------
 
@@ -524,7 +531,7 @@
 
 (defmethod rv-scale ::continuous-distribution
   [X scale-factor]
-  (let [X*           (sort-by key X)
+  (let [X*           (sort X)
         states       (vec (keys X*))
         probs        (vec (map (p * scale-factor) (successive-differences (vals X*))))
         zero-pos     (first (filter #(zero? (states %)) (range (count states))))
