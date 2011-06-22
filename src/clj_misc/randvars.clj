@@ -25,7 +25,7 @@
 
 (ns clj-misc.randvars
   (:use [clj-misc.utils :only [p my-partition-all constraints-1.0
-                               mapmap seq2map dissoc-vec
+                               seq2map dissoc-vec seq2redundant-map
                                successive-sums successive-differences
                                select-n-distinct select-n-summands]]))
 
@@ -282,7 +282,7 @@
   "Returns the distribution of f of two random variables X and Y."
   [f X Y]
   (with-meta
-    (into {} (filter (fn [[x p]] (> p 0.0)) (rv-convolute* f X Y)))
+    (into {} (filter (fn [[_ p]] (pos? p)) (rv-convolute* f X Y)))
     (if (or (= ::continuous-distribution (type X))
             (= ::continuous-distribution (type Y)))
       cont-type
@@ -290,21 +290,25 @@
 
 ;; -------------------- Begin arithmetic functions --------------------
 
+(defn rv-fn
+  [f X Y]
+  (rv-resample (rv-convolute f X Y)))
+
 (defn _+_
   [X Y]
-  (rv-resample (rv-convolute + X Y)))
+  (rv-fn + X Y))
 
 (defn _-_
   [X Y]
-  (rv-resample (rv-convolute - X Y)))
+  (rv-fn - X Y))
 
 (defn _*_
   [X Y]
-  (rv-resample (rv-convolute * X Y)))
+  (rv-fn * X Y))
 
 (defn _d_
   [X Y]
-  (rv-resample (rv-convolute (fn [x y] (if (zero? y) Double/NaN (/ x y))) X Y)))
+  (rv-fn / X Y))
 
 (defn _<_
   [X Y]
@@ -325,7 +329,7 @@
 (defn- rv-map
   "Returns the distribution of the random variable X with f applied to its states."
   [f X]
-  (with-meta (mapmap f identity X) (meta X)))
+  (with-meta (seq2redundant-map X (fn [[x p]] [(f x) p]) +) (meta X)))
 
 (defn _+
   [X y]
@@ -341,13 +345,13 @@
 
 (defn _d
   [X y]
-  (if (zero? y)
-    (with-meta {Double/NaN 1.0} (meta X))
-    (rv-map #(/ % y) X)))
+  (rv-map #(/ % y) X))
 
 (defmulti rv-cdf-lookup
   ;;"Return F_X(x) = P(X<x)."
   (fn [X y] (type X)))
+
+;;; FIXME: Potential bug if y is Double/NaN
 
 (defmethod rv-cdf-lookup ::discrete-distribution
   [X y]
@@ -355,16 +359,17 @@
 
 (defmethod rv-cdf-lookup ::continuous-distribution
   [X y]
-  (or (X y)
-      (if-let [below-y (seq (filter #(< % y) (keys X)))]
-        (X (apply max below-y))
-        0.0)))
+  (if-let [above-y (seq (filter #(>= % y) (keys X)))]
+    (X (apply min above-y))
+    1.0))
 
 (defn _<
   [X y]
   (> (rv-cdf-lookup X y) 0.5))
 
-(def _> (complement _<))
+(defn _>
+  [X y]
+  (< (rv-cdf-lookup X y) 0.5))
 
 (defn _min
   [X y]
@@ -388,7 +393,7 @@
 
 (defn d_
   [x Y]
-  (rv-map #(if (zero? %) Double/NaN (/ x %)) Y))
+  (rv-map #(/ x %) Y))
 
 (defn <_
   [x Y]
@@ -396,7 +401,7 @@
 
 (defn >_
   [x Y]
-  (complement <_))
+  (> (rv-cdf-lookup Y x) 0.5))
 
 (defn min_
   [x Y]
@@ -407,10 +412,6 @@
   (if (>_ x Y) x Y))
 
 ;; -------------------- Begin arithmetic functions --------------------
-
-(defn rv-fn
-  [f X Y]
-  (rv-resample (rv-convolute f X Y)))
 
 (defmulti rv-mean
   "Returns the mean value of a random variable X."
@@ -468,6 +469,17 @@
      (take n (draw-repeatedly X))))
 
 ;; -------------------- Begin unused functions --------------------
+
+(defn make-randvar
+  [rv-type num-states valid-states]
+  (constraints-1.0 {:pre [(#{:discrete :continuous} rv-type)]})
+  (let [discrete-RV (with-meta
+                      (zipmap (map double (select-n-distinct num-states valid-states))
+                              (map #(/ % 100.0) (select-n-summands num-states 100 1)))
+                      disc-type)]
+    (if (= rv-type :discrete)
+      discrete-RV
+      (to-continuous-randvar discrete-RV))))
 
 (defn rv-zero-above-scalar
   "Sets all values greater than y in the random variable X to 0."
@@ -532,16 +544,7 @@
   [delta X Y]
   (every? (fn [[x px]] (if-let [py (Y x)] (<= (Math/abs (- py px)) delta))) X))
 
-(defn make-randvar
-  [rv-type num-states valid-states]
-  (constraints-1.0 {:pre [(#{:discrete :continuous} rv-type)]})
-  (let [discrete-RV (with-meta
-                      (zipmap (map double (select-n-distinct num-states valid-states))
-                              (map #(/ % 100.0) (select-n-summands num-states 100 1)))
-                      disc-type)]
-    (if (= rv-type :discrete)
-      discrete-RV
-      (to-continuous-randvar discrete-RV))))
+
 
 ;; Example profiling code
 ;;(use 'clj-misc.memtest)

@@ -116,7 +116,9 @@
   [aseq keyvalfn mergefn]
   (reduce (fn [amap x]
             (let [[key val] (keyvalfn x)]
-              (update-in amap [key] mergefn val)))
+              (if-let [old-val (amap key)]
+                (assoc amap key (mergefn old-val val))
+                (assoc amap key val))))
           {}
           aseq))
 
