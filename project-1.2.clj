@@ -6,7 +6,8 @@
                      [clojure-contrib "1.2.0"]]
   :dev-dependencies [[swank-clojure "1.4.0-SNAPSHOT"]
                      [clojure-source "1.2.0"]
-                     [lein-clojars "0.6.0"]]
+                     [lein-clojars "0.6.0"]
+                     [org.clojars.rayne/autodoc "0.8.0-SNAPSHOT"]]
   :jvm-opts         ["-agentlib:jdwp=transport=dt_socket,server=y,suspend=n"]
   :main             clj-span.commandline)
 

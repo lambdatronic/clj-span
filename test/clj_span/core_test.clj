@@ -7,6 +7,15 @@
         [clj-misc.matrix-ops :only (make-matrix map-matrix resample-matrix get-rows get-cols)]
         [clj-span.sediment-model :only (aggregate-flow-dirs)]))
 
+;; Courtesy of Stuart Sierra (note the slight whiff of evil...)
+(defn refer-private [ns]
+  (doseq [[symbol var] (ns-interns ns)]
+    (when (:private (meta var))
+      (intern *ns* symbol var))))
+
+(doseq [ns [clj-misc.randvars clj-misc.utils clj-span.params clj-misc.matrix-ops clj-span.sediment-model]] (refer-private ns))
+;; End evil symbol table tampering
+
 (def attach-disc-metadata   (p map-matrix #(with-meta % disc-type)))
 (def attach-cont-metadata   (p map-matrix #(with-meta % cont-type)))
 (def rationalize-probs      (p map-matrix (p mapmap identity rationalize)))
