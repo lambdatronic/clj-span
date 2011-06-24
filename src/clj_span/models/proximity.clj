@@ -30,7 +30,7 @@
   (:use [clj-misc.utils      :only (def- p my->> mapmap euclidean-distance with-progress-bar-cool with-message remove-nil-val-entries)]
         [clj-span.params     :only (*trans-threshold*)]
         [clj-span.core       :only (distribute-flow! service-carrier)]
-        [clj-misc.randvars   :only (_0_ _+_ _* _>_ rv-fn _>)]
+        [clj-misc.varprop    :only (_0_ _+_ _* _>_ rv-fn _>)]
         [clj-misc.matrix-ops :only (get-neighbors get-line-fn find-bounding-box)]))
 
 ;; in meters

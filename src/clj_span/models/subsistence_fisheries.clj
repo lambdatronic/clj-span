@@ -48,7 +48,7 @@
                                     find-nearest
                                     find-in-range
                                     find-line-between)]
-        [clj-misc.randvars   :only (_0_ *_ _d _*_ _+_ _> rv-fn)]))
+        [clj-misc.varprop    :only (_0_ *_ _d _*_ _+_ _> rv-fn)]))
 
 (defstruct fisherman :need :route :cache :fishing-area)
 

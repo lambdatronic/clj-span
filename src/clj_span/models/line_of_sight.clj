@@ -36,7 +36,7 @@
   (:use [clj-span.params     :only (*trans-threshold*)]
         [clj-misc.utils      :only (euclidean-distance p def- between? with-progress-bar-cool with-message)]
         [clj-misc.matrix-ops :only (find-line-between get-line-fn)]
-        [clj-misc.randvars   :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)]
+        [clj-misc.varprop    :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)]
         [clj-span.core       :only (distribute-flow! service-carrier)]))
 
 ;; in meters

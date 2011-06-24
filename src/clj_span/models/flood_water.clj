@@ -27,7 +27,7 @@
                                     with-progress-bar-cool euclidean-distance)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? add-ids subtract-ids find-nearest
                                     find-line-between rotate-2d-vec find-point-at-dist-in-m)]
-        [clj-misc.randvars   :only (_0_ _+_ *_ _d rv-fn _min_)]))
+        [clj-misc.varprop    :only (_0_ _+_ *_ _d rv-fn _min_)]))
 
 (defn- lowest-neighbors
   [id in-stream? elevation-layer rows cols]
@@ -107,7 +107,7 @@
              (if (= _0_ sink-cap)
                [actual-weight {}]
                (do
-                 (alter sink-cap-ref (p rv-fn (fn [a s] (- s (min a (* sink-AF s)))) actual-weight))
+                 (alter sink-cap-ref #(rv-fn (fn [a s] (- s (min a (* sink-AF s)))) actual-weight %))
                  [(rv-fn (fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
                   {affected-sink (rv-fn (fn [a s] (min a s)) actual-weight sink-cap)}])))))
         [actual-weight {}])
@@ -118,7 +118,7 @@
            (if (= _0_ sink-cap)
              [actual-weight {}]
              (do
-               (alter sink-cap-ref (p rv-fn (fn [a s] (max (- s a) 0.0)) actual-weight))
+               (alter sink-cap-ref #(rv-fn (fn [a s] (max (- s a) 0.0)) actual-weight %))
                [(rv-fn (fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
                 {current-id (rv-fn (fn [a s] (min a s)) actual-weight sink-cap)}]))))
         [actual-weight {}]))))

@@ -25,7 +25,7 @@
         [clj-misc.utils         :only (seq2map mapmap p &)]
         [clj-misc.matrix-ops    :only (get-rows get-cols make-matrix map-matrix find-bounding-box
                                        filter-matrix-for-coords get-neighbors on-bounds?)]
-        [clj-misc.randvars      :only (_0_ _+_ rv-fn _min_ _max_)]
+        [clj-misc.varprop       :only (_0_ _+_ rv-fn _min_ _max_)]
         [clj-misc.point-algebra :only (nearest-point-where)]))
 
 (defn- step-upstream

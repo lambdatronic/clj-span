@@ -68,7 +68,7 @@
                                     dist-to-steps
                                     find-point-at-dist-in-m
                                     find-line-between)]
-        [clj-misc.randvars   :only (_0_ _+_ _*_ *_ _d rv-fn _>)]))
+        [clj-misc.varprop    :only (_0_ _+_ _*_ *_ _d rv-fn _>)]))
 
 (defn handle-sink-effects
   [current-id possible-weight actual-weight eco-sink-layer geo-sink-layer m2-per-cell]
