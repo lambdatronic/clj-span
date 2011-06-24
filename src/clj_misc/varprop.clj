@@ -24,14 +24,42 @@
 (ns clj-misc.varprop
   (:use [clj-misc.utils :only [my-partition-all replace-all]]))
 
-(defrecord FuzzyNumber [mean var])
+;;(defrecord FuzzyNumber [mean var])
+(defstruct FuzzyNumber :mean :var)
 
+;; (defn fuzzy-number
+;;   "Constructs a FuzzyNumber."
+;;   [mean var]
+;;   (FuzzyNumber. mean var))
 (defn fuzzy-number
   "Constructs a FuzzyNumber."
   [mean var]
-  (FuzzyNumber. mean var))
+  (struct FuzzyNumber mean var))
 
-(def _0_ (fuzzy-number 0.0 0.0))
+(defn fuzzy-number-from-states
+  "Constructs a FuzzyNumber from n states and n probs, corresponding
+   to a finite discrete distribution."
+  [states probs]
+  (let [mean (reduce + (map * states probs))
+        var  (reduce + (map (fn [x p] (* (Math/pow (- x mean) 2) p)) states probs))]
+    (fuzzy-number mean var)))
+
+(defn fuzzy-number-from-ranges
+  "Constructs a FuzzyNumber from n bounds and n-1 probs corresponding
+   to a piecewise continuous uniform distribution with
+   discontinuities (i.e. jumps) at the bounds. prob i represents the
+   probability of being between bound i and bound i+1."
+  [bounds probs]
+  (let [midpoints     (map (fn [next prev] (/ (+ next prev) 2.0)) (rest bounds) bounds)
+        mean          (reduce + (map * midpoints probs))
+        second-moment (* 1/3 (reduce + (map (fn [p1 p2 bp] (* (Math/pow bp 3) (- p1 p2)))
+                                            (cons 0 probs)
+                                            (concat probs [0])
+                                            bounds)))
+        var           (- second-moment (* mean mean))]
+    (fuzzy-number mean var)))
+
+(def ^{:doc "A fuzzy number with mean and variance of 0."} _0_ (fuzzy-number 0.0 0.0))
 
 (defn _+_
   "Returns the sum of two or more FuzzyNumbers."
@@ -314,14 +342,14 @@
 (defmethod ?max? :more [X Y & more] (reduce ?max? (?max? X Y) more))
 
 (def fuzzy-arithmetic-mapping
-  '{+   ?+?
-    -   ?-?
-    *   ?*?
-    /   ?d?
-    <   ?<?
-    >   ?>?
-    min ?min?
-    max ?max?})
+  '{+   clj-misc.varprop/?+?
+    -   clj-misc.varprop/?-?
+    *   clj-misc.varprop/?*?
+    /   clj-misc.varprop/?d?
+    <   clj-misc.varprop/?<?
+    >   clj-misc.varprop/?>?
+    min clj-misc.varprop/?min?
+    max clj-misc.varprop/?max?})
 
 (defn fuzzify-fn
   "Transforms f into its fuzzy arithmetic equivalent, using the

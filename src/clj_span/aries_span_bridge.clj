@@ -29,7 +29,7 @@
         [clj-misc.matrix-ops     :only (seq2matrix map-matrix)]
         [clj-misc.utils          :only (mapmap remove-nil-val-entries p & constraints-1.0 with-message successive-sums)]
         [clj-misc.randvars       :only (cont-type disc-type)]
-        [clj-misc.varprop        :only (fuzzy-number _0_)])
+        [clj-misc.varprop        :only (fuzzy-number fuzzy-number-from-states fuzzy-number-from-ranges _0_)])
   (:import (java.io File FileWriter FileReader PushbackReader)))
 
 #_(refer 'geospace :only '(grid-rows
@@ -165,20 +165,11 @@
           (for [value (NaNs-to-zero (get-data ds))]
             (with-meta (array-map value 1.0) disc-type))))))
 
-(defn fuzzy-variance
-  [probs bounds mean]
-  (let [second-moment (* 1/3 (reduce + (map (fn [p1 p2 bp] (* (Math/pow bp 3) (- p1 p2)))
-                                            (cons 0 probs)
-                                            (concat probs [0])
-                                            bounds)))]
-    (- second-moment (* mean mean))))
-
 (defmethod unpack-datasource :varprop
   [_ ds rows cols]
   (println "Inside unpack-datasource!" rows cols)
   (let [n             (* rows cols)
-        NaNs-to-zero  (p map #(if (Double/isNaN %) 0.0 %))
-        get-midpoints #(map (fn [next prev] (/ (+ next prev) 2.0)) (rest %) %)]
+        NaNs-to-zero  (p map #(if (Double/isNaN %) 0.0 %))]
     (println "Checking datasource type..." ds)
     (if (and (probabilistic? ds) (not (binary? ds)))
       (do (print "It's probabilistic...")
@@ -192,22 +183,17 @@
                     unbounded-from-above? (== Double/POSITIVE_INFINITY (last bounds))]
                 (if (or unbounded-from-below? unbounded-from-above?)
                   (throw (Exception. "All undiscretized bounds must be closed above and below.")))
-                (let [midpoints (get-midpoints bounds)]
-                  (for [idx (range n)]
-                    (if-let [probs (get-probabilities ds idx)]
-                      (let [mean (reduce + (map * midpoints probs))
-                            var  (fuzzy-variance probs bounds mean)]
-                        (fuzzy-number mean var))
-                      _0_)))))
+                (for [idx (range n)]
+                  (if-let [probs (get-probabilities ds idx)]
+                    (fuzzy-number-from-ranges bounds probs)
+                    _0_))))
             ;; discrete distributions
             (do
               (println "and discrete.")
               (let [states (get-possible-states ds)]
                 (for [idx (range n)]
                   (if-let [probs (get-probabilities ds idx)]
-                    (let [mean (reduce + (map * states probs))
-                          var  (reduce + (map (fn [x p] (* (Math/pow (- x mean) 2) p)) states probs))]
-                      (fuzzy-number mean var))
+                    (fuzzy-number-from-states states probs)
                     _0_))))))
       ;; binary distributions and deterministic values
       (do (println "It's deterministic.")
