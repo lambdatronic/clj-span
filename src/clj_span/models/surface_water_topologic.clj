@@ -21,7 +21,7 @@
 ;;;
 
 (ns clj-span.models.surface-water-topologic
-  (:use [clj-span.model-api     :only (distribute-flow service-carrier)]
+  (:use [clj-span.core          :only (distribute-flow! service-carrier)]
         [clj-misc.utils         :only (seq2map mapmap p &)]
         [clj-misc.matrix-ops    :only (get-rows get-cols make-matrix map-matrix find-bounding-box
                                        filter-matrix-for-coords get-neighbors on-bounds?)]
@@ -363,19 +363,11 @@
     (println "\nAll done.")
     in-stream-carriers))
 
-(defmethod distribute-flow "SurfaceWaterMovement"
-  [_ animation? cell-width cell-height source-layer sink-layer use-layer
-   {stream-layer "River", elevation-layer "Altitude"}]
-  (println "Running Surface Water flow model.")
-  (let [rows                (get-rows source-layer)
-        cols                (get-cols source-layer)
-        possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
-        actual-flow-layer   (make-matrix rows cols (fn [_] (ref _0_)))
-        [source-points sink-points use-points stream-points] (pmap (p filter-matrix-for-coords (p not= _0_))
-                                                                   [source-layer sink-layer use-layer stream-layer])]
-    (println "Source points:" (count source-points))
-    (println "Sink points:  " (count sink-points))
-    (println "Use points:   " (count use-points))
+(defmethod distribute-flow! "SurfaceWaterMovement"
+  [_ cell-width cell-height rows cols cache-layer possible-flow-layer
+   actual-flow-layer source-layer sink-layer use-layer source-points
+   sink-points use-points {stream-layer "River", elevation-layer "Altitude"}]
+  (let [stream-points (filter-matrix-for-coords (p not= _0_) stream-layer)]
     (println "Stream points:" (count stream-points))
     (let [sink-caps          (seq2map sink-points (fn [id] [id (ref (get-in sink-layer id))]))
           use-caps           (seq2map use-points  (fn [id] [id (ref (get-in use-layer  id))]))
@@ -389,7 +381,7 @@
                                                      cols)
           stream-roots       (find-nearest-stream-points in-stream-carriers rows cols use-points)
           carrier-caches     (search-upstream elevation-layer rows cols in-stream-carriers stream-roots use-caps unsaturated-use?)]
-      (println "Simulation complete. Returning the cache-layer.")
-      [(make-matrix rows cols carrier-caches)
-       (map-matrix deref possible-flow-layer)
-       (map-matrix deref actual-flow-layer)])))
+      ;; Update the cache-layer.
+      (dosync
+       (doseq [[id cache] carrier-caches]
+         (alter (get-in cache-layer id) (constantly cache)))))))
