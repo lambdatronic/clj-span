@@ -30,10 +30,11 @@
         [clj-misc.utils          :only (mapmap remove-nil-val-entries p & constraints-1.0 with-message successive-sums)]
         [clj-misc.randvars       :only (cont-type disc-type)]
         [clj-misc.varprop        :only (fuzzy-number fuzzy-number-from-states fuzzy-number-from-ranges _0_)])
-  (:import (java.io File FileWriter FileReader PushbackReader)
-           (org.integratedmodelling.corescience.implementations.datasources MemObjectContextualizedDatasource
+  (:import (java.io File FileWriter FileReader PushbackReader)))
+
+#_(import '(org.integratedmodelling.corescience.implementations.datasources MemObjectContextualizedDatasource
                                                                             MemDoubleContextualizedDatasource)
-           (org.integratedmodelling.corescience.literals IndexedCategoricalDistribution)))
+          '(org.integratedmodelling.corescience.literals IndexedCategoricalDistribution))
 
 #_(refer 'geospace :only '(grid-rows
                            grid-columns
@@ -173,7 +174,7 @@
           (with-meta (array-map value 1.0) disc-type)))))
 
 
-(defmethod unpack-datasource :varprop
+#_(defmethod unpack-datasource :varprop
   [_ ds _]
   (println "Inside unpack-datasource!\nChecking datasource type..." ds)
   (cond (instance? MemObjectContextualizedDatasource ds)
