@@ -173,8 +173,7 @@
         (for [value (NaNs-to-zero (get-data ds))]
           (with-meta (array-map value 1.0) disc-type)))))
 
-
-#_(defmethod unpack-datasource :varprop
+(defmethod unpack-datasource :varprop
   [_ ds _]
   (println "Inside unpack-datasource!\nChecking datasource type..." ds)
   (cond (instance? MemObjectContextualizedDatasource ds)
