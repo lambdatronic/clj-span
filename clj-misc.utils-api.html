@@ -71,6 +71,8 @@ namespace.
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.utils/count-distinct">count-distinct</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#clj-misc.utils/depth-first-graph-search">depth-first-graph-search</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.utils/depth-first-tree-search">depth-first-tree-search</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.utils/euclidean-distance">euclidean-distance</a>
@@ -103,7 +105,7 @@ namespace.
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.utils/seq2redundant-map">seq2redundant-map</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
-      <a href="#clj-misc.utils/shortest-path">shortest-path</a>
+      <a href="#clj-misc.utils/shortest-path-bfgs">shortest-path-bfgs</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.utils/vectorize">vectorize</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
@@ -236,12 +238,24 @@ to indicate that more values were not examined.</pre>
 </div><div id="var-entry">
   <br />
   <hr />
+  <h2 id="clj-misc.utils/depth-first-graph-search">depth-first-graph-search</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (depth-first-graph-search root successors goal?)
+</pre>
+  <pre id="var-docstr">The classic depth-first-graph-search. Bread and butter of computer
+science. Implemented using tail recursion, of course! ;)</pre>
+  
+  
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
   <h2 id="clj-misc.utils/depth-first-tree-search">depth-first-tree-search</h2>
   <span id="var-type">function</span><br />
-  <pre id="var-usage">Usage: (depth-first-tree-search open-list successors goal?)
+  <pre id="var-usage">Usage: (depth-first-tree-search root successors goal?)
 </pre>
-  <pre id="var-docstr">The classic depth-first-tree-search.  Bread and butter of computer
-science.  Implemented using tail recursion, of course! ;)</pre>
+  <pre id="var-docstr">The classic depth-first-tree-search. Bread and butter of computer
+science. Implemented using tail recursion, of course! ;)</pre>
   
   
   
@@ -429,11 +443,11 @@ val using (mergefn curval val).</pre>
 </div><div id="var-entry">
   <br />
   <hr />
-  <h2 id="clj-misc.utils/shortest-path">shortest-path</h2>
+  <h2 id="clj-misc.utils/shortest-path-bfgs">shortest-path-bfgs</h2>
   <span id="var-type">function</span><br />
-  <pre id="var-usage">Usage: (shortest-path root successors goal? heuristic-filter)
+  <pre id="var-usage">Usage: (shortest-path-bfgs root successors goal? heuristic-filter)
 </pre>
-  <pre id="var-docstr">The classic breadth-first-search.  Bread and butter of computer
+  <pre id="var-docstr">The classic breadth-first-graph-search.  Bread and butter of computer
 science.  Implemented using tail recursion, of course! ;)</pre>
   
   
