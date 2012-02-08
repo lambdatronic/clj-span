@@ -247,18 +247,27 @@
 (defun gcl-expand (chunkname noweb? file)
   "Recursively expand a chunk into the output stream"
   (let ((chunklist (gethash chunkname *chunkhash* :not-found)) chunk type name)
-    (if (= chunklist :not-found)
+    (if (eq chunklist :not-found)
         (break "Chunk ~a not found!~%" chunkname)
-      (dolist (chunk (reverse chunklist))
-        (dolist (line (reverse chunk))
-          (if noweb?
-              (multiple-value-setq (type name) (ischunk-noweb line))
-            (multiple-value-setq (type name) (ischunk-latex line)))
-          (if (eq type 'refer)
-              (progn
-                (when *chunknoise* (format t "REFER name=~a~%" name))
-                (gcl-expand name noweb? file))
-            (format file "~a ; ~a~%" line chunkname)))))))
+      (progn
+        (format file ";;;====================================~%")
+        (format file ";;; Begin chunk ~a~%" chunkname)
+        (format file ";;;====================================~%~%")
+        (dolist (chunk (reverse chunklist))
+          (dolist (line (reverse chunk))
+            (if noweb?
+                (multiple-value-setq (type name) (ischunk-noweb line))
+              (multiple-value-setq (type name) (ischunk-latex line)))
+            (if (eq type 'refer)
+                (progn
+                  (when *chunknoise* (format t "REFER name=~a~%" name))
+                  (format file "~%")
+                  (gcl-expand name noweb? file))
+              (format file "~a~%" line)))
+          (format file "~%"))
+        (format file ";;;====================================~%")
+        (format file ";;; End chunk ~a~%" chunkname)
+        (format file ";;;====================================~%~%")))))
 
 
 
