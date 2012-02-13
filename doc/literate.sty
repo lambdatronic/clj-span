@@ -1,0 +1,21 @@
+\ProvidesPackage{literate}
+\NeedsTeXFormat{LaTeX2e}
+\RequirePackage{verbatim}
+
+\chardef\atcode=\catcode`\@
+\catcode`\@=11
+\renewcommand{\verbatim@font}{\ttfamily\small}
+\catcode`\@=\atcode
+
+\newcommand{\longdash}{\hbox to 1cm{\hrulefill}}
+
+\newenvironment{chunk}[1]{%
+\par\noindent%
+\qquad\longdash\quad\textbf{#1}\quad\longdash%
+\verbatim}{\endverbatim%
+\qquad\longdash\longdash\longdash%
+\par\noindent}
+
+\newcommand{\getchunk}[1]{%
+\noindent
+{\small $\backslash{}$begin\{chunk\}\{\textbf{#1}\}}}
