@@ -26,11 +26,11 @@
 
 (ns clj-span.commandline
   (:gen-class)
-  (:use [clj-span.core                :only (run-span)]
-        [clj-misc.utils               :only (def- defmulti- &)]
-        [clj-span.worldgen            :only (read-layer-from-file)]
-        [clojure.set :as set          :only (difference)]
-        [clojure.contrib.duck-streams :only (file-str)]))
+  (:use [clj-span.core     :only (run-span)]
+        [clj-misc.utils    :only (def- defmulti- &)]
+        [clj-span.worldgen :only (read-layer-from-file)]
+        [clojure.set       :only (difference) :as set]
+        [clojure.java.io   :only (file) :as io]))
 
 (def- usage-message
   (str
@@ -68,10 +68,10 @@
                   usage-message))))
 
 (def- param-tests
-  [["-source-layer"       #(.canRead (file-str %))  " is not readable."          ]
-   ["-sink-layer"         #(.canRead (file-str %))  " is not readable."          ]
-   ["-use-layer"          #(.canRead (file-str %))  " is not readable."          ]
-   ["-flow-layers"        #(.canRead (file-str %))  " is not readable."          ]
+  [["-source-layer"       #(.canRead  (io/file %))  " is not readable."          ]
+   ["-sink-layer"         #(.canRead  (io/file %))  " is not readable."          ]
+   ["-use-layer"          #(.canRead  (io/file %))  " is not readable."          ]
+   ["-flow-layers"        #(.canRead  (io/file %))  " is not readable."          ]
    ["-source-threshold"   (& float?   read-string)  " is not a double."          ]
    ["-sink-threshold"     (& float?   read-string)  " is not a double."          ]
    ["-use-threshold"      (& float?   read-string)  " is not a double."          ]

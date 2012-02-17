@@ -62,7 +62,7 @@
         point-layer (make-matrix (inc max-y) (inc max-x) #(get point-vals % _0_))]
     (draw-layer "Points" point-layer type scale)))
 
-(def *animation-sleep-ms* 100)
+(def ^:dynamic *animation-sleep-ms* 100)
 
 (defn run-animation [panel]
   (send-off *agent* run-animation)

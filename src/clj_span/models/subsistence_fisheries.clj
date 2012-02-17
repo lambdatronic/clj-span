@@ -100,7 +100,7 @@
                  (doall (pmap (p go-fish! fish-supply fish-left? possible-flow-layer actual-flow-layer km2-per-cell) %)))
               fishermen)))))
 
-(def *fishing-range* 5000.0) ;; max distance in meters that a fisherman can sail from shore
+(def ^:dynamic *fishing-range* 5000.0) ;; max distance in meters that a fisherman can sail from shore
 
 ;; FIXME: Use locations with no path to the coast will not create fishermen agents.
 (defn make-fishermen

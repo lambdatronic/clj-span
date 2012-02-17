@@ -1,7 +1,7 @@
 (ns clj-span.repl-utils
   (:use (clj-span core commandline aries-span-bridge analyzer gui)
         (clj-misc utils matrix-ops varprop stats)
-        clojure.contrib.pprint)
+        clojure.pprint)
   (:require [clj-misc.randvars :as rv]))
 
 (defn load-layers

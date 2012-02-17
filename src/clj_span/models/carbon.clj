@@ -87,8 +87,8 @@
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-(def- *num-world-samples* 10)
-(def- *sample-prob*       (/ 1.0 *num-world-samples*))
+(def ^:dynamic *num-world-samples* 10)
+(def ^:dynamic *sample-prob*       (/ 1.0 *num-world-samples*))
 
 (defn- get-carrier-cache
   [source-percents actual-sinks-by-source possible-use actual-use use-percent]

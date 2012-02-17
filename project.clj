@@ -11,8 +11,7 @@ Attribution Networks (SPANs): Spatially Quantifying the Flow of
 Ecosystem Services from Landscapes to People' (Springer LNCS 2010 -
 Johnson et al.)
 ----------------------------------------------------------------------"
-  :dependencies [[org.clojure/clojure         "1.2.1"]
-                 [org.clojure/clojure-contrib "1.2.0"]]
+  :dependencies [[org.clojure/clojure "1.3.0"]]
   :checksum-deps true
   ;; :warn-on-reflection true
   :main clj-span.commandline)

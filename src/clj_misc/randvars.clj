@@ -41,7 +41,7 @@
 ;; (defn discrete-rv []
 ;;   (DiscreteRV. ))
 
-(def *rv-max-states* 10) ;; sensible default
+(def ^:dynamic *rv-max-states* 10) ;; sensible default
 
 (defn reset-rv-max-states!
   [new-val]

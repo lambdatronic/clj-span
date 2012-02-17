@@ -139,8 +139,8 @@
      (map (fn [id] [id :left  (subtract-ids id storm-centerpoint)]) left-storm-surge-cells)
      (map (fn [id] [id :right (subtract-ids id storm-centerpoint)]) right-storm-surge-cells))))
 
-(def *storm-surge-width* 100000.0) ;; in meters
-(def *storm-surge-depth* 5000.0)   ;; in meters
+(def ^:dynamic *storm-surge-width* 100000.0) ;; in meters
+(def ^:dynamic *storm-surge-depth* 5000.0)   ;; in meters
 
 (defn make-storm-surge
   [source-layer get-next-bearing storm-centerpoint storm-bearing sample-bearing m2-per-cell cell-width cell-height rows cols]
@@ -199,7 +199,7 @@
           :bearing (mean-bearing (map second samples))
           :length  length)))))
 
-(def *max-sample-window-size* 10000.0) ; in meters
+(def ^:dynamic *max-sample-window-size* 10000.0) ; in meters
 
 (defn make-storm-track-sample
   [get-next-bearing storm-centerpoint storm-bearing cell-width cell-height rows cols]

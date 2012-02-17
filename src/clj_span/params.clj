@@ -24,7 +24,11 @@
 (ns clj-span.params
   (:use [clj-misc.randvars :only (*rv-max-states* reset-rv-max-states!)]))
 
-(declare *trans-threshold* *source-type* *sink-type* *use-type* *benefit-type*)
+(def ^:dynamic *trans-threshold*)
+(def ^:dynamic *source-type*)
+(def ^:dynamic *sink-type*)
+(def ^:dynamic *use-type*)
+(def ^:dynamic *benefit-type*)
 
 (defn set-global-params!
   [{:keys [rv-max-states trans-threshold source-type sink-type use-type benefit-type]}]

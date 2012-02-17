@@ -1,11 +1,10 @@
 (ns clj-span.core-test
-  (:use clojure.contrib.test-is
+  (:use clojure.test
         clj-span.core :reload-all
-        [clj-misc.randvars   :only (_0_ cont-type disc-type to-continuous-randvar rv-average)]
+        [clj-misc.randvars   :only (_0_ cont-type disc-type to-continuous-randvar rv-intensive-sampler)]
         [clj-misc.utils      :only (& p mapmap seq2map)]
         [clj-span.params     :only (set-global-params!)]
-        [clj-misc.matrix-ops :only (make-matrix map-matrix resample-matrix get-rows get-cols)]
-        [clj-span.sediment-model :only (aggregate-flow-dirs)]))
+        [clj-misc.matrix-ops :only (make-matrix map-matrix resample-matrix get-rows get-cols)]))
 
 ;; Courtesy of Stuart Sierra (note the slight whiff of evil...)
 (defn refer-private [ns]
@@ -13,7 +12,7 @@
     (when (:private (meta var))
       (intern *ns* symbol var))))
 
-(doseq [ns [clj-misc.randvars clj-misc.utils clj-span.params clj-misc.matrix-ops clj-span.sediment-model]] (refer-private ns))
+(doseq [ns '(clj-misc.randvars clj-misc.utils clj-span.params clj-misc.matrix-ops)] (refer-private ns))
 ;; End evil symbol table tampering
 
 (def attach-disc-metadata   (p map-matrix #(with-meta % disc-type)))
@@ -102,7 +101,7 @@
                           [name (resample-matrix
                                  scaled-rows
                                  scaled-cols
-                                 (if (= name "Hydrosheds") aggregate-flow-dirs rv-average)
+                                 rv-intensive-sampler
                                  matrix)]))))
 
 (deftest preprocess-data-layers-test

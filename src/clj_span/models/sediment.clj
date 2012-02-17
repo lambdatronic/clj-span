@@ -131,7 +131,7 @@
                 {current-id (rv-fn (fn [a s] (min a s)) actual-weight sink-cap)}]))))
         [actual-weight {}]))))
 
-(def- *max-levee-distance* 100.0) ;; in meters
+(def ^:dynamic *max-levee-distance* 100.0) ;; in meters
 
 (defn- nearby-levees
   [origin bearing levee? cell-width cell-height]
