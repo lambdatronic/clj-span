@@ -21,13 +21,14 @@
 ;;;
 
 (ns clj-span.models.surface-water
-  (:use [clj-span.core          :only (distribute-flow! service-carrier)]
-        [clj-span.params        :only (*trans-threshold*)]
+  (:use [clj-span.params        :only (*trans-threshold*)]
         [clj-misc.utils         :only (seq2map mapmap iterate-while-seq with-message
                                        memoize-by-first-arg angular-distance p & def-
                                        with-progress-bar-cool)]
         [clj-misc.matrix-ops    :only (get-neighbors on-bounds? subtract-ids find-nearest)]
         [clj-misc.varprop       :only (_0_ _+_ *_ _d rv-fn _min_ _>)]))
+
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
 (defn- lowest-neighbors
   [id in-stream? elevation-layer rows cols]

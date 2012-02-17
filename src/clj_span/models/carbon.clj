@@ -83,8 +83,9 @@
 
 (ns clj-span.models.carbon
   (:use [clj-misc.utils      :only (p sum def- with-progress-bar-cool)]
-        [clj-misc.varprop    :only (*_ _d draw fuzzy-number-from-states)]
-        [clj-span.core       :only (distribute-flow! service-carrier)]))
+        [clj-misc.varprop    :only (*_ _d draw fuzzy-number-from-states)]))
+
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
 (def- *num-world-samples* 10)
 (def- *sample-prob*       (/ 1.0 *num-world-samples*))

@@ -21,12 +21,13 @@
 ;;;
 
 (ns clj-span.models.surface-water-topologic
-  (:use [clj-span.core          :only (distribute-flow! service-carrier)]
-        [clj-misc.utils         :only (seq2map mapmap p &)]
+  (:use [clj-misc.utils         :only (seq2map mapmap p &)]
         [clj-misc.matrix-ops    :only (get-rows get-cols make-matrix map-matrix find-bounding-box
                                        filter-matrix-for-coords get-neighbors on-bounds?)]
         [clj-misc.varprop       :only (_0_ _+_ rv-fn _min_ _max_)]
         [clj-misc.point-algebra :only (nearest-point-where)]))
+
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
 (defn- step-upstream
   [closed-set in-stream? elevation-layer rows cols id]

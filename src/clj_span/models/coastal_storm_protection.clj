@@ -48,7 +48,6 @@
 
 (ns clj-span.models.coastal-storm-protection
   (:use [clj-span.params     :only (*trans-threshold*)]
-        [clj-span.core       :only (distribute-flow! service-carrier)]
         [clj-misc.utils      :only (p
                                     my->>
                                     seq2map
@@ -69,6 +68,8 @@
                                     find-point-at-dist-in-m
                                     find-line-between)]
         [clj-misc.varprop    :only (_0_ _+_ _*_ *_ _d rv-fn _>)]))
+
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
 (defn handle-sink-effects
   [current-id possible-weight actual-weight eco-sink-layer geo-sink-layer m2-per-cell]

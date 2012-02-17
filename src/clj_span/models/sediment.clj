@@ -31,13 +31,14 @@
 ;;;
 
 (ns clj-span.models.sediment
-  (:use [clj-span.core       :only (distribute-flow! service-carrier)]
-        [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
+  (:use [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
                                     memoize-by-first-arg angular-distance p def-
                                     with-progress-bar-cool euclidean-distance)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? add-ids subtract-ids find-nearest
                                     find-line-between rotate-2d-vec find-point-at-dist-in-m)]
         [clj-misc.varprop    :only (_0_ _+_ *_ _d rv-fn _min_)]))
+
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
 (defn- lowest-neighbors
   [id in-stream? elevation-layer rows cols]

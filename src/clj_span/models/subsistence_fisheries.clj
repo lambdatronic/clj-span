@@ -31,8 +31,7 @@
 ;;; 7. Once all demand is met, end the simulation and return the cache-layer.
 
 (ns clj-span.models.subsistence-fisheries
-  (:use [clj-span.core       :only (distribute-flow! service-carrier)]
-        [clj-misc.utils      :only (p
+  (:use [clj-misc.utils      :only (p
                                     &
                                     seq2map
                                     seq2redundant-map
@@ -52,6 +51,8 @@
                                     find-in-range
                                     find-line-between)]
         [clj-misc.varprop    :only (_0_ *_ _d _*_ _+_ _> rv-fn)]))
+
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
 (defstruct fisherman :need :route :cache :fishing-area)
 
