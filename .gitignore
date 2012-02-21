@@ -1,10 +1,6 @@
+autodoc
 pom.xml
 *jar
 lib
 classes
-resources
-next_commit.txt
-diff_with_aries.sh
-aries
-autodoc
 .lein-deps-sum

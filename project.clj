@@ -12,6 +12,6 @@ Ecosystem Services from Landscapes to People' (Springer LNCS 2010 -
 Johnson et al.)
 ----------------------------------------------------------------------"
   :dependencies [[org.clojure/clojure "1.3.0"]]
-  :checksum-deps true
+  :checksum-deps false
   ;; :warn-on-reflection true
   :main clj-span.commandline)
