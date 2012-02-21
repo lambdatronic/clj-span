@@ -1,14 +1,11 @@
 <html>
   <head>
-    <title>Index - clj-span nil API documentation</title>
+    <title>Index - clj-span API documentation</title>
     <link href="static/favicon.png" rel="icon" />
     <link href="static/favicon.png" rel="shortcut icon" />
     <link media="all" type="text/css" href="static/clojure.css" rel="stylesheet" />
     <link media="all" type="text/css" href="static/wiki.css" rel="stylesheet" />
     <link media="all" type="text/css" href="static/internal.css" rel="stylesheet" />
-    <!-- TODO: are we using these (from clojure.org)? If so, add the files -->
-    <script src="file/view/code_highlighter.js" type="text/javascript"></script>
-    <script src="file/view/clojure.js" type="text/javascript"></script>
     <style>.menuWrapper{height: 36px;}</style>
     <!--[if lte IE 6]>
     <link rel="stylesheet" href="http://www.wikispaces.com/_/2009051601/s/internal_ie.css" type="text/css" />
@@ -35,10 +32,12 @@ namespace.
       <li><a class="wiki_link" href="index.html">Overview</a></li>
       <li><a class="wiki_link" href="api-index.html">API Index</a></li>
     </ul>
-    <span class="toc-header">Namespaces</span>
-    <ul id="left-sidebar-list">
-      <li><a href="clj-misc.matrix-ops-api.html" class="wiki_link">clj-misc.matrix-ops</a></li><li><a href="clj-misc.memtest-api.html" class="wiki_link">clj-misc.memtest</a></li><li><a href="clj-misc.point-algebra-api.html" class="wiki_link">clj-misc.point-algebra</a></li><li><a href="clj-misc.randvars-api.html" class="wiki_link">clj-misc.randvars</a></li><li><a href="clj-misc.stats-api.html" class="wiki_link">clj-misc.stats</a></li><li><a href="clj-misc.utils-api.html" class="wiki_link">clj-misc.utils</a></li><li><a href="clj-misc.varprop-api.html" class="wiki_link">clj-misc.varprop</a></li><li><a href="clj-span.agents-api.html" class="wiki_link">clj-span.agents</a></li><li><a href="clj-span.analyzer-api.html" class="wiki_link">clj-span.analyzer</a></li><li><a href="clj-span.aries-span-bridge-api.html" class="wiki_link">clj-span.aries-span-bridge</a></li><li><a href="clj-span.commandline-api.html" class="wiki_link">clj-span.commandline</a></li><li><a href="clj-span.core-api.html" class="wiki_link">clj-span.core</a></li><li><a href="clj-span.gui-api.html" class="wiki_link">clj-span.gui</a></li><li><a href="clj-span.interface-api.html" class="wiki_link">clj-span.interface</a></li><li><a href="clj-span.model-lang-api.html" class="wiki_link">clj-span.model-lang</a></li><li><a href="clj-span.models.carbon-api.html" class="wiki_link">clj-span.models.carbon</a></li><li><a href="clj-span.models.coastal-storm-protection-api.html" class="wiki_link">clj-span.models.coastal-storm-protection</a></li><li><a href="clj-span.models.flood-water-api.html" class="wiki_link">clj-span.models.flood-water</a></li><li><a href="clj-span.models.line-of-sight-api.html" class="wiki_link">clj-span.models.line-of-sight</a></li><li><a href="clj-span.models.proximity-api.html" class="wiki_link">clj-span.models.proximity</a></li><li><a href="clj-span.models.sediment-api.html" class="wiki_link">clj-span.models.sediment</a></li><li><a href="clj-span.models.subsistence-fisheries-api.html" class="wiki_link">clj-span.models.subsistence-fisheries</a></li><li><a href="clj-span.models.surface-water-api.html" class="wiki_link">clj-span.models.surface-water</a></li><li><a href="clj-span.models.surface-water-topologic-api.html" class="wiki_link">clj-span.models.surface-water-topologic</a></li><li><a href="clj-span.params-api.html" class="wiki_link">clj-span.params</a></li><li><a href="clj-span.repl-utils-api.html" class="wiki_link">clj-span.repl-utils</a></li><li><a href="clj-span.worldgen-api.html" class="wiki_link">clj-span.worldgen</a></li>
-    </ul>
+    <div class="NamespaceTOC">
+      <span class="toc-header">Namespaces</span>
+      <ul id="left-sidebar-list">
+        <li><a href="clj-misc.matrix-ops-api.html" class="wiki_link">clj-misc.matrix-ops</a></li><li><a href="clj-misc.memtest-api.html" class="wiki_link">clj-misc.memtest</a></li><li><a href="clj-misc.point-algebra-api.html" class="wiki_link">clj-misc.point-algebra</a></li><li><a href="clj-misc.randvars-api.html" class="wiki_link">clj-misc.randvars</a></li><li><a href="clj-misc.stats-api.html" class="wiki_link">clj-misc.stats</a></li><li><a href="clj-misc.utils-api.html" class="wiki_link">clj-misc.utils</a></li><li><a href="clj-misc.varprop-api.html" class="wiki_link">clj-misc.varprop</a></li><li><a href="clj-span.agents-api.html" class="wiki_link">clj-span.agents</a></li><li><a href="clj-span.analyzer-api.html" class="wiki_link">clj-span.analyzer</a></li><li><a href="clj-span.aries-span-bridge-api.html" class="wiki_link">clj-span.aries-span-bridge</a></li><li><a href="clj-span.commandline-api.html" class="wiki_link">clj-span.commandline</a></li><li><a href="clj-span.core-api.html" class="wiki_link">clj-span.core</a></li><li><a href="clj-span.gui-api.html" class="wiki_link">clj-span.gui</a></li><li><a href="clj-span.interface-api.html" class="wiki_link">clj-span.interface</a></li><li><a href="clj-span.model-lang-api.html" class="wiki_link">clj-span.model-lang</a></li><li><a href="clj-span.models.carbon-api.html" class="wiki_link">clj-span.models.carbon</a></li><li><a href="clj-span.models.coastal-storm-protection-api.html" class="wiki_link">clj-span.models.coastal-storm-protection</a></li><li><a href="clj-span.models.flood-water-api.html" class="wiki_link">clj-span.models.flood-water</a></li><li><a href="clj-span.models.line-of-sight-api.html" class="wiki_link">clj-span.models.line-of-sight</a></li><li><a href="clj-span.models.proximity-api.html" class="wiki_link">clj-span.models.proximity</a></li><li><a href="clj-span.models.sediment-api.html" class="wiki_link">clj-span.models.sediment</a></li><li><a href="clj-span.models.subsistence-fisheries-api.html" class="wiki_link">clj-span.models.subsistence-fisheries</a></li><li><a href="clj-span.models.surface-water-api.html" class="wiki_link">clj-span.models.surface-water</a></li><li><a href="clj-span.models.surface-water-topologic-api.html" class="wiki_link">clj-span.models.surface-water-topologic</a></li><li><a href="clj-span.params-api.html" class="wiki_link">clj-span.params</a></li><li><a href="clj-span.repl-utils-api.html" class="wiki_link">clj-span.repl-utils</a></li><li><a href="clj-span.worldgen-api.html" class="wiki_link">clj-span.worldgen</a></li>
+      </ul>
+    </div>
     
     <a href="http://clojure.org" class="wiki_link">Clojure Home</a>
   </div>
@@ -49,7 +48,7 @@ namespace.
 	  <div class="contentBox"><div class="innerContentBox">
               <div id="content_view" class="wiki wikiPage">
                 <div id="right-sidebar"></div>
-                <div id="content-tag"><h1 id="overview">Index of Public Functions and Variables - <span id="header-project">clj-span</span> <span id="header-version"></span> (<span id="header-status"></span>)</h1>
+                <div id="content-tag"><h1 id="overview">Index of Public Functions and Variables - <span id="header-project">clj-span</span> <span id="header-version"></span></h1>
 This page has an alphabetical index of all the documented functions and variables
 in <span class="project-name-span">clj-span</span>. 
 
@@ -84,7 +83,8 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/angular-rotation">angular-rotation</a><span id="line-content">             function      clj-misc.utils     Given two vectors A and B, returns the directed an...
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/arrayify">arrayify</a><span id="line-content">                     function      clj-misc.utils     Creates a 2D Java array (of Objects) from a vect o...
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/arrayify-map">arrayify-map</a><span id="line-content">                 function      clj-misc.utils     Creates a Java HashMap&lt;String,Array[]&gt; from a map ...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="B"><span id="section-head">B</span></h2>
   <pre>
@@ -93,21 +93,21 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-span.analyzer-api.html#clj-span.analyzer/blocked-use">blocked-use</a><span id="line-content">                  function      clj-span.analyzer  Returns a map of {location-id -&gt; blocked-use}. Blo...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/box-muller-normal">box-muller-normal</a><span id="line-content">            function      clj-misc.varprop   Returns a value from X~N(0,1). Uses the Box-Muller...
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/breadth-first-search">breadth-first-search</a><span id="line-content">         function      clj-misc.utils     The classic breadth-first-search.  Bread and butte...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="C"><span id="section-head">C</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/contains-item?">contains-item?</a><span id="line-content">               function      clj-misc.utils     Returns true if sequence contains item.  Otherwise...
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/count-distinct">count-distinct</a><span id="line-content">               function      clj-misc.utils     Returns a map of {distinct-val -&gt; num-instances, ....
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="D"><span id="section-head">D</span></h2>
   <pre>
-<span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/?d?">?d?</a><span id="line-content">                          multimethod   clj-misc.varprop   Returns the quotient of two or more values, which ...
-</span></span><span id="section-content"> <a href="clj-span.model-lang-api.html#clj-span.model-lang/defspan">defspan</a><span id="line-content">                      macro         clj-span.model-lang Define SPAN model components..
+<span id="section-content"> <a href="clj-span.model-lang-api.html#clj-span.model-lang/defspan">defspan</a><span id="line-content">                      macro         clj-span.model-lang Define SPAN model components..
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/depth-first-graph-search">depth-first-graph-search</a><span id="line-content">     function      clj-misc.utils     The classic depth-first-graph-search. Bread and bu...
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/depth-first-tree-search">depth-first-tree-search</a><span id="line-content">      function      clj-misc.utils     The classic depth-first-tree-search. Bread and but...
-</span></span><span id="section-content"> <a href="clj-span.core-api.html#clj-span.core/distribute-flow!">distribute-flow!</a><span id="line-content">             multimethod   clj-span.core      Creates a network of interconnected locations, and...
 </span></span><span id="section-content"> <a href="clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/divides?">divides?</a><span id="line-content">                     function      clj-misc.matrix-ops Is y divisible by x? (i.e. x is the denominator).
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/draw">draw</a><span id="line-content">                         function      clj-misc.varprop   Extracts a deterministic value from a FuzzyNumber ...
 </span></span><span id="section-content"> <a href="clj-misc.randvars-api.html#clj-misc.randvars/draw-repeatedly">draw-repeatedly</a><span id="line-content">              function      clj-misc.randvars  Extracts values from X using a uniform distributio...
@@ -115,13 +115,15 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/d_">d_</a><span id="line-content">                           function      clj-misc.varprop   Returns the quotient of a scalar and one or more F...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_d">_d</a><span id="line-content">                           function      clj-misc.varprop   Returns the quotient of a FuzzyNumber and one or m...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_d_">_d_</a><span id="line-content">                          function      clj-misc.varprop   Returns the quotient of two or more FuzzyNumbers..
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="E"><span id="section-head">E</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/euclidean-distance">euclidean-distance</a><span id="line-content">           function      clj-misc.utils     Returns the euclidean distance between two n-dimen...
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/expand-runtime-encoded-vector">expand-runtime-encoded-vector</a><span id="line-content"> function     clj-misc.utils     Expands a vector of the form [:foo 2 :bar 1 :baz 3...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="F"><span id="section-head">F</span></h2>
   <pre>
@@ -133,18 +135,21 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/fuzzy-number">fuzzy-number</a><span id="line-content">                 function      clj-misc.varprop   Constructs a FuzzyNumber..
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/fuzzy-number-from-ranges">fuzzy-number-from-ranges</a><span id="line-content">     function      clj-misc.varprop   Constructs a FuzzyNumber from n bounds and n-1 pro...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/fuzzy-number-from-states">fuzzy-number-from-states</a><span id="line-content">     function      clj-misc.varprop   Constructs a FuzzyNumber from n states and n probs...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="G"><span id="section-head">G</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-span.core-api.html#clj-span.core/generate-results-map">generate-results-map</a><span id="line-content">         function      clj-span.core      Run flow model and return the results as a map of ...
 </span></span><span id="section-content"> <a href="clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/get-neighbors">get-neighbors</a><span id="line-content">                function      clj-misc.matrix-ops Return a sequence of neighboring points within th...
 </span></span><span id="section-content"> <a href="clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/grids-align?">grids-align?</a><span id="line-content">                 function      clj-misc.matrix-ops Verifies that all matrices have the same number o...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="H"><span id="section-head">H</span></h2>
   <pre>
-</pre>
+
+  </pre>
 </div><div id="index-body">
   <h2 id="I"><span id="section-head">I</span></h2>
   <pre>
@@ -154,27 +159,29 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-span.analyzer-api.html#clj-span.analyzer/inaccessible-sink">inaccessible-sink</a><span id="line-content">            function      clj-span.analyzer  Returns a map of {location-id -&gt; inaccessible-sink...
 </span></span><span id="section-content"> <a href="clj-span.analyzer-api.html#clj-span.analyzer/inaccessible-source">inaccessible-source</a><span id="line-content">          function      clj-span.analyzer  Returns a map of {location-id -&gt; inaccessible-sour...
 </span></span><span id="section-content"> <a href="clj-span.analyzer-api.html#clj-span.analyzer/inaccessible-use">inaccessible-use</a><span id="line-content">             function      clj-span.analyzer  Returns a map of {location-id -&gt; inaccessible-use}...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="J"><span id="section-head">J</span></h2>
   <pre>
-</pre>
+
+  </pre>
 </div><div id="index-body">
   <h2 id="K"><span id="section-head">K</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/key-by-val">key-by-val</a><span id="line-content">                   function      clj-misc.utils     Returns the key from a map m whose corresponding v...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="L"><span id="section-head">L</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/linearize">linearize</a><span id="line-content">                    function      clj-misc.utils     Transforms a 2D matrix into a 1D vector..
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="M"><span id="section-head">M</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-span.commandline-api.html#clj-span.commandline/-main">-main</a><span id="line-content">                        function      clj-span.commandline The compiled Java class' main method.  Pass it a...
-</span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/?max?">?max?</a><span id="line-content">                        multimethod   clj-misc.varprop   Returns the largest of two or more values, which m...
-</span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/?min?">?min?</a><span id="line-content">                        multimethod   clj-misc.varprop   Returns the smallest of two or more values, which ...
 </span></span><span id="section-content"> <a href="clj-misc.point-algebra-api.html#clj-misc.point-algebra/make-bounded-neighbor-generator">make-bounded-neighbor-generator</a><span id="line-content"> function   clj-misc.point-algebra Returns a function that, given a point, genera...
 </span></span><span id="section-content"> <a href="clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/make-matrix">make-matrix</a><span id="line-content">                  function      clj-misc.matrix-ops Creates a rows x cols vector of vectors whose sta...
 </span></span><span id="section-content"> <a href="clj-misc.point-algebra-api.html#clj-misc.point-algebra/make-point-list">make-point-list</a><span id="line-content">              function      clj-misc.point-algebra Return a list of [x y] points..
@@ -196,19 +203,22 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_max_">_max_</a><span id="line-content">                        function      clj-misc.varprop   Returns the greatest of two or more FuzzyNumbers u...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_min">_min</a><span id="line-content">                         function      clj-misc.varprop   Returns the smallest of a FuzzyNumber and one or m...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_min_">_min_</a><span id="line-content">                        function      clj-misc.varprop   Returns the smallest of two or more FuzzyNumbers u...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="N"><span id="section-head">N</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-misc.point-algebra-api.html#clj-misc.point-algebra/nearest-point-where">nearest-point-where</a><span id="line-content">          function      clj-misc.point-algebra Returns the nearest point to origin-point whic...
 </span></span><span id="section-content"> <a href="clj-misc.stats-api.html#clj-misc.stats/normalize">normalize</a><span id="line-content">                    function      clj-misc.stats     Return x normalized in the range [0,1]. x is assum...
 </span></span><span id="section-content"> <a href="clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/normalize-matrix">normalize-matrix</a><span id="line-content">             function      clj-misc.matrix-ops Normalizes the values in the matrix to the interv...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="O"><span id="section-head">O</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/on-bounds?">on-bounds?</a><span id="line-content">                   function      clj-misc.matrix-ops Returns true if the point occurs anywhere on the ...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="P"><span id="section-head">P</span></h2>
   <pre>
@@ -216,11 +226,13 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-span.core-api.html#clj-span.core/preprocess-data-layers">preprocess-data-layers</a><span id="line-content">       function      clj-span.core      Preprocess data layers (downsampling and zeroing b...
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/print-sysprops">print-sysprops</a><span id="line-content">               function      clj-misc.utils     Print out the result of System.getProperties().
 </span></span><span id="section-content"> <a href="clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/printf-matrix">printf-matrix</a><span id="line-content">                function      clj-misc.matrix-ops Pretty prints a matrix to *out* according to form...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="Q"><span id="section-head">Q</span></h2>
   <pre>
-</pre>
+
+  </pre>
 </div><div id="index-body">
   <h2 id="R"><span id="section-head">R</span></h2>
   <pre>
@@ -228,14 +240,13 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/rv-extensive-sampler">rv-extensive-sampler</a><span id="line-content">         function      clj-misc.varprop   Returns the extensive weighted sum of a coverage (...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/rv-fn">rv-fn</a><span id="line-content">                        macro         clj-misc.varprop   Transforms f into its fuzzy arithmetic equivalent,...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/rv-intensive-sampler">rv-intensive-sampler</a><span id="line-content">         function      clj-misc.varprop   Returns the intensive weighted sum of a coverage (...
-</span></span><span id="section-content"> <a href="clj-misc.randvars-api.html#clj-misc.randvars/rv-mean">rv-mean</a><span id="line-content">                      multimethod   clj-misc.randvars  Returns the mean value of a random variable X..
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/rv-mean">rv-mean</a><span id="line-content">                      function      clj-misc.varprop   Returns the mean of a FuzzyNumber..
 </span></span><span id="section-content"> <a href="clj-misc.randvars-api.html#clj-misc.randvars/rv-pos">rv-pos</a><span id="line-content">                       function      clj-misc.randvars  Sets all negative values in X to 0..
-</span></span><span id="section-content"> <a href="clj-misc.randvars-api.html#clj-misc.randvars/rv-resample">rv-resample</a><span id="line-content">                  multimethod   clj-misc.randvars  Returns a new random variable with &lt;=*rv-max-state...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/rv-sum">rv-sum</a><span id="line-content">                       function      clj-misc.varprop   Returns the sum of a sequence of FuzzyNumbers usin...
 </span></span><span id="section-content"> <a href="clj-misc.randvars-api.html#clj-misc.randvars/rv-zero-above-scalar">rv-zero-above-scalar</a><span id="line-content">         function      clj-misc.randvars  Sets all values greater than y in the random varia...
 </span></span><span id="section-content"> <a href="clj-misc.randvars-api.html#clj-misc.randvars/rv-zero-below-scalar">rv-zero-below-scalar</a><span id="line-content">         function      clj-misc.randvars  Sets all values less than y in the random variable...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="S"><span id="section-head">S</span></h2>
   <pre>
@@ -245,39 +256,46 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/seq2redundant-map">seq2redundant-map</a><span id="line-content">            function      clj-misc.utils     Constructs a map from a sequence by applying keyva...
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/shortest-path-bfgs">shortest-path-bfgs</a><span id="line-content">           function      clj-misc.utils     The classic breadth-first-graph-search.  Bread and...
 </span></span><span id="section-content"> <a href="clj-span.aries-span-bridge-api.html#clj-span.aries-span-bridge/span-driver">span-driver</a><span id="line-content">                  function      clj-span.aries-span-bridge Takes the source, sink, use, and flow conc...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="T"><span id="section-head">T</span></h2>
   <pre>
-</pre>
+
+  </pre>
 </div><div id="index-body">
   <h2 id="U"><span id="section-head">U</span></h2>
   <pre>
-<span id="section-content"> <a href="clj-span.aries-span-bridge-api.html#clj-span.aries-span-bridge/unpack-datasource">unpack-datasource</a><span id="line-content">            multimethod   clj-span.aries-span-bridge Returns a seq of length n of the values in...
-</span></span></pre>
+
+  </pre>
 </div><div id="index-body">
   <h2 id="V"><span id="section-head">V</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/vectorize">vectorize</a><span id="line-content">                    function      clj-misc.utils     Creates a vect of vects from a 2D Java array..
 </span></span><span id="section-content"> <a href="clj-misc.utils-api.html#clj-misc.utils/vectorize-map">vectorize-map</a><span id="line-content">                function      clj-misc.utils     Creates a map of {keywords -&gt; vect-of-vects} from ...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="W"><span id="section-head">W</span></h2>
   <pre>
-</pre>
+
+  </pre>
 </div><div id="index-body">
   <h2 id="X"><span id="section-head">X</span></h2>
   <pre>
-</pre>
+
+  </pre>
 </div><div id="index-body">
   <h2 id="Y"><span id="section-head">Y</span></h2>
   <pre>
-</pre>
+
+  </pre>
 </div><div id="index-body">
   <h2 id="Z"><span id="section-head">Z</span></h2>
   <pre>
 <span id="section-content"> <a href="clj-span.core-api.html#clj-span.core/zero-layer-below-threshold">zero-layer-below-threshold</a><span id="line-content">   function      clj-span.core      Takes a two dimensional array of RVs and replaces ...
-</span></span></pre>
+</span></span>
+  </pre>
 </div><div id="index-body">
   <h2 id="Other"><span id="section-head">Other</span></h2>
   <pre>
@@ -286,11 +304,6 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/-_">-_</a><span id="line-content">                           function      clj-misc.varprop   Returns the difference of a scalar and one or more...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/&lt;_">&lt;_</a><span id="line-content">                           function      clj-misc.varprop   Compares a scalar and one or more FuzzyNumbers and...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/&gt;_">&gt;_</a><span id="line-content">                           function      clj-misc.varprop   Compares a scalar and one or more FuzzyNumbers and...
-</span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/?*?">?*?</a><span id="line-content">                          multimethod   clj-misc.varprop   Returns the product of two or more values, which m...
-</span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/?+?">?+?</a><span id="line-content">                          multimethod   clj-misc.varprop   Returns the sum of two or more values, which may b...
-</span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/?-?">?-?</a><span id="line-content">                          multimethod   clj-misc.varprop   Returns the difference of two or more values, whic...
-</span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/?&lt;?">?&lt;?</a><span id="line-content">                          multimethod   clj-misc.varprop   Compares two or more values, which may be FuzzyNum...
-</span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/?&gt;?">?&gt;?</a><span id="line-content">                          multimethod   clj-misc.varprop   Compares two or more values, which may be FuzzyNum...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_*">_*</a><span id="line-content">                           function      clj-misc.varprop   Returns the product of a FuzzyNumber and one or mo...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_*_">_*_</a><span id="line-content">                          function      clj-misc.varprop   Returns the product of two or more FuzzyNumbers..
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_+">_+</a><span id="line-content">                           function      clj-misc.varprop   Returns the sum of a FuzzyNumber and one or more s...
@@ -302,7 +315,8 @@ Shortcuts:<br />
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_&lt;_">_&lt;_</a><span id="line-content">                          function      clj-misc.varprop   Compares two or more FuzzyNumbers and returns true...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_&gt;">_&gt;</a><span id="line-content">                           function      clj-misc.varprop   Compares a FuzzyNumber and one or more scalars and...
 </span></span><span id="section-content"> <a href="clj-misc.varprop-api.html#clj-misc.varprop/_&gt;_">_&gt;_</a><span id="line-content">                          function      clj-misc.varprop   Compares two or more FuzzyNumbers and returns true...
-</span></span></pre>
+</span></span>
+  </pre>
 </div>
 <style type="text/css">
   #AllContentContainer {min-width: 96em;}
