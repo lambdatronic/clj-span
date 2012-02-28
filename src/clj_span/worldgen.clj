@@ -29,7 +29,7 @@
 
 (defn read-layer-from-file
   [filename]
-  (with-open [in-stream (io/reader filename)] (read in-stream)))
+  (with-open [in-stream (java.io.PushbackReader. (io/reader filename))] (read in-stream)))
 
 (defn write-layer-to-file
   [filename layer]
