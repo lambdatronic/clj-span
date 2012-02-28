@@ -16,29 +16,30 @@ Copyright Gary W. Johnson (gjohnson@green-compass.org) 2009-2012
 To run clj-span, you will need:
 
 1) Sun's JDK 1.6+
-2) clj-span-standalone.jar (contains clojure and clojure-contrib)
+2) clj-span-standalone.jar (contains clojure-1.3)
 
 Then simply place clj-span-standalone.jar on your classpath and fire
 up your JVM as follows:
 
 java -cp clj-span-standalone.jar clj_span.commandline \
-     -source-layer       <filepath>        \
-     -sink-layer         <filepath>        \
-     -use-layer          <filepath>        \
-     -flow-layers        <filepath>        \
-     -source-threshold   <double>          \
-     -sink-threshold     <double>          \
-     -use-threshold      <double>          \
-     -trans-threshold    <double>          \
-     -cell-width         <double>          \
-     -cell-height        <double>          \
-     -rv-max-states      <integer>         \
-     -downscaling-factor <number>          \
-     -source-type        <finite|infinite> \
-     -sink-type          <finite|infinite> \
-     -use-type           <finite|infinite> \
-     -benefit-type       <rival|non-rival> \
-     -animation?         <true|false>      \
+     -source-layer       <filepath>                 \
+     -sink-layer         <filepath>                 \
+     -use-layer          <filepath>                 \
+     -flow-layers        <filepath>                 \
+     -source-threshold   <double>                   \
+     -sink-threshold     <double>                   \
+     -use-threshold      <double>                   \
+     -trans-threshold    <double>                   \
+     -cell-width         <double>                   \
+     -cell-height        <double>                   \
+     -rv-max-states      <integer>                  \
+     -downscaling-factor <number>                   \
+     -source-type        <finite|infinite>          \
+     -sink-type          <finite|infinite>          \
+     -use-type           <finite|infinite>          \
+     -benefit-type       <rival|non-rival>          \
+     -value-type         <numbers|varprop|randvars> \
+     -animation?         <true|false>               \
      -flow-model         <line-of-sight|proximity|carbon|flood-water|surface-water|sediment|coastal-storm-protection|subsistence-fisheries>
 
 * License

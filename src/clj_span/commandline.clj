@@ -35,22 +35,23 @@
 (def- usage-message
   (str
    "Usage: java -cp clj-span-standalone.jar clj_span.commandline \\ \n"
-   "            -source-layer       <filepath>        \\ \n"
-   "            -sink-layer         <filepath>        \\ \n"
-   "            -use-layer          <filepath>        \\ \n"
-   "            -flow-layers        <filepath>        \\ \n"
-   "            -source-threshold   <double>          \\ \n"
-   "            -sink-threshold     <double>          \\ \n"
-   "            -use-threshold      <double>          \\ \n"
-   "            -trans-threshold    <double>          \\ \n"
-   "            -cell-width         <double>          \\ \n"
-   "            -cell-height        <double>          \\ \n"
-   "            -rv-max-states      <integer>         \\ \n"
-   "            -downscaling-factor <number>          \\ \n"
-   "            -source-type        <finite|infinite> \\ \n"
-   "            -sink-type          <finite|infinite> \\ \n"
-   "            -use-type           <finite|infinite> \\ \n"
-   "            -benefit-type       <rival|non-rival> \\ \n"
+   "            -source-layer       <filepath>                 \\ \n"
+   "            -sink-layer         <filepath>                 \\ \n"
+   "            -use-layer          <filepath>                 \\ \n"
+   "            -flow-layers        <filepath>                 \\ \n"
+   "            -source-threshold   <double>                   \\ \n"
+   "            -sink-threshold     <double>                   \\ \n"
+   "            -use-threshold      <double>                   \\ \n"
+   "            -trans-threshold    <double>                   \\ \n"
+   "            -cell-width         <double>                   \\ \n"
+   "            -cell-height        <double>                   \\ \n"
+   "            -rv-max-states      <integer>                  \\ \n"
+   "            -downscaling-factor <number>                   \\ \n"
+   "            -source-type        <finite|infinite>          \\ \n"
+   "            -sink-type          <finite|infinite>          \\ \n"
+   "            -use-type           <finite|infinite>          \\ \n"
+   "            -benefit-type       <rival|non-rival>          \\ \n"
+   "            -value-type         <numbers|varprop|randvars> \\ \n"
    "            -animation?         <true|false>      \\ \n"
    "            -flow-model         <line-of-sight|proximity|carbon|flood-water|surface-water|sediment|coastal-storm-protection|subsistence-fisheries> \n"))
 
@@ -68,23 +69,24 @@
                   usage-message))))
 
 (def- param-tests
-  [["-source-layer"       #(.canRead  (io/file %))  " is not readable."          ]
-   ["-sink-layer"         #(.canRead  (io/file %))  " is not readable."          ]
-   ["-use-layer"          #(.canRead  (io/file %))  " is not readable."          ]
-   ["-flow-layers"        #(.canRead  (io/file %))  " is not readable."          ]
-   ["-source-threshold"   (& float?   read-string)  " is not a double."          ]
-   ["-sink-threshold"     (& float?   read-string)  " is not a double."          ]
-   ["-use-threshold"      (& float?   read-string)  " is not a double."          ]
-   ["-trans-threshold"    (& float?   read-string)  " is not a double."          ]
-   ["-cell-width"         (& float?   read-string)  " is not a double."          ]
-   ["-cell-height"        (& float?   read-string)  " is not a double."          ]
-   ["-rv-max-states"      (& integer? read-string)  " is not an integer."        ]
-   ["-downscaling-factor" (& number?  read-string)  " is not a number."          ]               
-   ["-source-type"        #{"finite" "infinite"}    " must be one of finite or infinite."]
-   ["-sink-type"          #{"finite" "infinite"}    " must be one of finite or infinite."]
-   ["-use-type"           #{"finite" "infinite"}    " must be one of finite or infinite."]
-   ["-benefit-type"       #{"rival" "non-rival"}    " must be one of rival or non-rival."]
-   ["-animation?"         #{"true" "false"}         " must be one of true or false."]
+  [["-source-layer"       #(.canRead  (io/file %))          " is not readable."                             ]
+   ["-sink-layer"         #(.canRead  (io/file %))          " is not readable."                             ]
+   ["-use-layer"          #(.canRead  (io/file %))          " is not readable."                             ]
+   ["-flow-layers"        #(.canRead  (io/file %))          " is not readable."                             ]
+   ["-source-threshold"   (& float?   read-string)          " is not a double."                             ]
+   ["-sink-threshold"     (& float?   read-string)          " is not a double."                             ]
+   ["-use-threshold"      (& float?   read-string)          " is not a double."                             ]
+   ["-trans-threshold"    (& float?   read-string)          " is not a double."                             ]
+   ["-cell-width"         (& float?   read-string)          " is not a double."                             ]
+   ["-cell-height"        (& float?   read-string)          " is not a double."                             ]
+   ["-rv-max-states"      (& integer? read-string)          " is not an integer."                           ]
+   ["-downscaling-factor" (& number?  read-string)          " is not a number."                             ]
+   ["-source-type"        #{"finite" "infinite"}            " must be one of finite or infinite."           ]
+   ["-sink-type"          #{"finite" "infinite"}            " must be one of finite or infinite."           ]
+   ["-use-type"           #{"finite" "infinite"}            " must be one of finite or infinite."           ]
+   ["-benefit-type"       #{"rival" "non-rival"}            " must be one of rival or non-rival."           ]
+   ["-value-type"         #{"numbers" "varprop" "randvars"} " must be one of numbers, varprop, or randvars."]
+   ["-animation?"         #{"true" "false"}                 " must be one of true or false."                ]
    ["-flow-model"         #{"line-of-sight" "proximity" "carbon" "flood-water" "surface-water" "sediment" "coastal-storm-protection" "subsistence-fisheries"}
     " must be one of line-of-sight, proximity, carbon, flood-water, surface-water, sediment, coastal-storm-protection, or subsistence-fisheries."]])
 
@@ -131,6 +133,7 @@
       (assoc :sink-type          (keyword (params "-sink-type")))
       (assoc :use-type           (keyword (params "-use-type")))
       (assoc :benefit-type       (keyword (params "-benefit-type")))
+      (assoc :value-type         (keyword (params "-value-type")))
       (assoc :animation?         (read-string (params "-animation?")))
       (assoc :flow-model         ({"line-of-sight"            "LineOfSight"
                                    "proximity"                "Proximity"
