@@ -66,6 +66,44 @@
 
 (defmethod to-continuous-randvar ::continuous-distribution [continuous-RV] continuous-RV)
 
+(defn randvar-from-states
+  "Constructs a discrete Randvar from n states and n probs,
+   corresponding to a finite discrete distribution."
+  [states probs]
+  (with-meta (zipmap states probs) disc-type))
+
+;; FIXME: I should be using randvar-from-ranges-continous (see below)
+;;        as the definition for this function, but continuous RV math
+;;        is still buggy.
+(defn randvar-from-ranges
+  "Constructs a discrete Randvar from n bounds and n-1 probs
+   corresponding to a piecewise continuous uniform distribution with
+   discontinuities (i.e. jumps) at the bounds. prob i represents the
+   probability of being between bound i and bound i+1."
+  [bounds probs]
+  (let [midpoints (map (fn [next prev] (/ (+ next prev) 2.0)) (rest bounds) bounds)]
+    (with-meta (zipmap midpoints probs) disc-type)))
+
+(defn randvar-from-ranges-continuous
+  "Constructs a continuous Randvar from n bounds and n-1 probs
+   corresponding to a piecewise continuous uniform distribution with
+   discontinuities (i.e. jumps) at the bounds. prob i represents the
+   probability of being between bound i and bound i+1."
+  [bounds probs]
+  (let [cdf-vals (successive-sums 0.0 probs)]
+    (with-meta (zipmap bounds cdf-vals) cont-type)))
+
+(defn make-randvar
+  [rv-type num-states valid-states]
+  (constraints-1.0 {:pre [(#{:discrete :continuous} rv-type)]})
+  (let [discrete-RV (with-meta
+                      (zipmap (map double (select-n-distinct num-states valid-states))
+                              (map #(/ % 100.0) (select-n-summands num-states 100 1)))
+                      disc-type)]
+    (if (= rv-type :discrete)
+      discrete-RV
+      (to-continuous-randvar discrete-RV))))
+
 (def _0_ (with-meta {0.0 1.0} disc-type))
 
 ;; -------------------- Begin rv-resample functions --------------------
@@ -457,17 +495,6 @@
   (first (draw-repeatedly X)))
 
 ;; -------------------- Begin unused functions --------------------
-
-(defn make-randvar
-  [rv-type num-states valid-states]
-  (constraints-1.0 {:pre [(#{:discrete :continuous} rv-type)]})
-  (let [discrete-RV (with-meta
-                      (zipmap (map double (select-n-distinct num-states valid-states))
-                              (map #(/ % 100.0) (select-n-summands num-states 100 1)))
-                      disc-type)]
-    (if (= rv-type :discrete)
-      discrete-RV
-      (to-continuous-randvar discrete-RV))))
 
 (defn rv-zero-above-scalar
   "Sets all values greater than y in the random variable X to 0."

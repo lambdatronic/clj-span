@@ -26,10 +26,9 @@
 
 (ns clj-span.aries-span-bridge
   (:use [clj-span.core           :only (run-span)]
-        [clj-misc.matrix-ops     :only (seq2matrix map-matrix)]
-        [clj-misc.utils          :only (mapmap remove-nil-val-entries p & constraints-1.0 with-message successive-sums)]
-        [clj-misc.randvars       :only (cont-type disc-type)]
-        [clj-misc.varprop        :only (fuzzy-number fuzzy-number-from-states fuzzy-number-from-ranges _0_)])
+        [clj-misc.matrix-ops     :only (seq2matrix)]
+        [clj-misc.utils          :only (remove-nil-val-entries constraints-1.0 with-message)])
+  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (java.io File FileWriter FileReader PushbackReader)))
 
 #_(import '(org.integratedmodelling.corescience.implementations.datasources MemObjectContextualizedDatasource
@@ -48,7 +47,6 @@
 #_(refer 'modelling   :only '(probabilistic?
                               binary?
                               encodes-continuous-distribution?
-                              get-dist-breakpoints
                               get-possible-states
                               get-probabilities
                               get-data
@@ -64,14 +62,14 @@
          probabilistic?
          binary?
          encodes-continuous-distribution?
-         get-dist-breakpoints
          get-possible-states
          get-probabilities
          get-data
          run-at-location)
 
 (defn save-span-layers
-  [filename source-layer sink-layer use-layer flow-layers cell-width cell-height value-type]
+  [filename source-layer sink-layer use-layer flow-layers cell-width cell-height]
+  (constraints-1.0 {:pre [(.canWrite (File. filename))]})
   (let [dummy-map    {:theoretical-source  (constantly {})
                       :inaccessible-source (constantly {})
                       :possible-source     (constantly {})
@@ -87,18 +85,12 @@
                       :actual-use          (constantly {})
                       :possible-flow       (constantly {})
                       :blocked-flow        (constantly {})
-                      :actual-flow         (constantly {})}
-        to-printable (if (contains? #{:randvars :varprop} value-type)
-                       #(with-meta (into {} %) (meta %))
-                       identity)]
+                      :actual-flow         (constantly {})}]
     (with-open [outstream (FileWriter. filename)]
       (binding [*out*       outstream
                 *print-dup* true]
-        (doseq [layer [source-layer sink-layer use-layer]]
-          (prn (if layer (map-matrix to-printable layer))))
-        (prn (mapmap identity #(map-matrix to-printable %) flow-layers))
-        (prn cell-width)
-        (prn cell-height)))
+        (doseq [data [source-layer sink-layer use-layer flow-layers cell-width cell-height]]
+          (prn data))))
     dummy-map))
 
 (defn read-span-layers
@@ -118,126 +110,47 @@
   [doubles]
   (map #(if (Double/isNaN %) 0.0 %) doubles))
 
-(defn get-midpoints
-  [bounds]
-  (map (fn [next prev] (/ (+ next prev) 2)) (rest bounds) bounds))
+;; FIXME: If I ever need to deal with a discrete distribution rather
+;;        than continuous ranges, I can get the distribution's states
+;;        with (get-possible-states ds).
+;;
+;; FIXME: These functions from the modelling namespace don't seem to work:
+;;        (probabilistic?, binary?, encodes-continuous-distribution?, get-probabilities)
+(defn unpack-datasource
+  "Returns a seq of the values in ds, where their representations are
+   determined by value-type. NaNs and nils are converted to 0s."
+  [value-type ds]
+  (println "Unpacking datasource" ds)
+  (case (class ds)
 
-(defmulti unpack-datasource
-  "Returns a seq of length n of the values in ds, where their
-   representations are determined by value-type."
-  (fn [value-type ds n] value-type))
-
-(defmethod unpack-datasource :default
-  [value-type _ _]
-  (throw (Exception. (str "unpack-datasource is undefined for value-type: " value-type))))
-
-(defmethod unpack-datasource :randvars
-  [_ ds n]
-  (println "Inside unpack-datasource!\nChecking datasource type..." ds)
-  (if (and (probabilistic? ds) (not (binary? ds)))
-    (do (print "It's probabilistic...")
-        (flush)
-        (if (encodes-continuous-distribution? ds)
-          ;; sampled continuous distributions
-          ;; FIXME: How is missing information represented?
-          ;; FIXME: Evil hack warning! Continuous RV arithmetic is
-          ;; broken so I'm going to make these all discrete
-          ;; distributions which use the range midpoints as their
-          ;; states.
-          (do
-            (println "and continuous.")
-            (let [bounds                (get-dist-breakpoints ds)
-                  unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
-                  unbounded-from-above? (== Double/POSITIVE_INFINITY (last bounds))]
-              (if (or unbounded-from-below? unbounded-from-above?)
-                (throw (Exception. "All undiscretized bounds must be closed above and below.")))
-              (let [prob-dist (apply create-struct (NaNs-to-zero (get-midpoints bounds)))]
-                (for [idx (range n)]
-                  (with-meta
-                    (if-let [probs (get-probabilities ds idx)]
-                      (apply struct prob-dist probs)
-                      (array-map 0.0 1.0))
-                    disc-type)))))
-          ;; discrete distributions (FIXME: How is missing information represented? Fns aren't setup for non-numeric values.)
-          (do
-            (println "and discrete.")
-            (let [prob-dist (apply create-struct (get-possible-states ds))]
-              (for [idx (range n)]
-                (with-meta
-                  (if-let [probs (get-probabilities ds idx)]
-                    (apply struct prob-dist probs)
-                    (array-map 0.0 1.0))
-                  disc-type))))))
-    ;; binary distributions and deterministic values (FIXME: NaNs become 0s currently. Is this good?)
-    (do (println "It's deterministic.")
-        (for [value (NaNs-to-zero (get-data ds))]
-          (with-meta (array-map value 1.0) disc-type)))))
-
-#_(defmethod unpack-datasource :varprop
-  [_ ds _]
-  (println "Inside unpack-datasource!\nChecking datasource type..." ds)
-  (cond (instance? MemObjectContextualizedDatasource ds)
-        (do (println "It's probabilistic and continuous.")
-            (let [dists                 (.getRawData ds)
-                  example-dist          (first (remove nil? dists))
-                  bounds                (seq (.getRanges example-dist))
-                  example-probs         (seq (.getData   example-dist))
-                  unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
-                  unbounded-from-above? (== Double/POSITIVE_INFINITY (last bounds))]
-              (if (or unbounded-from-below? unbounded-from-above?)
-                (throw (Exception. "All undiscretized bounds must be closed above and below.")))
-              (println "Breakpoints:  " bounds)
-              (println "Example Probs:" example-probs)
-              (for [#^IndexedCategoricalDistribution dist dists]
-                (if dist
-                  (fuzzy-number-from-ranges bounds (.getData dist))
-                  _0_))))
-
-        (instance? MemDoubleContextualizedDatasource ds)
-        (do (println "It's deterministic.")
-            (for [value (NaNs-to-zero (get-data ds))]
-              (fuzzy-number value 0.0)))
-
-        :otherwise
-        (throw (Exception. (str "Unrecognized datasource type: " (class ds))))))
-
-(defn- unpack-datasource-orig
-  "Returns a seq of length n of the values in ds,
-   represented as probability distributions {rationals -> doubles}.
-   NaN state values are converted to 0s."
-  [ds rows cols]
-  (let [n            (* rows cols)
-        to-rationals (p map #(if (Double/isNaN %) 0 (rationalize %)))]
-    (if (and (probabilistic? ds) (not (binary? ds)))
-      (if (encodes-continuous-distribution? ds)
-        ;; sampled continuous distributions (FIXME: How is missing information represented?)
-        (let [bounds                (get-dist-breakpoints ds)
+    :MemObjectContextualizedDatasource
+    (do (println "These are BN outputs.")
+        (let [dists                 (.getRawData ds)
+              example-dist          (first (remove nil? dists))
+              bounds                (seq (.getRanges example-dist))
+              example-probs         (seq (.getData   example-dist))
               unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
-              unbounded-from-above? (== Double/POSITIVE_INFINITY (last bounds))]
-          (let [prob-dist             (apply create-struct (to-rationals
-                                                            (if unbounded-from-below?
-                                                              (if unbounded-from-above?
-                                                                (rest (butlast bounds))
-                                                                (rest bounds))
-                                                              (if unbounded-from-above?
-                                                                (butlast bounds)
-                                                                bounds))))
-                get-cdf-vals          (if unbounded-from-below?
-                                        (if unbounded-from-above?
-                                          (& successive-sums butlast (p get-probabilities ds))
-                                          (& successive-sums (p get-probabilities ds)))
-                                        (if unbounded-from-above?
-                                          (& (p successive-sums 0.0) butlast (p get-probabilities ds))
-                                          (& (p successive-sums 0.0) (p get-probabilities ds))))]
-            (for [idx (range n)]
-              (with-meta (apply struct prob-dist (get-cdf-vals idx)) cont-type))))
-        ;; discrete distributions (FIXME: How is missing information represented? Fns aren't setup for non-numeric values.)
-        (let [prob-dist (apply create-struct (get-possible-states ds))]
-          (for [idx (range n)]
-            (with-meta (apply struct prob-dist (get-probabilities ds idx)) disc-type))))
-      ;; binary distributions and deterministic values (FIXME: NaNs become 0s currently. Is this good?)
-      (for [value (to-rationals (get-data ds))]
-        (with-meta (array-map value 1.0) disc-type)))))
+              unbounded-from-above? (== Double/POSITIVE_INFINITY (last  bounds))]
+          (println "Breakpoints:  " bounds)
+          (println "Example Probs:" example-probs)
+          (if (or unbounded-from-below? unbounded-from-above?)
+            (throw (Exception. "All undiscretized bounds must be closed above and below.")))
+          ;; (for [#^IndexedCategoricalDistribution dist dists]
+          (for [^:IndexedCategoricalDistribution dist dists]
+            (case value-type
+              :randvars (if dist (rv/randvar-from-ranges      bounds (.getData dist)) rv/_0_)
+              :varprop  (if dist (vp/fuzzy-number-from-ranges bounds (.getData dist)) vp/_0_)
+              :numbers  (if dist (nb/number-from-ranges       bounds (.getData dist)) nb/_0_)))))
+
+    :MemDoubleContextualizedDatasource
+    (do (println "These are deterministic values.")
+        (for [value (NaNs-to-zero (get-data ds))]
+          (case value-type
+            :randvars (rv/make-randvar :discrete 1 [value])
+            :varprop  (vp/fuzzy-number value 0.0)
+            :numbers  value)))
+
+    (throw (Exception. (str "Unrecognized datasource type: " (class ds))))))
 
 (defn- layer-from-observation
   "Builds a rows x cols matrix (vector of vectors) of the concept's
@@ -245,7 +158,7 @@
   [observation concept rows cols value-type]
   (when concept
     (println "Extracting" (.getLocalName concept) "layer.")
-    (seq2matrix rows cols (unpack-datasource value-type (find-state observation concept) (* rows cols)))))
+    (seq2matrix rows cols (unpack-datasource value-type (find-state observation concept)))))
 
 (defn- layer-map-from-observation
   "Builds a map of {concept-names -> matrices}, where each concept's
@@ -256,7 +169,7 @@
     (println "Extracting flow layers:" (map (memfn getLocalName) concepts))
     (into {}
           (map (fn [c] [(.getLocalName c)
-                        (seq2matrix rows cols (unpack-datasource value-type (find-state observation c) (* rows cols)))])
+                        (seq2matrix rows cols (unpack-datasource value-type (find-state observation c)))])
                concepts))))
 
 (defn span-driver
@@ -268,13 +181,13 @@
    (:cli-menu :closure-map). If the :save-file parameter is set in the
    flow-params map, the SPAN model will not be run, and instead the
    source, sink, use, and flow layers will be extracted from the
-   observation and written to :save-file."
+   observation, converted to :value-type, and written to :save-file."
   [observation-or-model-spec source-concept sink-concept use-concept flow-concepts
    {:keys [source-threshold sink-threshold use-threshold trans-threshold
            rv-max-states downscaling-factor source-type sink-type use-type benefit-type
-           result-type value-type animation? save-file]
-    :or {result-type :closure-map
-         value-type  :varprop}}]
+           value-type animation? result-type save-file]
+    :or {value-type  :varprop
+         result-type :closure-map}}]
   (let [observation (if (vector? observation-or-model-spec)
                       (with-message "Running model to get observation..." "done."
                         (apply run-at-location observation-or-model-spec))
@@ -293,28 +206,28 @@
           use-layer       (layer-from-observation     observation use-concept    rows cols value-type)
           flow-layers     (layer-map-from-observation observation flow-concepts  rows cols value-type)]
       (println "Flow Parameters:")
-      (println "flow-model         =" flow-model)
-      (println "downscaling-factor =" downscaling-factor)
-      (println "rv-max-states      =" rv-max-states)
       (println "source-threshold   =" source-threshold)
       (println "sink-threshold     =" sink-threshold)
       (println "use-threshold      =" use-threshold)
       (println "trans-threshold    =" trans-threshold)
       (println "cell-width         =" cell-w "meters")
       (println "cell-height        =" cell-h "meters")
+      (println "rv-max-states      =" rv-max-states)
+      (println "downscaling-factor =" downscaling-factor)
       (println "source-type        =" source-type)
       (println "sink-type          =" sink-type)
       (println "use-type           =" use-type)
       (println "benefit-type       =" benefit-type)
-      (println "result-type        =" result-type)
       (println "value-type         =" value-type)
+      (println "flow-model         =" flow-model)
       (println "animation?         =" animation?)
+      (println "result-type        =" result-type)
       (println "save-file          =" save-file)
       (println "(Pausing 10 seconds)")
       (Thread/sleep 10000)
       (if (string? save-file)
         (do (println "Writing extracted SPAN layers to" save-file "and exiting early.")
-            (save-span-layers save-file source-layer sink-layer use-layer flow-layers cell-w cell-h value-type))
+            (save-span-layers save-file source-layer sink-layer use-layer flow-layers cell-w cell-h))
         (run-span (remove-nil-val-entries
                    {:source-layer       source-layer
                     :source-threshold   source-threshold
@@ -332,6 +245,7 @@
                     :sink-type          sink-type
                     :use-type           use-type
                     :benefit-type       benefit-type
+                    :value-type         value-type
                     :flow-model         flow-model
                     :animation?         animation?
                     :result-type        result-type}))))))
