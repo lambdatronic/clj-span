@@ -27,10 +27,11 @@
         [clj-span.params         :only (set-global-params!)]
         [clj-span.interface      :only (provide-results)]
         [clj-span.gui            :only (draw-ref-layer run-animation end-animation)]
-        [clj-misc.varprop        :only (_0_ _< rv-intensive-sampler)]
+        [clj-misc.varprop        :only (_0_ _<)]
         [clj-misc.matrix-ops     :only (map-matrix
                                         make-matrix
                                         resample-matrix
+                                        rv-intensive-sampler
                                         matrix2seq
                                         get-rows
                                         get-cols
