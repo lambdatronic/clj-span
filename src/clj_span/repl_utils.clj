@@ -185,7 +185,7 @@
              :use-type           :infinite
              :benefit-type       :non-rival
              :value-type         :varprop
-             :downscaling-factor 4
+             :downscaling-factor 2
              :rv-max-states      10
              :animation?         false
              :result-type        :closure-map}))
