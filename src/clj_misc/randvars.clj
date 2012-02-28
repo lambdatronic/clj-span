@@ -24,22 +24,12 @@
 ;;; samples from their cumulative distribution functions (CDFs).
 
 (ns clj-misc.randvars
-  (:use [clj-misc.utils :only [p my-partition-all constraints-1.0
-                               seq2map dissoc-vec seq2redundant-map
-                               successive-sums successive-differences
+  (:use [clj-misc.utils :only [p constraints-1.0 seq2map dissoc-vec
+                               seq2redundant-map successive-sums
+                               successive-differences
                                select-n-distinct select-n-summands]]))
 
 ;; -------------------- Begin utility functions --------------------
-
-;; (defrecord ContinuousRV [])
-
-;; (defrecord DiscreteRV [])
-
-;; (defn continuous-rv []
-;;   (ContinuousRV. ))
-
-;; (defn discrete-rv []
-;;   (DiscreteRV. ))
 
 (def ^:dynamic *rv-max-states* 10) ;; sensible default
 
@@ -146,7 +136,7 @@
 ;;    X
 ;;    (let [partition-size (Math/ceil (/ (dec (count X)) (dec *rv-max-states*)))]
 ;;      (with-meta
-;;        (seq2map (my-partition-all partition-size (sort X))
+;;        (seq2map (partition-all partition-size (sort X))
 ;;                 #(vector (/ (apply + (keys %)) (count %))
 ;;                          (apply + (vals %))))
 ;;        (meta X)))))
@@ -448,7 +438,7 @@
 
         :otherwise
         (recur (pmap rv-sum
-                     (my-partition-all 20 Xs)))))
+                     (partition-all 20 Xs)))))
 
 (defn draw-repeatedly
   "Extracts values from X using a uniform distribution."
