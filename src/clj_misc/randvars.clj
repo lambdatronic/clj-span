@@ -450,15 +450,6 @@
         (recur (pmap rv-sum
                      (my-partition-all 20 Xs)))))
 
-(defn rv-extensive-sampler
-  [coverage]
-  (rv-sum (map (fn [[val frac]] (_* val frac)) coverage)))
-
-(defn rv-intensive-sampler
-  [coverage]
-  (let [frac-sum (reduce + (map second coverage))]
-    (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
-
 (defn draw-repeatedly
   "Extracts values from X using a uniform distribution."
   ([X]

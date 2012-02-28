@@ -22,20 +22,14 @@
 ;;; var].
 
 (ns clj-misc.varprop
-  (:use [clj-misc.utils :only [my-partition-all replace-all]])
-  (:import clojure.lang.IPersistentMap))
+  (:use [clj-misc.utils :only [replace-all]]))
 
-;;(defrecord FuzzyNumber [mean var])
-(defstruct FuzzyNumber :mean :var)
+(defrecord FuzzyNumber [mean var])
 
-;; (defn fuzzy-number
-;;   "Constructs a FuzzyNumber."
-;;   [mean var]
-;;   (FuzzyNumber. mean var))
 (defn fuzzy-number
   "Constructs a FuzzyNumber."
   [mean var]
-  (struct FuzzyNumber mean var))
+  (FuzzyNumber. mean var))
 
 (defn fuzzy-number-from-states
   "Constructs a FuzzyNumber from n states and n probs, corresponding
@@ -60,7 +54,7 @@
         var           (- second-moment (* mean mean))]
     (fuzzy-number mean var)))
 
-(def ^{:doc "A fuzzy number with mean and variance of 0."} _0_ (fuzzy-number 0.0 0.0))
+(def ^{:doc "A FuzzyNumber with mean and variance of 0."} _0_ (fuzzy-number 0.0 0.0))
 
 (defn _+_
   "Returns the sum of two or more FuzzyNumbers."
@@ -248,10 +242,10 @@
                      :more
                      [(type X) (type Y)])))
 
-(defmethod ?+? [IPersistentMap IPersistentMap] [X Y & _] (_+_ X Y))
-(defmethod ?+? [IPersistentMap Number]         [X Y & _] (_+  X Y))
-(defmethod ?+? [Number         IPersistentMap] [X Y & _] ( +_ X Y))
-(defmethod ?+? [Number         Number]         [X Y & _] ( +  X Y))
+(defmethod ?+? [FuzzyNumber FuzzyNumber] [X Y & _] (_+_ X Y))
+(defmethod ?+? [FuzzyNumber Number]      [X Y & _] (_+  X Y))
+(defmethod ?+? [Number      FuzzyNumber] [X Y & _] ( +_ X Y))
+(defmethod ?+? [Number      Number]      [X Y & _] ( +  X Y))
 (defmethod ?+? :more [X Y & more] (reduce ?+? (?+? X Y) more))
 
 (defmulti ?-?
@@ -260,10 +254,10 @@
                      :more
                      [(type X) (type Y)])))
 
-(defmethod ?-? [IPersistentMap IPersistentMap] [X Y & _] (_-_ X Y))
-(defmethod ?-? [IPersistentMap Number]         [X Y & _] (_-  X Y))
-(defmethod ?-? [Number         IPersistentMap] [X Y & _] ( -_ X Y))
-(defmethod ?-? [Number         Number]         [X Y & _] ( -  X Y))
+(defmethod ?-? [FuzzyNumber FuzzyNumber] [X Y & _] (_-_ X Y))
+(defmethod ?-? [FuzzyNumber Number]      [X Y & _] (_-  X Y))
+(defmethod ?-? [Number      FuzzyNumber] [X Y & _] ( -_ X Y))
+(defmethod ?-? [Number      Number]      [X Y & _] ( -  X Y))
 (defmethod ?-? :more [X Y & more] (reduce ?-? (?-? X Y) more))
 
 (defmulti ?*?
@@ -272,10 +266,10 @@
                      :more
                      [(type X) (type Y)])))
 
-(defmethod ?*? [IPersistentMap IPersistentMap] [X Y & _] (_*_ X Y))
-(defmethod ?*? [IPersistentMap Number]         [X Y & _] (_*  X Y))
-(defmethod ?*? [Number         IPersistentMap] [X Y & _] ( *_ X Y))
-(defmethod ?*? [Number         Number]         [X Y & _] ( *  X Y))
+(defmethod ?*? [FuzzyNumber FuzzyNumber] [X Y & _] (_*_ X Y))
+(defmethod ?*? [FuzzyNumber Number]      [X Y & _] (_*  X Y))
+(defmethod ?*? [Number      FuzzyNumber] [X Y & _] ( *_ X Y))
+(defmethod ?*? [Number      Number]      [X Y & _] ( *  X Y))
 (defmethod ?*? :more [X Y & more] (reduce ?*? (?*? X Y) more))
 
 (defmulti ?d?
@@ -284,10 +278,10 @@
                      :more
                      [(type X) (type Y)])))
 
-(defmethod ?d? [IPersistentMap IPersistentMap] [X Y & _] (_d_ X Y))
-(defmethod ?d? [IPersistentMap Number]         [X Y & _] (_d  X Y))
-(defmethod ?d? [Number         IPersistentMap] [X Y & _] ( d_ X Y))
-(defmethod ?d? [Number         Number]         [X Y & _] ( /  X Y))
+(defmethod ?d? [FuzzyNumber FuzzyNumber] [X Y & _] (_d_ X Y))
+(defmethod ?d? [FuzzyNumber Number]      [X Y & _] (_d  X Y))
+(defmethod ?d? [Number      FuzzyNumber] [X Y & _] ( d_ X Y))
+(defmethod ?d? [Number      Number]      [X Y & _] ( /  X Y))
 (defmethod ?d? :more [X Y & more] (reduce ?d? (?d? X Y) more))
 
 (defmulti ?<?
@@ -298,10 +292,10 @@
                      :more
                      [(type X) (type Y)])))
 
-(defmethod ?<? [IPersistentMap IPersistentMap] [X Y & _] (_<_ X Y))
-(defmethod ?<? [IPersistentMap Number]         [X Y & _] (_<  X Y))
-(defmethod ?<? [Number         IPersistentMap] [X Y & _] ( <_ X Y))
-(defmethod ?<? [Number         Number]         [X Y & _] ( <  X Y))
+(defmethod ?<? [FuzzyNumber FuzzyNumber] [X Y & _] (_<_ X Y))
+(defmethod ?<? [FuzzyNumber Number]      [X Y & _] (_<  X Y))
+(defmethod ?<? [Number      FuzzyNumber] [X Y & _] ( <_ X Y))
+(defmethod ?<? [Number      Number]      [X Y & _] ( <  X Y))
 (defmethod ?<? :more [X Y & more] (every? (fn [[X Y]] (?<? X Y)) (partition 2 1 (list* X Y more))))
 
 (defmulti ?>?
@@ -312,10 +306,10 @@
                      :more
                      [(type X) (type Y)])))
 
-(defmethod ?>? [IPersistentMap IPersistentMap] [X Y & _] (_>_ X Y))
-(defmethod ?>? [IPersistentMap Number]         [X Y & _] (_>  X Y))
-(defmethod ?>? [Number         IPersistentMap] [X Y & _] ( >_ X Y))
-(defmethod ?>? [Number         Number]         [X Y & _] ( >  X Y))
+(defmethod ?>? [FuzzyNumber FuzzyNumber] [X Y & _] (_>_ X Y))
+(defmethod ?>? [FuzzyNumber Number]      [X Y & _] (_>  X Y))
+(defmethod ?>? [Number      FuzzyNumber] [X Y & _] ( >_ X Y))
+(defmethod ?>? [Number      Number]      [X Y & _] ( >  X Y))
 (defmethod ?>? :more [X Y & more] (every? (fn [[X Y]] (?>? X Y)) (partition 2 1 (list* X Y more))))
 
 (defmulti ?min?
@@ -324,10 +318,10 @@
                      :more
                      [(type X) (type Y)])))
 
-(defmethod ?min? [IPersistentMap IPersistentMap] [X Y & _] (_min_ X Y))
-(defmethod ?min? [IPersistentMap Number]         [X Y & _] (_min  X Y))
-(defmethod ?min? [Number         IPersistentMap] [X Y & _] ( min_ X Y))
-(defmethod ?min? [Number         Number]         [X Y & _] ( min  X Y))
+(defmethod ?min? [FuzzyNumber FuzzyNumber] [X Y & _] (_min_ X Y))
+(defmethod ?min? [FuzzyNumber Number]      [X Y & _] (_min  X Y))
+(defmethod ?min? [Number      FuzzyNumber] [X Y & _] ( min_ X Y))
+(defmethod ?min? [Number      Number]      [X Y & _] ( min  X Y))
 (defmethod ?min? :more [X Y & more] (reduce ?min? (?min? X Y) more))
 
 (defmulti ?max?
@@ -336,10 +330,10 @@
                      :more
                      [(type X) (type Y)])))
 
-(defmethod ?max? [IPersistentMap IPersistentMap] [X Y & _] (_max_ X Y))
-(defmethod ?max? [IPersistentMap Number]         [X Y & _] (_max  X Y))
-(defmethod ?max? [Number         IPersistentMap] [X Y & _] ( max_ X Y))
-(defmethod ?max? [Number         Number]         [X Y & _] ( max  X Y))
+(defmethod ?max? [FuzzyNumber FuzzyNumber] [X Y & _] (_max_ X Y))
+(defmethod ?max? [FuzzyNumber Number]      [X Y & _] (_max  X Y))
+(defmethod ?max? [Number      FuzzyNumber] [X Y & _] ( max_ X Y))
+(defmethod ?max? [Number      Number]      [X Y & _] ( max  X Y))
 (defmethod ?max? :more [X Y & more] (reduce ?max? (?max? X Y) more))
 
 (def fuzzy-arithmetic-mapping
@@ -353,6 +347,8 @@
     max clj-misc.varprop/?max?})
 
 (defn ensure-fuzzy
+  "If value is a FuzzyNumber, return it. Otherwise, make it into a
+   FuzzyNumber."
   [value]
   (if (number? value)
     (fuzzy-number value 0.0)
@@ -397,22 +393,7 @@
 
         :otherwise
         (recur (pmap rv-sum
-                     (my-partition-all 20 Xs)))))
-
-(defn rv-extensive-sampler
-  "Returns the extensive weighted sum of a coverage (i.e. a sequence
-   of pairs of [value fraction-covered]). For use with
-   clj-misc.matrix-ops/resample-matrix."
-  [coverage]
-  (rv-sum (map (fn [[val frac]] (_* val frac)) coverage)))
-
-(defn rv-intensive-sampler
-  "Returns the intensive weighted sum of a coverage (i.e. a sequence
-   of pairs of [value fraction-covered]). For use with
-   clj-misc.matrix-ops/resample-matrix."
-  [coverage]
-  (let [frac-sum (reduce + (map second coverage))]
-    (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
+                     (partition-all 20 Xs)))))
 
 (let [stored-val (atom nil)]
   (defn marsaglia-normal
@@ -457,7 +438,7 @@
   (+ (* (marsaglia-normal) (Math/sqrt (:var X))) (:mean X)))
 
 (defn draw-repeatedly
-  "Takes a fuzzy number X, and returns an infinite lazy sequence of
+  "Takes a FuzzyNumber X, and returns an infinite lazy sequence of
    normally-distributed, pseudo-random numbers that match the
    parameters of X, (or a finite sequence of length n, if an integer n
    is provided)."
