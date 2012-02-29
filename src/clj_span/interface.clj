@@ -22,9 +22,15 @@
 ;;; functions.
 
 (ns clj-span.interface
-  (:use [clj-misc.varprop    :only (_0_)]
+  (:use [clj-span.params     :only (*value-type*)]
         [clj-misc.utils      :only (& p mapmap)]
         [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)]))
+
+;; Symbol table voodoo
+(case *value-type*
+  :numbers  (use '[clj-misc.numbers  :only (_0_)])
+  :varprop  (use '[clj-misc.varprop  :only (_0_)])
+  :randvars (use '[clj-misc.randvars :only (_0_)]))
 
 (defn- select-location
   "Prompts for coords and returns the selected [i j] pair."

@@ -27,12 +27,17 @@
 ;;;   block the frontier's progress
 
 (ns clj-span.models.proximity
-  (:use [clj-misc.utils      :only (def- p my->> mapmap euclidean-distance with-progress-bar-cool with-message remove-nil-val-entries)]
-        [clj-span.params     :only (*trans-threshold*)]
-        [clj-misc.varprop    :only (_0_ _+_ _* _>_ rv-fn _>)]
+  (:use [clj-span.params     :only (*trans-threshold* *value-type*)]
+        [clj-misc.utils      :only (def- p my->> mapmap euclidean-distance with-progress-bar-cool with-message remove-nil-val-entries)]
         [clj-misc.matrix-ops :only (get-neighbors get-line-fn find-bounding-box)]))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
+
+;; Symbol table voodoo
+(case *value-type*
+  :numbers  (use '[clj-misc.numbers  :only (_0_ _+_ _* _>_ rv-fn _>)])
+  :varprop  (use '[clj-misc.varprop  :only (_0_ _+_ _* _>_ rv-fn _>)])
+  :randvars (use '[clj-misc.randvars :only (_0_ _+_ _* _>_ rv-fn _>)]))
 
 ;; in meters
 (def- half-mile    805.0)

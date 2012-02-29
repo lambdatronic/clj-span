@@ -31,7 +31,8 @@
 ;;; 7. Once all demand is met, end the simulation and return the cache-layer.
 
 (ns clj-span.models.subsistence-fisheries
-  (:use [clj-misc.utils      :only (p
+  (:use [clj-span.params     :only (*value-type*)]
+        [clj-misc.utils      :only (p
                                     &
                                     seq2map
                                     seq2redundant-map
@@ -49,10 +50,15 @@
                                     get-bearing
                                     find-nearest
                                     find-in-range
-                                    find-line-between)]
-        [clj-misc.varprop    :only (_0_ *_ _d _*_ _+_ _> rv-fn)]))
+                                    find-line-between)]))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
+
+;; Symbol table voodoo
+(case *value-type*
+  :numbers  (use '[clj-misc.numbers  :only (_0_ *_ _d _*_ _+_ _> rv-fn)])
+  :varprop  (use '[clj-misc.varprop  :only (_0_ *_ _d _*_ _+_ _> rv-fn)])
+  :randvars (use '[clj-misc.randvars :only (_0_ *_ _d _*_ _+_ _> rv-fn)]))
 
 (defstruct fisherman :need :route :cache :fishing-area)
 

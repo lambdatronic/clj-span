@@ -29,16 +29,18 @@
 (def ^:dynamic *sink-type*)
 (def ^:dynamic *use-type*)
 (def ^:dynamic *benefit-type*)
+(def ^:dynamic *value-type*)
 
 (defn set-global-params!
-  [{:keys [rv-max-states trans-threshold source-type sink-type use-type benefit-type]}]
+  [{:keys [rv-max-states trans-threshold source-type sink-type use-type benefit-type value-type]}]
   (reset-rv-max-states! rv-max-states)
-  (doseq [[sym value] {'*trans-threshold* trans-threshold,
-                       '*source-type*     source-type,
-                       '*sink-type*       sink-type,
-                       '*use-type*        use-type,
-                       '*benefit-type*    benefit-type}]
-    (intern (find-ns 'clj-span.params) sym value)))
+  (doseq [[var value] {#'*trans-threshold* trans-threshold,
+                       #'*source-type*     source-type,
+                       #'*sink-type*       sink-type,
+                       #'*use-type*        use-type,
+                       #'*benefit-type*    benefit-type,
+                       #'*value-type*      value-type}]
+    (alter-var-root var (constantly value))))
 
 (defn print-global-params
   []
@@ -47,4 +49,5 @@
   (println "*source-type*"     *source-type*)
   (println "*sink-type*"       *sink-type*)
   (println "*use-type*"        *use-type*)
-  (println "*benefit-type*"    *benefit-type*))
+  (println "*benefit-type*"    *benefit-type*)
+  (println "*value-type*"      *value-type*))

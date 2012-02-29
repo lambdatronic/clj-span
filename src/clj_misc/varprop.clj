@@ -395,6 +395,19 @@
         (recur (pmap rv-sum
                      (partition-all 20 Xs)))))
 
+(defn rv-extensive-sampler
+  "Returns the extensive weighted sum of a coverage (i.e. a sequence
+   of pairs of [value fraction-covered])."
+  [coverage]
+  (rv-sum (map (fn [[val frac]] (_* val frac)) coverage)))
+
+(defn rv-intensive-sampler
+  "Returns the intensive weighted sum of a coverage (i.e. a sequence
+   of pairs of [value fraction-covered])."
+  [coverage]
+  (let [frac-sum (reduce + (map second coverage))]
+    (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
+
 (let [stored-val (atom nil)]
   (defn marsaglia-normal
     "Returns a value from X~N(0,1). Uses the Marsaglia polar

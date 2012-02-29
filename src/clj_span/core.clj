@@ -23,40 +23,42 @@
 ;;; different options specifying the form of its results.
 
 (ns clj-span.core
-  (:use [clj-misc.utils          :only (seq2map constraints-1.0 p &)]
-        [clj-span.params         :only (set-global-params!)]
-        [clj-span.interface      :only (provide-results)]
-        [clj-span.gui            :only (draw-ref-layer run-animation end-animation)]
-        [clj-misc.varprop        :only (_0_ _<)]
+  (:use [clj-span.params         :only (set-global-params!)]
+        [clj-misc.utils          :only (seq2map constraints-1.0 p &)]
         [clj-misc.matrix-ops     :only (map-matrix
                                         make-matrix
                                         resample-matrix
-                                        rv-intensive-sampler
                                         matrix2seq
                                         get-rows
                                         get-cols
                                         grids-align?
                                         is-matrix?
-                                        filter-matrix-for-coords)]
-        [clj-span.analyzer       :only (theoretical-source
-                                        inaccessible-source
-                                        possible-source
-                                        blocked-source
-                                        actual-source
-                                        theoretical-sink
-                                        inaccessible-sink
-                                        actual-sink
-                                        theoretical-use
-                                        inaccessible-use
-                                        possible-use
-                                        blocked-use
-                                        actual-use
-                                        blocked-flow)]))
+                                        filter-matrix-for-coords)])
+  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
+
+(declare theoretical-source
+         inaccessible-source
+         possible-source
+         blocked-source
+         actual-source
+         theoretical-sink
+         inaccessible-sink
+         actual-sink
+         theoretical-use
+         inaccessible-use
+         possible-use
+         blocked-use
+         actual-use
+         blocked-flow
+         provide-results
+         draw-ref-layer
+         run-animation
+         end-animation)
 
 (defn zero-layer-below-threshold
   "Takes a two dimensional array of RVs and replaces all values which
    have a >50% likelihood of being below the threshold with _0_."
-  [threshold layer]
+  [_< _0_ threshold layer]
   (println (str "Zeroing layer below " threshold "..."))
   (let [result (map-matrix #(if (_< % threshold) _0_ %) layer)]
     (printf "  Distinct Layer Values: [Pre] %d [Post] %d\n"
@@ -66,7 +68,7 @@
 
 (defn preprocess-data-layers
   "Preprocess data layers (downsampling and zeroing below their thresholds)."
-  [source-layer source-threshold sink-layer sink-threshold use-layer use-threshold flow-layers downscaling-factor]
+  [source-layer source-threshold sink-layer sink-threshold use-layer use-threshold flow-layers downscaling-factor rv-sampler _0_ _<]
   (println "Preprocessing the input data layers.")
   (let [rows             (get-rows source-layer)
         cols             (get-cols source-layer)
@@ -75,9 +77,9 @@
         row-scale-factor (float (/ scaled-rows rows))
         col-scale-factor (float (/ scaled-cols cols))
         preprocess-layer (fn [l t] (if l
-                                     (let [scaled-layer (resample-matrix scaled-rows scaled-cols rv-intensive-sampler l)]
+                                     (let [scaled-layer (resample-matrix scaled-rows scaled-cols rv-sampler l)]
                                        (if t
-                                         (zero-layer-below-threshold t scaled-layer)
+                                         (zero-layer-below-threshold _< _0_ t scaled-layer)
                                          scaled-layer))
                                      (make-matrix scaled-rows scaled-cols (constantly _0_))))
         [scaled-source-layer scaled-sink-layer scaled-use-layer] (map preprocess-layer
@@ -87,7 +89,7 @@
                                                   [name (resample-matrix
                                                          scaled-rows
                                                          scaled-cols
-                                                         rv-intensive-sampler
+                                                         rv-sampler
                                                          layer)]))]
     [scaled-source-layer scaled-sink-layer scaled-use-layer scaled-flow-layers row-scale-factor col-scale-factor]))
 
@@ -118,7 +120,7 @@
   (throw (Exception. (str "distribute-flow! is undefined for flow type: " flow-model))))
 
 (defn run-simulation
-  [flow-model animation? cell-width cell-height source-layer sink-layer use-layer flow-layers]
+  [flow-model animation? cell-width cell-height source-layer sink-layer use-layer flow-layers _0_]
   (println "\nRunning" flow-model "flow model.")
   (let [rows                (get-rows source-layer)
         cols                (get-cols source-layer)
@@ -185,7 +187,7 @@
   "Run flow model and return the results as a map of layer names to closures."
   [flow-model animation? orig-rows orig-cols cell-width cell-height
    scaled-source-layer scaled-sink-layer scaled-use-layer scaled-flow-layers
-   row-scale-factor col-scale-factor]
+   row-scale-factor col-scale-factor rv-sampler _0_]
   (let [[cache-layer possible-flow-layer actual-flow-layer] (run-simulation flow-model
                                                                             animation?
                                                                             (* cell-width  col-scale-factor)
@@ -193,9 +195,10 @@
                                                                             scaled-source-layer
                                                                             scaled-sink-layer
                                                                             scaled-use-layer
-                                                                            scaled-flow-layers)]
+                                                                            scaled-flow-layers
+                                                                            _0_)]
     (apply array-map
-           (mapcat (fn [[name f]] [name (& (p resample-matrix orig-rows orig-cols rv-intensive-sampler) f)])
+           (mapcat (fn [[name f]] [name (& (p resample-matrix orig-rows orig-cols rv-sampler) f)])
                    (array-map
                     "Source - Theoretical"  #(theoretical-source  scaled-source-layer scaled-use-layer)
                     "Source - Inaccessible" #(inaccessible-source scaled-source-layer scaled-use-layer cache-layer)
@@ -214,6 +217,35 @@
                     "Flow   - Blocked"      #(blocked-flow possible-flow-layer actual-flow-layer)
                     "Flow   - Actual"       (constantly actual-flow-layer))))))
 
+(defn load-value-type-dependent-libs
+  "Loads all namespaces that depend on clj-span.params/*value-type*
+   having been set at runtime."
+  []
+  (require '(clj-span.models carbon
+                             proximity
+                             line-of-sight
+                             surface-water
+                             subsistence-fisheries
+                             coastal-storm-protection
+                             flood-water
+                             sediment))
+  (use '[clj-span.interface :only [provide-results]]
+       '[clj-span.gui       :only [draw-ref-layer run-animation end-animation]]
+       '[clj-span.analyzer  :only [theoretical-source
+                                   inaccessible-source
+                                   possible-source
+                                   blocked-source
+                                   actual-source
+                                   theoretical-sink
+                                   inaccessible-sink
+                                   actual-sink
+                                   theoretical-use
+                                   inaccessible-use
+                                   possible-use
+                                   blocked-use
+                                   actual-use
+                                   blocked-flow]]))
+
 (def double>0?         #(and (float?   %) (pos? %)))
 (def nil-or-double>=0? #(or  (nil?     %) (and (float? %) (>= % 0))))
 (def integer>=1?       #(and (integer? %) (>= % 1)))
@@ -225,7 +257,7 @@
            use-layer    use-threshold    flow-layers   trans-threshold
            cell-width   cell-height      rv-max-states downscaling-factor
            source-type  sink-type        use-type      benefit-type
-           flow-model   result-type      animation?]
+           value-type   flow-model       animation?    result-type]
     :or {rv-max-states      10
          downscaling-factor 1}}]
   ;; Validate the inputs
@@ -240,6 +272,7 @@
           (every? #{:finite :infinite} [source-type use-type])
           (contains? #{:finite :infinite nil} sink-type)
           (contains? #{:rival :non-rival} benefit-type)
+          (contains? #{:randvars :varprop :numbers} value-type)
           (contains? #{"LineOfSight"
                        "Proximity"
                        "CO2Removed"
@@ -257,31 +290,31 @@
                        :source-type        source-type
                        :sink-type          sink-type
                        :use-type           use-type
-                       :benefit-type       benefit-type})
+                       :benefit-type       benefit-type
+                       :value-type         value-type})
+  ;; Load all namespaces that depend on clj-span.params/*value-type*
+  (load-value-type-dependent-libs)
   ;; Run flow model and return the results
-  (provide-results result-type
-                   source-layer
-                   sink-layer
-                   use-layer
-                   flow-layers
-                   (apply generate-results-map
-                          flow-model
-                          animation?
-                          (get-rows source-layer)
-                          (get-cols source-layer)
-                          cell-width
-                          cell-height
-                          (preprocess-data-layers source-layer source-threshold
-                                                  sink-layer   sink-threshold
-                                                  use-layer    use-threshold
-                                                  flow-layers  downscaling-factor))))
-
-;; Now we can import our SPAN model implementations.
-(require '(clj-span.models carbon
-                           proximity
-                           line-of-sight
-                           surface-water
-                           subsistence-fisheries
-                           coastal-storm-protection
-                           flood-water
-                           sediment))
+  (let [[rv-sampler _0_  _<] (case value-type
+                              :numbers  [nb/rv-intensive-sampler nb/_0_ nb/_<]
+                              :varprop  [vp/rv-intensive-sampler vp/_0_ vp/_<]
+                              :randvars [rv/rv-intensive-sampler rv/_0_ rv/_<])]
+    (provide-results result-type
+                     source-layer
+                     sink-layer
+                     use-layer
+                     flow-layers
+                     (apply generate-results-map
+                            flow-model
+                            animation?
+                            (get-rows source-layer)
+                            (get-cols source-layer)
+                            cell-width
+                            cell-height
+                            rv-sampler
+                            _0_
+                            (preprocess-data-layers source-layer source-threshold
+                                                    sink-layer   sink-threshold
+                                                    use-layer    use-threshold
+                                                    flow-layers  downscaling-factor
+                                                    rv-sampler _0_ _<)))))

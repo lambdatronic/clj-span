@@ -23,32 +23,7 @@
 
 (ns clj-misc.matrix-ops
   (:use [clojure.set    :only (map-invert)]
-        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries magnitude between? metric-distance)])
-  (:require (clj-misc numbers varprop randvars)))
-
-(def ^:dynamic rv-sum clj-misc.numbers/rv-sum)
-(def ^:dynamic _*     clj-misc.numbers/_*)
-
-(def ^{:dynamic true, :doc "Value type expected in matrix cells. One of :numbers, :varprop, or :randvars."} *default-value-type* :numbers)
-
-(defn reset-default-value-type!
-  [new-type]
-  (constraints-1.0 {:pre [(contains? #{:numbers :varprop :randvars} new-type)]})
-  (alter-var-root #'*default-value-type* (constantly new-type))
-  (alter-var-root #'rv-sum
-                  (fn [f new-type]
-                    (case new-type
-                      :numbers  clj-misc.numbers/rv-sum
-                      :varprop  clj-misc.varprop/rv-sum
-                      :randvars clj-misc.randvars/rv-sum))
-                  new-type)
-  (alter-var-root #'_*
-                  (fn [f new-type]
-                    (case new-type
-                      :numbers  clj-misc.numbers/_*
-                      :varprop  clj-misc.varprop/_*
-                      :randvars clj-misc.randvars/_*))
-                  new-type))
+        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries magnitude between? metric-distance)]))
 
 (defn get-rows [matrix] (count matrix))
 (defn get-cols [matrix] (count (first matrix)))
@@ -178,19 +153,6 @@
   [coverage]
   (let [frac-sum (reduce + (map second coverage))]
     (reduce + (map (fn [[val frac]] (* val (/ frac frac-sum))) coverage))))
-
-(defn rv-extensive-sampler
-  "Returns the extensive weighted sum of a coverage (i.e. a sequence
-   of pairs of [value fraction-covered])."
-  [coverage]
-  (rv-sum (map (fn [[val frac]] (_* val frac)) coverage)))
-
-(defn rv-intensive-sampler
-  "Returns the intensive weighted sum of a coverage (i.e. a sequence
-   of pairs of [value fraction-covered])."
-  [coverage]
-  (let [frac-sum (reduce + (map second coverage))]
-    (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
 
 (defn cell-fractions-covered
   [i l]

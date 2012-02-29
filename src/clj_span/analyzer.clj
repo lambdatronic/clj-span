@@ -26,14 +26,20 @@
   (:use [clj-misc.utils      :only (p with-progress-bar)]
         [clj-span.params     :only (*source-type*
                                     *sink-type*
-                                    *use-type*)]
-        [clj-misc.varprop    :only (_0_ _+_ _* *_ rv-fn _min_)]
+                                    *use-type*
+                                    *value-type*)]
         [clj-misc.matrix-ops :only (get-rows
                                     get-cols
                                     matrix2seq
                                     map-matrix
                                     make-matrix
                                     unbitpack-route)]))
+
+;; Symbol table voodoo
+(case *value-type*
+  :numbers  (use '[clj-misc.numbers  :only (_0_ _+_ _* *_ rv-fn _min_)])
+  :varprop  (use '[clj-misc.varprop  :only (_0_ _+_ _* *_ rv-fn _min_)])
+  :randvars (use '[clj-misc.randvars :only (_0_ _+_ _* *_ rv-fn _min_)]))
 
 (defn theoretical-source
   "If *source-type* is finite, return source-layer. Else return

@@ -1,6 +1,6 @@
 (ns clj-span.gui
-  (:use [clj-misc.utils      :only (&)]
-        [clj-misc.varprop    :only (rv-mean _+ _0_)]
+  (:use [clj-span.params     :only (*value-type*)]
+        [clj-misc.utils      :only (&)]
         [clj-misc.matrix-ops :only (get-rows
                                     get-cols
                                     map-matrix
@@ -9,6 +9,12 @@
   (:import (java.awt Color Graphics Dimension)
            (java.awt.image BufferedImage)
            (javax.swing JPanel JFrame)))
+
+;; Symbol table voodoo
+(case *value-type*
+  :numbers  (use '[clj-misc.numbers  :only (rv-mean _+ _0_)])
+  :varprop  (use '[clj-misc.varprop  :only (rv-mean _+ _0_)])
+  :randvars (use '[clj-misc.randvars :only (rv-mean _+ _0_)]))
 
 (defn fill-cell [#^Graphics g x y scale color]
   (doto g

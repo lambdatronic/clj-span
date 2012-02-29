@@ -33,12 +33,17 @@
 ;;;   source point.
 
 (ns clj-span.models.line-of-sight
-  (:use [clj-span.params     :only (*trans-threshold*)]
+  (:use [clj-span.params     :only (*trans-threshold* *value-type*)]
         [clj-misc.utils      :only (euclidean-distance p def- between? with-progress-bar-cool with-message)]
-        [clj-misc.matrix-ops :only (find-line-between get-line-fn)]
-        [clj-misc.varprop    :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)]))
+        [clj-misc.matrix-ops :only (find-line-between get-line-fn)]))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
+
+;; Symbol table voodoo
+(case *value-type*
+  :numbers  (use '[clj-misc.numbers  :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)])
+  :varprop  (use '[clj-misc.varprop  :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)])
+  :randvars (use '[clj-misc.randvars :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)]))
 
 ;; in meters
 (def- half-mile    805.0)

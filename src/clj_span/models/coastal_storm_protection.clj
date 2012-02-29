@@ -47,7 +47,7 @@
 ;;; requirements with the number of cells analyzed.
 
 (ns clj-span.models.coastal-storm-protection
-  (:use [clj-span.params     :only (*trans-threshold*)]
+  (:use [clj-span.params     :only (*trans-threshold* *value-type*)]
         [clj-misc.utils      :only (p
                                     my->>
                                     seq2map
@@ -66,10 +66,15 @@
                                     get-neighbors
                                     dist-to-steps
                                     find-point-at-dist-in-m
-                                    find-line-between)]
-        [clj-misc.varprop    :only (_0_ _+_ _*_ *_ _d rv-fn _>)]))
+                                    find-line-between)]))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
+
+;; Symbol table voodoo
+(case *value-type*
+  :numbers  (use '[clj-misc.numbers  :only (_0_ _+_ _*_ *_ _d rv-fn _>)])
+  :varprop  (use '[clj-misc.varprop  :only (_0_ _+_ _*_ *_ _d rv-fn _>)])
+  :randvars (use '[clj-misc.randvars :only (_0_ _+_ _*_ *_ _d rv-fn _>)]))
 
 (defn handle-sink-effects
   [current-id possible-weight actual-weight eco-sink-layer geo-sink-layer m2-per-cell]

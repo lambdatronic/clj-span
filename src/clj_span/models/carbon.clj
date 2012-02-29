@@ -82,10 +82,16 @@
 ;;;   within some epsilon of one another.
 
 (ns clj-span.models.carbon
-  (:use [clj-misc.utils      :only (p sum def- with-progress-bar-cool)]
-        [clj-misc.varprop    :only (*_ _d draw fuzzy-number-from-states)]))
+  (:use [clj-misc.utils  :only (p sum def- with-progress-bar-cool)]
+        [clj-span.params :only (*value-type*)]))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
+
+;; Symbol table voodoo
+(case *value-type*
+  :numbers  (use '[clj-misc.numbers  :only (*_ _d draw number-from-states)       :rename {number-from-states       consolidate-states}])
+  :varprop  (use '[clj-misc.varprop  :only (*_ _d draw fuzzy-number-from-states) :rename {fuzzy-number-from-states consolidate-states}])
+  :randvars (use '[clj-misc.randvars :only (*_ _d draw randvar-from-states)      :rename {randvar-from-states      consolidate-states}]))
 
 (def ^:dynamic *num-world-samples* 10)
 (def ^:dynamic *sample-prob*       (/ 1.0 *num-world-samples*))
@@ -209,7 +215,7 @@
    service-carrier structs by use-point."
   [ha-per-cell source-points sink-points use-points world-sample]
   (println "Packing the results into proper service-carrier structs...")
-  (let [to-fuzzy-number #(fuzzy-number-from-states (keys %) (vals %))]
+  (let [to-fuzzy-number #(consolidate-states (keys %) (vals %))]
     (zipmap use-points
             (pmap (fn [carrier-cache]
                     (doall

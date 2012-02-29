@@ -80,5 +80,18 @@
   [Xs]
   (reduce + Xs))
 
+(defn rv-extensive-sampler
+  "Returns the extensive weighted sum of a coverage (i.e. a sequence
+   of pairs of [value fraction-covered])."
+  [coverage]
+  (rv-sum (map (fn [[val frac]] (_* val frac)) coverage)))
+
+(defn rv-intensive-sampler
+  "Returns the intensive weighted sum of a coverage (i.e. a sequence
+   of pairs of [value fraction-covered])."
+  [coverage]
+  (let [frac-sum (reduce + (map second coverage))]
+    (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
+
 (def ^{:doc "Extracts a deterministic value from a Number by simply returning it."} draw identity)
 (def ^{:doc "Returns n instances (or an infinite lazy sequence) of the passed-in Number."} draw-repeatedly repeat)

@@ -478,6 +478,19 @@
         (recur (pmap rv-sum
                      (partition-all 20 Xs)))))
 
+(defn rv-extensive-sampler
+  "Returns the extensive weighted sum of a coverage (i.e. a sequence
+   of pairs of [value fraction-covered])."
+  [coverage]
+  (rv-sum (map (fn [[val frac]] (_* val frac)) coverage)))
+
+(defn rv-intensive-sampler
+  "Returns the intensive weighted sum of a coverage (i.e. a sequence
+   of pairs of [value fraction-covered])."
+  [coverage]
+  (let [frac-sum (reduce + (map second coverage))]
+    (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
+
 (defn draw-repeatedly
   "Extracts values from X using a uniform distribution."
   ([X]
