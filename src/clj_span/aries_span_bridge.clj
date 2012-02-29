@@ -31,9 +31,7 @@
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (java.io File FileWriter FileReader PushbackReader)))
 
-#_(import '(org.integratedmodelling.corescience.implementations.datasources MemObjectContextualizedDatasource
-                                                                            MemDoubleContextualizedDatasource)
-          '(org.integratedmodelling.corescience.literals IndexedCategoricalDistribution))
+#_(import org.integratedmodelling.corescience.literals.IndexedCategoricalDistribution)
 
 #_(refer 'geospace :only '(grid-rows
                            grid-columns
@@ -121,9 +119,9 @@
    determined by value-type. NaNs and nils are converted to 0s."
   [value-type ds]
   (println "Unpacking datasource" ds)
-  (case (class ds)
+  (case (keyword (.getName (class ds)))
 
-    :MemObjectContextualizedDatasource
+    :org.integratedmodelling.corescience.implementations.datasources.MemObjectContextualizedDatasource
     (do (println "These are BN outputs.")
         (let [dists                 (.getRawData ds)
               example-dist          (first (remove nil? dists))
@@ -136,13 +134,13 @@
           (if (or unbounded-from-below? unbounded-from-above?)
             (throw (Exception. "All undiscretized bounds must be closed above and below.")))
           ;; (for [#^IndexedCategoricalDistribution dist dists]
-          (for [^:IndexedCategoricalDistribution dist dists]
+          (for [dist dists]
             (case value-type
               :randvars (if dist (rv/randvar-from-ranges      bounds (.getData dist)) rv/_0_)
               :varprop  (if dist (vp/fuzzy-number-from-ranges bounds (.getData dist)) vp/_0_)
               :numbers  (if dist (nb/number-from-ranges       bounds (.getData dist)) nb/_0_)))))
 
-    :MemDoubleContextualizedDatasource
+    :org.integratedmodelling.corescience.implementations.datasources.MemDoubleContextualizedDatasource
     (do (println "These are deterministic values.")
         (for [value (NaNs-to-zero (get-data ds))]
           (case value-type
@@ -222,7 +220,6 @@
       (println "flow-model         =" flow-model)
       (println "animation?         =" animation?)
       (println "result-type        =" result-type)
-      (println "save-file          =" save-file)
       (println "(Pausing 10 seconds)")
       (Thread/sleep 10000)
       (if (string? save-file)
