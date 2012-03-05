@@ -82,10 +82,9 @@
 ;;;   within some epsilon of one another.
 
 (ns clj-span.models.carbon
-  (:use [clj-misc.utils  :only (p sum def- with-progress-bar-cool)]
-        [clj-span.params :only (*value-type*)]))
+  (:use [clj-misc.utils :only (p sum def- with-progress-bar-cool)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*
@@ -235,7 +234,7 @@
 ;; FIXME: This algorithm eats up too much memory (related to storing
 ;; the sink-effects-seq, I believe).  Do something more intelligent.
 (defmethod distribute-flow! "CO2Removed"
-  [_ cell-width cell-height _ _ cache-layer _ _ source-layer
+  [_ cell-width cell-height _ _ _ cache-layer _ _ source-layer
    sink-layer use-layer source-points sink-points use-points _]
   "The amount of carbon sequestration produced is distributed among
    the consumers (carbon emitters) according to their relative use

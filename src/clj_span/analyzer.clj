@@ -24,16 +24,14 @@
 
 (ns clj-span.analyzer
   (:use [clj-misc.utils      :only (p with-progress-bar)]
-        [clj-span.params     :only (*source-type*
-                                    *sink-type*
-                                    *use-type*
-                                    *value-type*)]
         [clj-misc.matrix-ops :only (get-rows
                                     get-cols
                                     matrix2seq
                                     map-matrix
                                     make-matrix
                                     unbitpack-route)]))
+
+(refer 'clj-span.core :only '(*value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*
@@ -42,10 +40,10 @@
   :randvars (use '[clj-misc.randvars :only (_0_ _+_ _* *_ rv-fn _min_)]))
 
 (defn theoretical-source
-  "If *source-type* is finite, return source-layer. Else return
+  "If source-type is finite, return source-layer. Else return
    source-layer * num-users."
-  [source-layer use-layer]
-  (if (= *source-type* :finite)
+  [source-type source-layer use-layer]
+  (if (= source-type :finite)
     source-layer
     (let [num-users (count (remove (p = _0_) (matrix2seq use-layer)))]
       (map-matrix (p *_ num-users) source-layer))))
@@ -76,20 +74,20 @@
 (def actual-source (memoize actual-source))
 
 (defn theoretical-sink
-  "If *sink-type* is finite, return sink-layer. Else return sink-layer
-   * max-flowpaths (limited by total-source if *source-type* is
-   finite).  If *sink-type* is nil, we may assume that there are no
+  "If sink-type is finite, return sink-layer. Else return sink-layer
+   * max-flowpaths (limited by total-source if source-type is
+   finite).  If sink-type is nil, we may assume that there are no
    sinks in this model."
-  [source-layer sink-layer use-layer]
-  (if (nil? *sink-type*)
+  [source-type sink-type source-layer sink-layer use-layer]
+  (if (nil? sink-type)
     (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly _0_))
-    (if (= *sink-type* :finite)
+    (if (= sink-type :finite)
       sink-layer
       (let [num-sources    (count (remove (p = _0_) (matrix2seq source-layer)))
             num-users      (count (remove (p = _0_) (matrix2seq use-layer)))
             max-flowpaths  (* num-sources num-users)
             total-source   (reduce _+_ _0_ (remove (p = _0_) (matrix2seq source-layer)))
-            per-sink-limit (if (*source-type* :finite)
+            per-sink-limit (if (source-type :finite)
                              total-source
                              (_* total-source num-users))]
         (map-matrix #(if (= _0_ %) _0_ (_min_ (*_ max-flowpaths %) per-sink-limit)) sink-layer)))))
@@ -107,12 +105,12 @@
 (def actual-sink (memoize actual-sink))
 
 (defn theoretical-use
-  "If *use-type* is finite, return use-layer. Else return a new layer
+  "If use-type is finite, return use-layer. Else return a new layer
    in which all non-zero use values have been replaced with
    total-source (or with total-source divided by num-users if
-   *source-type* is finite)."
-  [source-layer use-layer]
-  (if (= *use-type* :finite)
+   source-type is finite)."
+  [use-type source-layer use-layer]
+  (if (= use-type :finite)
     use-layer
     (let [total-source (reduce _+_ _0_ (remove (p = _0_) (matrix2seq source-layer)))]
       (map-matrix #(if (not= _0_ %) total-source _0_) use-layer))))

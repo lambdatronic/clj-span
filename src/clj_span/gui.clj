@@ -1,6 +1,5 @@
 (ns clj-span.gui
-  (:use [clj-span.params     :only (*value-type*)]
-        [clj-misc.utils      :only (&)]
+  (:use [clj-misc.utils      :only (&)]
         [clj-misc.matrix-ops :only (get-rows
                                     get-cols
                                     map-matrix
@@ -9,6 +8,8 @@
   (:import (java.awt Color Graphics Dimension)
            (java.awt.image BufferedImage)
            (javax.swing JPanel JFrame)))
+
+(refer 'clj-span.core :only '(*value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*

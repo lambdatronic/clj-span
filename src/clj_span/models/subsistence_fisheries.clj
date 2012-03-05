@@ -31,8 +31,7 @@
 ;;; 7. Once all demand is met, end the simulation and return the cache-layer.
 
 (ns clj-span.models.subsistence-fisheries
-  (:use [clj-span.params     :only (*value-type*)]
-        [clj-misc.utils      :only (p
+  (:use [clj-misc.utils      :only (p
                                     &
                                     seq2map
                                     seq2redundant-map
@@ -52,7 +51,7 @@
                                     find-in-range
                                     find-line-between)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*
@@ -212,7 +211,7 @@
 ;;        Possible/Actual Use are in kg/km^2*year, Inaccessible Use
 ;;        will not make sense.
 (defmethod distribute-flow! "SubsistenceFishAccessibility"
-  [_ cell-width cell-height rows cols cache-layer possible-flow-layer
+  [_ cell-width cell-height rows cols _ cache-layer possible-flow-layer
    actual-flow-layer source-layer _ use-layer source-points _ use-points
    {path-layer "Path", population-density-layer "PopulationDensity"}]
   (let [km2-per-cell   (* cell-width cell-height (Math/pow 10.0 -6.0))

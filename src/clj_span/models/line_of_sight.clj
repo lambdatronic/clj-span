@@ -33,11 +33,10 @@
 ;;;   source point.
 
 (ns clj-span.models.line-of-sight
-  (:use [clj-span.params     :only (*trans-threshold* *value-type*)]
-        [clj-misc.utils      :only (euclidean-distance p def- between? with-progress-bar-cool with-message)]
+  (:use [clj-misc.utils      :only (euclidean-distance p def- between? with-progress-bar-cool with-message)]
         [clj-misc.matrix-ops :only (find-line-between get-line-fn)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*
@@ -114,7 +113,7 @@
    decay function is applied to the results to compute the visual
    utility originating from the source point."
   [source-layer sink-layer elev-layer cache-layer possible-flow-layer
-   actual-flow-layer to-meters [source-point use-point]]
+   actual-flow-layer to-meters trans-threshold [source-point use-point]]
   (when (not= source-point use-point) ;; no in-situ use
     (let [use-loc-in-m    (to-meters use-point)
           source-loc-in-m (to-meters source-point)
@@ -140,7 +139,7 @@
                                                        use-elev
                                                        (last sight-slopes)
                                                        (last runs)))]
-          (when (_> possible-weight *trans-threshold*)
+          (when (_> possible-weight trans-threshold)
             (let [sink-effects  (into {}
                                       (map #(let [sink-value (get-in sink-layer %1)]
                                               (if (not= sink-value _0_)
@@ -167,7 +166,7 @@
                (alter (get-in cache-layer use-point) conj carrier)))))))))
 
 (defmethod distribute-flow! "LineOfSight"
-  [_ cell-width cell-height _ _ cache-layer possible-flow-layer
+  [_ cell-width cell-height _ _ trans-threshold cache-layer possible-flow-layer
    actual-flow-layer source-layer sink-layer _ source-points
    _ use-points {elev-layer "Altitude"}]
   (let [num-view-lines (* (long (count source-points)) (long (count use-points)))
@@ -183,6 +182,7 @@
                  cache-layer
                  possible-flow-layer
                  actual-flow-layer
-                 to-meters)
+                 to-meters
+                 trans-threshold)
               (for [source-point source-points use-point use-points]
                 [source-point use-point]))))))

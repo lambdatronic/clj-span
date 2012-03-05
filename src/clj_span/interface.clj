@@ -22,9 +22,10 @@
 ;;; functions.
 
 (ns clj-span.interface
-  (:use [clj-span.params     :only (*value-type*)]
-        [clj-misc.utils      :only (& p mapmap)]
+  (:use [clj-misc.utils      :only (& p mapmap)]
         [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)]))
+
+(refer 'clj-span.core :only '(*value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*

@@ -31,14 +31,13 @@
 ;;;
 
 (ns clj-span.models.sediment
-  (:use [clj-span.params     :only (*value-type*)]
-        [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
+  (:use [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
                                     memoize-by-first-arg angular-distance p def-
                                     with-progress-bar-cool euclidean-distance)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? add-ids subtract-ids find-nearest
                                     find-line-between rotate-2d-vec find-point-at-dist-in-m)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*
@@ -301,7 +300,7 @@
 
 ;; FIXME: 100-yr vs. 500-yr floodplains?
 (defmethod distribute-flow! "SedimentTransport"
-  [_ cell-width cell-height rows cols cache-layer possible-flow-layer actual-flow-layer
+  [_ cell-width cell-height rows cols _ cache-layer possible-flow-layer actual-flow-layer
    source-layer sink-layer _ source-points sink-points use-points
    {stream-layer "River", elevation-layer "Altitude", levees-layer "Levee",
     floodplain-layer "FloodplainsCode"}]

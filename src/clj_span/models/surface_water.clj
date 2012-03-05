@@ -21,13 +21,12 @@
 ;;;
 
 (ns clj-span.models.surface-water
-  (:use [clj-span.params        :only (*trans-threshold* *value-type*)]
-        [clj-misc.utils         :only (seq2map mapmap iterate-while-seq with-message
-                                       memoize-by-first-arg angular-distance p & def-
-                                       with-progress-bar-cool)]
-        [clj-misc.matrix-ops    :only (get-neighbors on-bounds? subtract-ids find-nearest)]))
+  (:use [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
+                                    memoize-by-first-arg angular-distance p & def-
+                                    with-progress-bar-cool)]
+        [clj-misc.matrix-ops :only (get-neighbors on-bounds? subtract-ids find-nearest)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*
@@ -186,7 +185,7 @@
    in timesteps (more or less)."
   [cache-layer possible-flow-layer actual-flow-layer source-layer
    source-points mm2-per-cell sink-caps possible-use-caps actual-use-caps
-   in-stream? stream-intakes elevation-layer rows cols]
+   in-stream? stream-intakes elevation-layer rows cols trans-threshold]
   (with-message "Moving the surface water carriers downhill and downstream...\n" "All done."
     (dorun
      (stop-unless-reducing
@@ -210,7 +209,7 @@
                     in-stream?
                     stream-intakes
                     mm2-per-cell
-                    (* mm2-per-cell *trans-threshold*)
+                    (* mm2-per-cell trans-threshold)
                     elevation-layer
                     rows
                     cols)
@@ -252,7 +251,7 @@
   (seq2map active-points (fn [id] [id (ref (*_ mm2-per-cell (get-in layer id)))])))
 
 (defmethod distribute-flow! "SurfaceWaterMovement"
-  [_ cell-width cell-height rows cols cache-layer possible-flow-layer
+  [_ cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
    actual-flow-layer source-layer sink-layer use-layer source-points
    sink-points use-points {stream-layer "River", elevation-layer "Altitude"}]
   (let [mm2-per-cell      (* cell-width cell-height (Math/pow 10.0 6.0))
@@ -274,4 +273,5 @@
                        stream-intakes
                        elevation-layer
                        rows
-                       cols)))
+                       cols
+                       trans-threshold)))

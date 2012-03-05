@@ -23,17 +23,16 @@
 ;;; different options specifying the form of its results.
 
 (ns clj-span.core
-  (:use [clj-span.params         :only (set-global-params!)]
-        [clj-misc.utils          :only (seq2map constraints-1.0 p &)]
-        [clj-misc.matrix-ops     :only (map-matrix
-                                        make-matrix
-                                        resample-matrix
-                                        matrix2seq
-                                        get-rows
-                                        get-cols
-                                        grids-align?
-                                        is-matrix?
-                                        filter-matrix-for-coords)])
+  (:use [clj-misc.utils      :only (seq2map constraints-1.0 p &)]
+        [clj-misc.matrix-ops :only (map-matrix
+                                    make-matrix
+                                    resample-matrix
+                                    matrix2seq
+                                    get-rows
+                                    get-cols
+                                    grids-align?
+                                    is-matrix?
+                                    filter-matrix-for-coords)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
 (declare theoretical-source
@@ -54,6 +53,8 @@
          draw-ref-layer
          run-animation
          end-animation)
+
+(def ^:dynamic *value-type*)
 
 (defn zero-layer-below-threshold
   "Takes a two dimensional array of RVs and replaces all values which
@@ -110,17 +111,17 @@
    of the simulation, this function will update the passed in
    cache-layer, possible-flow-layer, and actual-flow-layer.  Its
    return result is ignored."
-  (fn [flow-model cell-width cell-height rows cols
+  (fn [flow-model cell-width cell-height rows cols trans-threshold
        cache-layer possible-flow-layer actual-flow-layer
        source-layer sink-layer use-layer source-points
        sink-points use-points flow-layers] flow-model))
 
 (defmethod distribute-flow! :default
-  [flow-model _ _ _ _ _ _ _ _ _ _ _ _ _ _]
+  [flow-model _ _ _ _ _ _ _ _ _ _ _ _ _ _ _]
   (throw (Exception. (str "distribute-flow! is undefined for flow type: " flow-model))))
 
 (defn run-simulation
-  [flow-model animation? cell-width cell-height source-layer sink-layer use-layer flow-layers _0_]
+  [flow-model animation? cell-width cell-height source-layer sink-layer use-layer flow-layers trans-threshold _0_]
   (println "\nRunning" flow-model "flow model.")
   (let [rows                (get-rows source-layer)
         cols                (get-cols source-layer)
@@ -151,6 +152,7 @@
                           cell-height
                           rows
                           cols
+                          trans-threshold
                           cache-layer
                           possible-flow-layer
                           actual-flow-layer
@@ -186,8 +188,9 @@
 (defn generate-results-map
   "Run flow model and return the results as a map of layer names to closures."
   [flow-model animation? orig-rows orig-cols cell-width cell-height
-   scaled-source-layer scaled-sink-layer scaled-use-layer scaled-flow-layers
-   row-scale-factor col-scale-factor rv-sampler _0_]
+   rv-sampler _0_ trans-threshold source-type sink-type use-type
+   benefit-type scaled-source-layer scaled-sink-layer scaled-use-layer
+   scaled-flow-layers row-scale-factor col-scale-factor]
   (let [[cache-layer possible-flow-layer actual-flow-layer] (run-simulation flow-model
                                                                             animation?
                                                                             (* cell-width  col-scale-factor)
@@ -196,19 +199,20 @@
                                                                             scaled-sink-layer
                                                                             scaled-use-layer
                                                                             scaled-flow-layers
+                                                                            trans-threshold
                                                                             _0_)]
     (apply array-map
            (mapcat (fn [[name f]] [name (& (p resample-matrix orig-rows orig-cols rv-sampler) f)])
                    (array-map
-                    "Source - Theoretical"  #(theoretical-source  scaled-source-layer scaled-use-layer)
+                    "Source - Theoretical"  #(theoretical-source  source-type scaled-source-layer scaled-use-layer)
                     "Source - Inaccessible" #(inaccessible-source scaled-source-layer scaled-use-layer cache-layer)
                     "Source - Possible"     #(possible-source     cache-layer)
                     "Source - Blocked"      #(blocked-source      cache-layer)
                     "Source - Actual"       #(actual-source       cache-layer)
-                    "Sink   - Theoretical"  #(theoretical-sink    scaled-source-layer scaled-sink-layer scaled-use-layer)
+                    "Sink   - Theoretical"  #(theoretical-sink    source-type sink-type scaled-source-layer scaled-sink-layer scaled-use-layer)
                     "Sink   - Inaccessible" #(inaccessible-sink   scaled-source-layer scaled-sink-layer scaled-use-layer cache-layer)
                     "Sink   - Actual"       #(actual-sink         cache-layer)
-                    "Use    - Theoretical"  #(theoretical-use     scaled-source-layer scaled-use-layer)
+                    "Use    - Theoretical"  #(theoretical-use     use-type scaled-source-layer scaled-use-layer)
                     "Use    - Inaccessible" #(inaccessible-use    scaled-source-layer scaled-use-layer cache-layer)
                     "Use    - Possible"     #(possible-use        cache-layer)
                     "Use    - Blocked"      #(blocked-use         cache-layer)
@@ -216,35 +220,6 @@
                     "Flow   - Possible"     (constantly possible-flow-layer)
                     "Flow   - Blocked"      #(blocked-flow possible-flow-layer actual-flow-layer)
                     "Flow   - Actual"       (constantly actual-flow-layer))))))
-
-(defn load-value-type-dependent-libs
-  "Loads all namespaces that depend on clj-span.params/*value-type*
-   having been set at runtime."
-  []
-  (require '(clj-span.models carbon
-                             proximity
-                             line-of-sight
-                             surface-water
-                             subsistence-fisheries
-                             coastal-storm-protection
-                             flood-water
-                             sediment))
-  (use '[clj-span.interface :only [provide-results]]
-       '[clj-span.gui       :only [draw-ref-layer run-animation end-animation]]
-       '[clj-span.analyzer  :only [theoretical-source
-                                   inaccessible-source
-                                   possible-source
-                                   blocked-source
-                                   actual-source
-                                   theoretical-sink
-                                   inaccessible-sink
-                                   actual-sink
-                                   theoretical-use
-                                   inaccessible-use
-                                   possible-use
-                                   blocked-use
-                                   actual-use
-                                   blocked-flow]]))
 
 (def double>0?         #(and (float?   %) (pos? %)))
 (def nil-or-double>=0? #(or  (nil?     %) (and (float? %) (>= % 0))))
@@ -285,15 +260,8 @@
           (contains? #{:cli-menu :closure-map} result-type)
           (contains? #{true false nil} animation?)]})
   ;; Initialize global parameters
-  (set-global-params! {:rv-max-states      rv-max-states
-                       :trans-threshold    trans-threshold
-                       :source-type        source-type
-                       :sink-type          sink-type
-                       :use-type           use-type
-                       :benefit-type       benefit-type
-                       :value-type         value-type})
-  ;; Load all namespaces that depend on clj-span.params/*value-type*
-  (load-value-type-dependent-libs)
+  (alter-var-root #'*value-type* (constantly value-type))
+  (if (= value-type :randvars) (rv/reset-rv-max-states! rv-max-states))
   ;; Run flow model and return the results
   (let [[rv-sampler _0_  _<] (case value-type
                               :numbers  [nb/rv-intensive-sampler nb/_0_ nb/_<]
@@ -313,8 +281,38 @@
                             cell-height
                             rv-sampler
                             _0_
+                            trans-threshold
+                            source-type
+                            sink-type
+                            use-type
+                            benefit-type
                             (preprocess-data-layers source-layer source-threshold
                                                     sink-layer   sink-threshold
                                                     use-layer    use-threshold
                                                     flow-layers  downscaling-factor
                                                     rv-sampler _0_ _<)))))
+
+(require '(clj-span.models carbon
+                           proximity
+                           line-of-sight
+                           surface-water
+                           subsistence-fisheries
+                           coastal-storm-protection
+                           flood-water
+                           sediment))
+(use '[clj-span.interface :only [provide-results]]
+     '[clj-span.gui       :only [draw-ref-layer run-animation end-animation]]
+     '[clj-span.analyzer  :only [theoretical-source
+                                 inaccessible-source
+                                 possible-source
+                                 blocked-source
+                                 actual-source
+                                 theoretical-sink
+                                 inaccessible-sink
+                                 actual-sink
+                                 theoretical-use
+                                 inaccessible-use
+                                 possible-use
+                                 blocked-use
+                                 actual-use
+                                 blocked-flow]])

@@ -47,8 +47,7 @@
 ;;; requirements with the number of cells analyzed.
 
 (ns clj-span.models.coastal-storm-protection
-  (:use [clj-span.params     :only (*trans-threshold* *value-type*)]
-        [clj-misc.utils      :only (p
+  (:use [clj-misc.utils      :only (p
                                     my->>
                                     seq2map
                                     angular-distance
@@ -68,7 +67,7 @@
                                     find-point-at-dist-in-m
                                     find-line-between)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
 
 ;; Symbol table voodoo
 (case *value-type*
@@ -320,7 +319,7 @@
 (defn run-storm-surge-simulation!
   [source-layer eco-sink-layer use-layer geo-sink-layer cache-layer
    possible-flow-layer actual-flow-layer cell-width cell-height rows
-   cols storm-centerpoint storm-bearing get-next-bearing]
+   cols trans-threshold storm-centerpoint storm-bearing get-next-bearing]
   (let [m2-per-cell        (* cell-width cell-height)
         storm-track-sample (make-storm-track-sample get-next-bearing
                                                     storm-centerpoint
@@ -352,7 +351,7 @@
                                     m2-per-cell
                                     rows
                                     cols
-                                    (* *trans-threshold* m2-per-cell))
+                                    (* trans-threshold m2-per-cell))
                                  [storm-track-sample storm-surge]))))))
 
 ;; FIXME: It would be good to have a faster way to compute
@@ -382,7 +381,7 @@
 ;; FIXME: Try a sphere or circle instead of a wave line.
 ;; FIXME: Try accounting for rotational cyclone dynamics.
 (defmethod distribute-flow! "CoastalStormMovement"
-  [_ cell-width cell-height rows cols cache-layer possible-flow-layer
+  [_ cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
    actual-flow-layer source-layer eco-sink-layer use-layer source-points
    _ use-points {storm-track-layer "StormTrack", geo-sink-layer "GeomorphicWaveReduction"}]
   (let [storm-centerpoint (first source-points)
@@ -400,6 +399,7 @@
                                    cell-height
                                    rows
                                    cols
+                                   trans-threshold
                                    storm-centerpoint
                                    storm-bearing
                                    get-next-bearing)
