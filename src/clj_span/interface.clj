@@ -76,7 +76,7 @@
       (print "Choice: ")
       (flush)
       (let [choice (read)]
-        (if (and (integer? choice) (> choice 0) (<= choice num-prompts))
+        (if (and (integer? choice) (pos? choice) (<= choice num-prompts))
           (prompts (dec choice))
           (do (println "Invalid selection. Please choose a number from the menu.")
               (recur)))))))

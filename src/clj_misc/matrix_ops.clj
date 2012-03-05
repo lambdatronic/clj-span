@@ -377,10 +377,10 @@
                           (range pi (inc bi))
                           (range pi (dec bi) -1)))
 
-          (== m 0) (map (fn [j] [pi j])
-                        (if (< pj bj)
-                          (range pj (inc bj))
-                          (range pj (dec bj) -1)))
+          (zero? m) (map (fn [j] [pi j])
+                         (if (< pj bj)
+                           (range pj (inc bj))
+                           (range pj (dec bj) -1)))
 
           :otherwise (let [get-i-range
                            (cond (and (< pi bi) (< pj bj))

@@ -29,6 +29,7 @@
   (:use [clj-span.core     :only (run-span)]
         [clj-misc.utils    :only (def- defmulti- &)]
         [clj-span.worldgen :only (read-layer-from-file)]
+        [clojure.string    :only (join)]
         [clojure.set       :only (difference) :as set]
         [clojure.java.io   :only (file) :as io]))
 
@@ -62,7 +63,7 @@
                  usage-message)))
 
 (defmethod print-usage :param-errors [_ extra-info]
-  (let [error-message (apply str (interpose "\n\t" extra-info))]
+  (let [error-message (join "\n\t" extra-info)]
     (println (str "\nError: The parameter values that you entered are incorrect.\n\t"
                   error-message
                   "\n\n"
