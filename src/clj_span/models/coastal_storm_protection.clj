@@ -67,13 +67,15 @@
                                     find-point-at-dist-in-m
                                     find-line-between)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-;; Symbol table voodoo
-(case *value-type*
-  :numbers  (use '[clj-misc.numbers  :only (_0_ _+_ _*_ *_ _d rv-fn _>)])
-  :varprop  (use '[clj-misc.varprop  :only (_0_ _+_ _*_ *_ _d rv-fn _>)])
-  :randvars (use '[clj-misc.randvars :only (_0_ _+_ _*_ *_ _d rv-fn _>)]))
+(def ^:dynamic _0_)
+(def ^:dynamic _+_)
+(def ^:dynamic _*_)
+(def ^:dynamic *_)
+(def ^:dynamic _d)
+(def ^:dynamic rv-fn)
+(def ^:dynamic _>)
 
 (defn handle-sink-effects
   [current-id possible-weight actual-weight eco-sink-layer geo-sink-layer m2-per-cell]
@@ -84,16 +86,16 @@
         eco-sink-cap     (if eco-sink? (*_ m2-per-cell eco-sink-height))
         geo-sink-cap     (if geo-sink? (*_ m2-per-cell geo-sink-height))
         post-geo-possible-weight (if geo-sink?
-                                   (rv-fn (fn [p g] (- p (min p g))) possible-weight geo-sink-cap)
+                                   (rv-fn '(fn [p g] (- p (min p g))) possible-weight geo-sink-cap)
                                    possible-weight)
         post-geo-actual-weight   (if geo-sink?
-                                   (rv-fn (fn [a g] (- a (min a g))) actual-weight geo-sink-cap)
+                                   (rv-fn '(fn [a g] (- a (min a g))) actual-weight geo-sink-cap)
                                    actual-weight)
         post-eco-actual-weight   (if (and eco-sink? (not= _0_ post-geo-actual-weight))
-                                   (rv-fn (fn [a e] (- a (min a e))) post-geo-actual-weight eco-sink-cap)
+                                   (rv-fn '(fn [a e] (- a (min a e))) post-geo-actual-weight eco-sink-cap)
                                    post-geo-actual-weight)
         eco-sink-effects         (if (and eco-sink? (not= _0_ post-geo-actual-weight))
-                                   {current-id (rv-fn min post-geo-actual-weight eco-sink-cap)})]
+                                   {current-id (rv-fn 'min post-geo-actual-weight eco-sink-cap)})]
     [post-geo-possible-weight post-eco-actual-weight eco-sink-effects]))
 
 (defn handle-local-users!
@@ -381,26 +383,37 @@
 ;; FIXME: Try a sphere or circle instead of a wave line.
 ;; FIXME: Try accounting for rotational cyclone dynamics.
 (defmethod distribute-flow! "CoastalStormMovement"
-  [_ cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
+  [_ value-type cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
    actual-flow-layer source-layer eco-sink-layer use-layer source-points
    _ use-points {storm-track-layer "StormTrack", geo-sink-layer "GeomorphicWaveReduction"}]
-  (let [storm-centerpoint (first source-points)
-        on-track?         #(not= _0_ (get-in storm-track-layer %))
-        get-next-bearing  (p get-next-bearing on-track? rows cols)]
-    (if-let [storm-bearing (get-next-bearing storm-centerpoint (find-bearing-to-users storm-centerpoint use-points))]
-      (run-storm-surge-simulation! source-layer
-                                   eco-sink-layer
-                                   use-layer
-                                   geo-sink-layer
-                                   cache-layer
-                                   possible-flow-layer
-                                   actual-flow-layer
-                                   cell-width
-                                   cell-height
-                                   rows
-                                   cols
-                                   trans-threshold
-                                   storm-centerpoint
-                                   storm-bearing
-                                   get-next-bearing)
-      (println "Either the storm source point" storm-centerpoint "is on the map boundary or no storm tracks lead away from it."))))
+  (let [prob-ns (case value-type
+                  :numbers  'clj-misc.numbers
+                  :varprop  'clj-misc.varprop
+                  :randvars 'clj-misc.randvars)]
+    (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
+              _+_   (var-get (ns-resolve prob-ns '_+_))
+              _*_   (var-get (ns-resolve prob-ns '_*_))
+              *_    (var-get (ns-resolve prob-ns '*_))
+              _d    (var-get (ns-resolve prob-ns '_d))
+              rv-fn (var-get (ns-resolve prob-ns 'rv-fn))
+              _>    (var-get (ns-resolve prob-ns '_>))]
+      (let [storm-centerpoint (first source-points)
+            on-track?         #(not= _0_ (get-in storm-track-layer %))
+            get-next-bearing  (p get-next-bearing on-track? rows cols)]
+        (if-let [storm-bearing (get-next-bearing storm-centerpoint (find-bearing-to-users storm-centerpoint use-points))]
+          (run-storm-surge-simulation! source-layer
+                                       eco-sink-layer
+                                       use-layer
+                                       geo-sink-layer
+                                       cache-layer
+                                       possible-flow-layer
+                                       actual-flow-layer
+                                       cell-width
+                                       cell-height
+                                       rows
+                                       cols
+                                       trans-threshold
+                                       storm-centerpoint
+                                       storm-bearing
+                                       get-next-bearing)
+          (println "Either the storm source point" storm-centerpoint "is on the map boundary or no storm tracks lead away from it."))))))

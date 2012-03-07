@@ -66,16 +66,16 @@
 
 (defmethod to-continuous-randvar ::continuous-distribution [continuous-RV] continuous-RV)
 
-(defn randvar-from-states
+(defn create-from-states
   "Constructs a discrete Randvar from n states and n probs,
    corresponding to a finite discrete distribution."
   [states probs]
   (with-meta (zipmap states probs) disc-type))
 
-;; FIXME: I should be using randvar-from-ranges-continous (see below)
+;; FIXME: I should be using create-from-ranges-continous (see below)
 ;;        as the definition for this function, but continuous RV math
 ;;        is still buggy.
-(defn randvar-from-ranges
+(defn create-from-ranges
   "Constructs a discrete Randvar from n bounds and n-1 probs
    corresponding to a piecewise continuous uniform distribution with
    discontinuities (i.e. jumps) at the bounds. prob i represents the
@@ -84,7 +84,7 @@
   (let [midpoints (map (fn [next prev] (/ (+ next prev) 2.0)) (rest bounds) bounds)]
     (with-meta (zipmap midpoints probs) disc-type)))
 
-(defn randvar-from-ranges-continuous
+(defn create-from-ranges-continuous
   "Constructs a continuous Randvar from n bounds and n-1 probs
    corresponding to a piecewise continuous uniform distribution with
    discontinuities (i.e. jumps) at the bounds. prob i represents the
@@ -330,23 +330,23 @@
 
 (defn rv-fn
   [f X Y]
-  (rv-resample (rv-convolute f X Y)))
+  (rv-resample (rv-convolute (eval f) X Y)))
 
 (defn _+_
   [X Y]
-  (rv-fn + X Y))
+  (rv-fn '+ X Y))
 
 (defn _-_
   [X Y]
-  (rv-fn - X Y))
+  (rv-fn '- X Y))
 
 (defn _*_
   [X Y]
-  (rv-fn * X Y))
+  (rv-fn '* X Y))
 
 (defn _d_
   [X Y]
-  (rv-fn / X Y))
+  (rv-fn '/ X Y))
 
 (defn _<_
   [X Y]

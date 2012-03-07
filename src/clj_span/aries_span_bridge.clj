@@ -136,9 +136,9 @@
           ;; (for [#^IndexedCategoricalDistribution dist dists]
           (for [dist dists]
             (case value-type
-              :randvars (if dist (rv/randvar-from-ranges      bounds (.getData dist)) rv/_0_)
-              :varprop  (if dist (vp/fuzzy-number-from-ranges bounds (.getData dist)) vp/_0_)
-              :numbers  (if dist (nb/number-from-ranges       bounds (.getData dist)) nb/_0_)))))
+              :randvars (if dist (rv/create-from-ranges bounds (.getData dist)) rv/_0_)
+              :varprop  (if dist (vp/create-from-ranges bounds (.getData dist)) vp/_0_)
+              :numbers  (if dist (nb/create-from-ranges bounds (.getData dist)) nb/_0_)))))
 
     :org.integratedmodelling.corescience.implementations.datasources.MemDoubleContextualizedDatasource
     (do (println "These are deterministic values.")

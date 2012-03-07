@@ -84,13 +84,12 @@
 (ns clj-span.models.carbon
   (:use [clj-misc.utils :only (p sum def- with-progress-bar-cool)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-;; Symbol table voodoo
-(case *value-type*
-  :numbers  (use '[clj-misc.numbers  :only (*_ _d draw number-from-states)       :rename {number-from-states       consolidate-states}])
-  :varprop  (use '[clj-misc.varprop  :only (*_ _d draw fuzzy-number-from-states) :rename {fuzzy-number-from-states consolidate-states}])
-  :randvars (use '[clj-misc.randvars :only (*_ _d draw randvar-from-states)      :rename {randvar-from-states      consolidate-states}]))
+(def ^:dynamic *_)
+(def ^:dynamic _d)
+(def ^:dynamic draw)
+(def ^:dynamic create-from-states)
 
 (def ^:dynamic *num-world-samples* 10)
 (def ^:dynamic *sample-prob*       (/ 1.0 *num-world-samples*))
@@ -214,7 +213,7 @@
    service-carrier structs by use-point."
   [ha-per-cell source-points sink-points use-points world-sample]
   (println "Packing the results into proper service-carrier structs...")
-  (let [to-fuzzy-number #(consolidate-states (keys %) (vals %))]
+  (let [to-fuzzy-number #(create-from-states (keys %) (vals %))]
     (zipmap use-points
             (pmap (fn [carrier-cache]
                     (doall
@@ -234,28 +233,36 @@
 ;; FIXME: This algorithm eats up too much memory (related to storing
 ;; the sink-effects-seq, I believe).  Do something more intelligent.
 (defmethod distribute-flow! "CO2Removed"
-  [_ cell-width cell-height _ _ _ cache-layer _ _ source-layer
+  [_ value-type cell-width cell-height _ _ _ cache-layer _ _ source-layer
    sink-layer use-layer source-points sink-points use-points _]
   "The amount of carbon sequestration produced is distributed among
    the consumers (carbon emitters) according to their relative use
    values after being initially reduced by the sink values due to
    landscape emissions."
-  (let [ha-per-cell (* cell-width cell-height (Math/pow 10.0 -4.0))
-        use-caches  (cacheify-world ha-per-cell
-                                    source-points
-                                    sink-points
-                                    use-points
-                                    (combine-sample-worlds source-points
-                                                           sink-points
-                                                           use-points
-                                                           (draw-sample-worlds source-layer
-                                                                               sink-layer
-                                                                               use-layer
-                                                                               source-points
-                                                                               sink-points
-                                                                               use-points
-                                                                               ha-per-cell)))]
-    ;; Update the cache-layer.
-    (dosync
-     (doseq [[id cache] use-caches]
-       (alter (get-in cache-layer id) (constantly cache))))))
+  (let [prob-ns (case value-type
+                  :numbers  'clj-misc.numbers
+                  :varprop  'clj-misc.varprop
+                  :randvars 'clj-misc.randvars)]
+    (binding [*_                  (var-get (ns-resolve prob-ns '*_))
+              _d                  (var-get (ns-resolve prob-ns '_d))
+              draw                (var-get (ns-resolve prob-ns 'draw))
+              create-from-states  (var-get (ns-resolve prob-ns 'create-from-states))]
+      (let [ha-per-cell (* cell-width cell-height (Math/pow 10.0 -4.0))
+            use-caches  (cacheify-world ha-per-cell
+                                        source-points
+                                        sink-points
+                                        use-points
+                                        (combine-sample-worlds source-points
+                                                               sink-points
+                                                               use-points
+                                                               (draw-sample-worlds source-layer
+                                                                                   sink-layer
+                                                                                   use-layer
+                                                                                   source-points
+                                                                                   sink-points
+                                                                                   use-points
+                                                                                   ha-per-cell)))]
+        ;; Update the cache-layer.
+        (dosync
+         (doseq [[id cache] use-caches]
+           (alter (get-in cache-layer id) (constantly cache))))))))

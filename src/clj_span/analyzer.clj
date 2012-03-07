@@ -225,11 +225,11 @@
    cannot be used by any location either due to propagation decay,
    lack of use capacity, or lack of flow pathways to use locations."
   [value-type source-type source-layer use-layer cache-layer]
-  (let [rv-subtract (case value-type
-                      :numbers  #(nb/rv-fn (fn [t p] (max (- t p) 0.0)) %1 %2)
-                      :varprop  #(vp/rv-fn (fn [t p] (max (- t p) 0.0)) %1 %2)
-                      :randvars #(rv/rv-fn (fn [t p] (max (- t p) 0.0)) %1 %2))]
-    (map-matrix rv-subtract
+  (let [rv-fn (case value-type
+                :numbers  nb/rv-fn
+                :varprop  vp/rv-fn
+                :randvars rv/rv-fn)]
+    (map-matrix #(rv-fn '(fn [t p] (max (- t p) 0.0)) %1 %2)
                 (theoretical-source value-type source-type source-layer use-layer)
                 (possible-source    value-type cache-layer))))
 
@@ -239,11 +239,11 @@
    cannot be utilized by any location either due to propagation decay
    of the asset or lack of flow pathways through the sink locations."
   [value-type source-type sink-type source-layer sink-layer use-layer cache-layer]
-  (let [rv-subtract (case value-type
-                      :numbers  #(nb/rv-fn (fn [t a] (max (- t a) 0.0)) %1 %2)
-                      :varprop  #(vp/rv-fn (fn [t a] (max (- t a) 0.0)) %1 %2)
-                      :randvars #(rv/rv-fn (fn [t a] (max (- t a) 0.0)) %1 %2))]
-    (map-matrix rv-subtract
+  (let [rv-fn (case value-type
+                :numbers  nb/rv-fn
+                :varprop  vp/rv-fn
+                :randvars rv/rv-fn)]
+    (map-matrix #(rv-fn '(fn [t a] (max (- t a) 0.0)) %1 %2)
                 (theoretical-sink value-type source-type sink-type source-layer sink-layer use-layer)
                 (actual-sink      value-type cache-layer))))
 
@@ -253,11 +253,11 @@
    be utilized by each location either due to propagation decay of the
    asset or lack of flow pathways to use locations."
   [value-type use-type source-layer use-layer cache-layer]
-  (let [rv-subtract (case value-type
-                      :numbers  #(nb/rv-fn (fn [t p] (max (- t p) 0.0)) %1 %2)
-                      :varprop  #(vp/rv-fn (fn [t p] (max (- t p) 0.0)) %1 %2)
-                      :randvars #(rv/rv-fn (fn [t p] (max (- t p) 0.0)) %1 %2))]
-    (map-matrix rv-subtract
+  (let [rv-fn (case value-type
+                :numbers  nb/rv-fn
+                :varprop  vp/rv-fn
+                :randvars rv/rv-fn)]
+    (map-matrix #(rv-fn '(fn [t p] (max (- t p) 0.0)) %1 %2)
                 (theoretical-use value-type use-type source-layer use-layer)
                 (possible-use    value-type cache-layer))))
 
@@ -266,11 +266,11 @@
    Blocked-source is the amount of the possible-source which cannot be
    used by any location due to upstream sinks or uses."
   [value-type cache-layer]
-  (let [rv-subtract (case value-type
-                      :numbers  #(nb/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2)
-                      :varprop  #(vp/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2)
-                      :randvars #(rv/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2))]
-    (map-matrix rv-subtract
+  (let [rv-fn (case value-type
+                :numbers  nb/rv-fn
+                :varprop  vp/rv-fn
+                :randvars rv/rv-fn)]
+    (map-matrix #(rv-fn '(fn [p a] (max (- p a) 0.0)) %1 %2)
                 (possible-source value-type cache-layer)
                 (actual-source   value-type cache-layer))))
 
@@ -279,11 +279,11 @@
    Blocked-use is the amount of the possible-use which cannot be
    realized due to upstream sinks or uses."
   [value-type cache-layer]
-  (let [rv-subtract (case value-type
-                      :numbers  #(nb/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2)
-                      :varprop  #(vp/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2)
-                      :randvars #(rv/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2))]
-    (map-matrix rv-subtract
+  (let [rv-fn (case value-type
+                :numbers  nb/rv-fn
+                :varprop  vp/rv-fn
+                :randvars rv/rv-fn)]
+    (map-matrix #(rv-fn '(fn [p a] (max (- p a) 0.0)) %1 %2)
                 (possible-use value-type cache-layer)
                 (actual-use   value-type cache-layer))))
 
@@ -292,10 +292,10 @@
    Blocked-flow is the amount of the possible-flow which cannot be
    realized due to upstream sinks or uses."
   [value-type possible-flow-layer actual-flow-layer]
-  (let [rv-subtract (case value-type
-                      :numbers  #(nb/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2)
-                      :varprop  #(vp/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2)
-                      :randvars #(rv/rv-fn (fn [p a] (max (- p a) 0.0)) %1 %2))]
-    (map-matrix rv-subtract
+  (let [rv-fn (case value-type
+                :numbers  nb/rv-fn
+                :varprop  vp/rv-fn
+                :randvars rv/rv-fn)]
+    (map-matrix #(rv-fn '(fn [p a] (max (- p a) 0.0)) %1 %2)
                 possible-flow-layer
                 actual-flow-layer)))

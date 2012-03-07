@@ -26,13 +26,15 @@
                                     with-progress-bar-cool)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? subtract-ids find-nearest)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-;; Symbol table voodoo
-(case *value-type*
-  :numbers  (use '[clj-misc.numbers  :only (_0_ _+_ *_ _d rv-fn _min_ _>)])
-  :varprop  (use '[clj-misc.varprop  :only (_0_ _+_ *_ _d rv-fn _min_ _>)])
-  :randvars (use '[clj-misc.randvars :only (_0_ _+_ *_ _d rv-fn _min_ _>)]))
+(def ^:dynamic _0_)
+(def ^:dynamic _+_)
+(def ^:dynamic *_)
+(def ^:dynamic _d)
+(def ^:dynamic rv-fn)
+(def ^:dynamic _min_)
+(def ^:dynamic _>)
 
 (defn- lowest-neighbors
   [id in-stream? elevation-layer rows cols]
@@ -90,17 +92,17 @@
            (if (= _0_ possible-use-cap)
              [possible-weight _0_]
              (do
-               (alter possible-use-cap-ref #(rv-fn (fn [p u] (max (- u p) 0.0)) possible-weight %))
-               [(rv-fn (fn [p u] (max (- p u) 0.0)) possible-weight possible-use-cap)
-                (rv-fn (fn [p u] (min p u))         possible-weight possible-use-cap)]))
+               (alter possible-use-cap-ref #(rv-fn '(fn [p u] (max (- u p) 0.0)) possible-weight %))
+               [(rv-fn '(fn [p u] (max (- p u) 0.0)) possible-weight possible-use-cap)
+                (rv-fn '(fn [p u] (min p u))         possible-weight possible-use-cap)]))
            [new-actual-weight actual-use]
            (if (or (= _0_ actual-use-cap)
                    (= _0_ actual-weight))
              [actual-weight _0_]
              (do
-               (alter actual-use-cap-ref #(rv-fn (fn [a u] (max (- u a) 0.0)) actual-weight %))
-               [(rv-fn (fn [a u] (max (- a u) 0.0)) actual-weight actual-use-cap)
-                (rv-fn (fn [a u] (min a u))         actual-weight actual-use-cap)]))]
+               (alter actual-use-cap-ref #(rv-fn '(fn [a u] (max (- u a) 0.0)) actual-weight %))
+               [(rv-fn '(fn [a u] (max (- a u) 0.0)) actual-weight actual-use-cap)
+                (rv-fn '(fn [a u] (min a u))         actual-weight actual-use-cap)]))]
        (if (or (not= _0_ possible-use)
                (not= _0_ actual-use))
          (alter (get-in cache-layer use-id) conj (assoc surface-water-carrier
@@ -124,9 +126,9 @@
                (= _0_ sink-cap))
          [actual-weight {}]
          (do
-           (alter sink-cap-ref #(rv-fn (fn [a s] (max (- s a) 0.0)) actual-weight %))
-           [(rv-fn (fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
-            {current-id (rv-fn (fn [a s] (min a s)) actual-weight sink-cap)}]))))
+           (alter sink-cap-ref #(rv-fn '(fn [a s] (max (- s a) 0.0)) actual-weight %))
+           [(rv-fn '(fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
+            {current-id (rv-fn '(fn [a s] (min a s)) actual-weight sink-cap)}]))))
     [actual-weight {}]))
 
 ;; FIXME: Make sure carriers can hop from stream to stream as necessary.
@@ -251,27 +253,38 @@
   (seq2map active-points (fn [id] [id (ref (*_ mm2-per-cell (get-in layer id)))])))
 
 (defmethod distribute-flow! "SurfaceWaterMovement"
-  [_ cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
+  [_ value-type cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
    actual-flow-layer source-layer sink-layer use-layer source-points
    sink-points use-points {stream-layer "River", elevation-layer "Altitude"}]
-  (let [mm2-per-cell      (* cell-width cell-height (Math/pow 10.0 6.0))
-        sink-caps         (make-buckets mm2-per-cell sink-layer sink-points)
-        possible-use-caps (make-buckets mm2-per-cell use-layer  use-points)
-        actual-use-caps   (mapmap identity (& ref deref) possible-use-caps)
-        in-stream?        (memoize #(not= _0_ (get-in stream-layer %)))
-        stream-intakes    (find-nearest-stream-points in-stream? rows cols use-points)]
-    (propagate-runoff! cache-layer
-                       possible-flow-layer
-                       actual-flow-layer
-                       source-layer
-                       source-points
-                       mm2-per-cell
-                       sink-caps
-                       possible-use-caps
-                       actual-use-caps
-                       in-stream?
-                       stream-intakes
-                       elevation-layer
-                       rows
-                       cols
-                       trans-threshold)))
+  (let [prob-ns (case value-type
+                  :numbers  'clj-misc.numbers
+                  :varprop  'clj-misc.varprop
+                  :randvars 'clj-misc.randvars)]
+    (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
+              _+_   (var-get (ns-resolve prob-ns '_+_))
+              *_    (var-get (ns-resolve prob-ns '*_))
+              _d    (var-get (ns-resolve prob-ns '_d))
+              rv-fn (var-get (ns-resolve prob-ns 'rv-fn))
+              _min_ (var-get (ns-resolve prob-ns '_min_))
+              _>    (var-get (ns-resolve prob-ns '_>))]
+      (let [mm2-per-cell      (* cell-width cell-height (Math/pow 10.0 6.0))
+            sink-caps         (make-buckets mm2-per-cell sink-layer sink-points)
+            possible-use-caps (make-buckets mm2-per-cell use-layer  use-points)
+            actual-use-caps   (mapmap identity (& ref deref) possible-use-caps)
+            in-stream?        (memoize #(not= _0_ (get-in stream-layer %)))
+            stream-intakes    (find-nearest-stream-points in-stream? rows cols use-points)]
+        (propagate-runoff! cache-layer
+                           possible-flow-layer
+                           actual-flow-layer
+                           source-layer
+                           source-points
+                           mm2-per-cell
+                           sink-caps
+                           possible-use-caps
+                           actual-use-caps
+                           in-stream?
+                           stream-intakes
+                           elevation-layer
+                           rows
+                           cols
+                           trans-threshold)))))

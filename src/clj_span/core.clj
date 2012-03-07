@@ -114,13 +114,14 @@
    of the simulation, this function will update the passed in
    cache-layer, possible-flow-layer, and actual-flow-layer.  Its
    return result is ignored."
-  (fn [flow-model cell-width cell-height rows cols trans-threshold
-       cache-layer possible-flow-layer actual-flow-layer
-       source-layer sink-layer use-layer source-points
-       sink-points use-points flow-layers] flow-model))
+  (fn [flow-model value-type cell-width cell-height rows cols
+       trans-threshold cache-layer possible-flow-layer
+       actual-flow-layer source-layer sink-layer use-layer
+       source-points sink-points use-points flow-layers]
+    flow-model))
 
 (defmethod distribute-flow! :default
-  [flow-model _ _ _ _ _ _ _ _ _ _ _ _ _ _ _]
+  [flow-model _ _ _ _ _ _ _ _ _ _ _ _ _ _ _ _]
   (throw (Exception. (str "distribute-flow! is undefined for flow type: " flow-model))))
 
 (defn run-simulation
@@ -157,6 +158,7 @@
           (send-off possible-flow-animator run-animation)
           (send-off actual-flow-animator   run-animation))
         (distribute-flow! flow-model
+                          value-type
                           cell-width
                           cell-height
                           rows
@@ -300,11 +302,11 @@
                                                   flow-layers  downscaling-factor
                                                   value-type))))
 
-;; (require '(clj-span.models carbon
-;;                            proximity
-;;                            line-of-sight
-;;                            surface-water
-;;                            subsistence-fisheries
-;;                            coastal-storm-protection
-;;                            flood-water
-;;                            sediment))
+(require '(clj-span.models carbon
+                           proximity
+                           line-of-sight
+                           surface-water
+                           subsistence-fisheries
+                           coastal-storm-protection
+                           flood-water
+                           sediment))

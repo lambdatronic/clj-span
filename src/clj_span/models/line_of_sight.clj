@@ -36,13 +36,21 @@
   (:use [clj-misc.utils      :only (euclidean-distance p def- between? with-progress-bar-cool with-message)]
         [clj-misc.matrix-ops :only (find-line-between get-line-fn)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-;; Symbol table voodoo
-(case *value-type*
-  :numbers  (use '[clj-misc.numbers  :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)])
-  :varprop  (use '[clj-misc.varprop  :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)])
-  :randvars (use '[clj-misc.randvars :only (_0_ _+_ _-_ _*_ _d_ _* *_ _d -_ _>_ _max_ rv-fn _>)]))
+(def ^:dynamic _0_)
+(def ^:dynamic _+_)
+(def ^:dynamic _-_)
+(def ^:dynamic _*_)
+(def ^:dynamic _d_)
+(def ^:dynamic _*)
+(def ^:dynamic *_)
+(def ^:dynamic _d)
+(def ^:dynamic -_)
+(def ^:dynamic _>_)
+(def ^:dynamic _max_)
+(def ^:dynamic rv-fn)
+(def ^:dynamic _>)
 
 ;; in meters
 (def- half-mile    805.0)
@@ -93,10 +101,10 @@
 
 (defn- compute-view-impact
   [scenic-value scenic-elev use-elev slope distance]
-  (let [projected-elev (rv-fn (fn [e r] (max 0.0 (+ e r))) use-elev (_* slope distance))]
+  (let [projected-elev (rv-fn '(fn [e r] (max 0.0 (+ e r))) use-elev (_* slope distance))]
     (if (_>_ slope _0_)
       ;; We are looking up, so only count the visible part of the feature.
-      (let [visible-fraction (-_ 1.0 (rv-fn (fn [p s] (if (< p s) (/ p s) 1.0))
+      (let [visible-fraction (-_ 1.0 (rv-fn '(fn [p s] (if (< p s) (/ p s) 1.0))
                                             projected-elev
                                             scenic-elev))]
         (_*_ scenic-value visible-fraction))
@@ -151,7 +159,7 @@
                                            sight-slopes
                                            runs
                                            (take-while pos? (map sink-decay runs))))
-                  actual-weight (rv-fn (fn [p s] (max 0.0 (- p s))) possible-weight (reduce _+_ _0_ (vals sink-effects)))
+                  actual-weight (rv-fn '(fn [p s] (max 0.0 (- p s))) possible-weight (reduce _+_ _0_ (vals sink-effects)))
                   carrier       (struct-map service-carrier
                                   :source-id       source-point
                                   ;;:route           (bitpack-route (reverse (cons use-point sight-line))) ;; Temporary efficiency hack
@@ -166,23 +174,40 @@
                (alter (get-in cache-layer use-point) conj carrier)))))))))
 
 (defmethod distribute-flow! "LineOfSight"
-  [_ cell-width cell-height _ _ trans-threshold cache-layer possible-flow-layer
-   actual-flow-layer source-layer sink-layer _ source-points
-   _ use-points {elev-layer "Altitude"}]
-  (let [num-view-lines (* (long (count source-points)) (long (count use-points)))
-        to-meters      (fn [[i j]] [(* i cell-height) (* j cell-width)])]
-    (with-message (str "Scanning " num-view-lines " view lines...\n") "\nAll done."
-      (with-progress-bar-cool
-        :drop
-        num-view-lines
-        (pmap (p raycast!
-                 source-layer
-                 sink-layer
-                 elev-layer
-                 cache-layer
-                 possible-flow-layer
-                 actual-flow-layer
-                 to-meters
-                 trans-threshold)
-              (for [source-point source-points use-point use-points]
-                [source-point use-point]))))))
+  [_ value-type cell-width cell-height _ _ trans-threshold cache-layer
+   possible-flow-layer actual-flow-layer source-layer sink-layer _
+   source-points _ use-points {elev-layer "Altitude"}]
+  (let [prob-ns (case value-type
+                  :numbers  'clj-misc.numbers
+                  :varprop  'clj-misc.varprop
+                  :randvars 'clj-misc.randvars)]
+    (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
+              _+_   (var-get (ns-resolve prob-ns '_+_))
+              _-_   (var-get (ns-resolve prob-ns '_-_))
+              _*_   (var-get (ns-resolve prob-ns '_*_))
+              _d_   (var-get (ns-resolve prob-ns '_d_))
+              _*    (var-get (ns-resolve prob-ns '_*))
+              *_    (var-get (ns-resolve prob-ns '*_))
+              _d    (var-get (ns-resolve prob-ns '_d))
+              -_    (var-get (ns-resolve prob-ns '-_))
+              _>_   (var-get (ns-resolve prob-ns '_>_))
+              _max_ (var-get (ns-resolve prob-ns '_max_))
+              rv-fn (var-get (ns-resolve prob-ns 'rv-fn))
+              _>    (var-get (ns-resolve prob-ns '_>))]
+      (let [num-view-lines (* (long (count source-points)) (long (count use-points)))
+            to-meters      (fn [[i j]] [(* i cell-height) (* j cell-width)])]
+        (with-message (str "Scanning " num-view-lines " view lines...\n") "\nAll done."
+          (with-progress-bar-cool
+            :drop
+            num-view-lines
+            (pmap (p raycast!
+                     source-layer
+                     sink-layer
+                     elev-layer
+                     cache-layer
+                     possible-flow-layer
+                     actual-flow-layer
+                     to-meters
+                     trans-threshold)
+                  (for [source-point source-points use-point use-points]
+                    [source-point use-point]))))))))

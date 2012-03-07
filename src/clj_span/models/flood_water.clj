@@ -27,13 +27,14 @@
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? add-ids subtract-ids find-nearest
                                     find-line-between rotate-2d-vec find-point-at-dist-in-m)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-;; Symbol table voodoo
-(case *value-type*
-  :numbers  (use '[clj-misc.numbers  :only (_0_ _+_ *_ _d rv-fn _min_)])
-  :varprop  (use '[clj-misc.varprop  :only (_0_ _+_ *_ _d rv-fn _min_)])
-  :randvars (use '[clj-misc.randvars :only (_0_ _+_ *_ _d rv-fn _min_)]))
+(def ^:dynamic _0_)
+(def ^:dynamic _+_)
+(def ^:dynamic *_)
+(def ^:dynamic _d)
+(def ^:dynamic rv-fn)
+(def ^:dynamic _min_)
 
 (defn- lowest-neighbors
   [id in-stream? elevation-layer rows cols]
@@ -113,9 +114,9 @@
              (if (= _0_ sink-cap)
                [actual-weight {}]
                (do
-                 (alter sink-cap-ref #(rv-fn (fn [a s] (- s (min a (* sink-AF s)))) actual-weight %))
-                 [(rv-fn (fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
-                  {affected-sink (rv-fn (fn [a s] (min a s)) actual-weight sink-cap)}])))))
+                 (alter sink-cap-ref #(rv-fn '(fn [a s] (- s (min a (* sink-AF s)))) actual-weight %))
+                 [(rv-fn '(fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
+                  {affected-sink (rv-fn '(fn [a s] (min a s)) actual-weight sink-cap)}])))))
         [actual-weight {}])
       ;; Not in the stream. Only one source weight and one sink. Activation factors don't matter.
       (if-let [sink-cap-ref (sink-caps current-id)]
@@ -124,9 +125,9 @@
            (if (= _0_ sink-cap)
              [actual-weight {}]
              (do
-               (alter sink-cap-ref #(rv-fn (fn [a s] (max (- s a) 0.0)) actual-weight %))
-               [(rv-fn (fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
-                {current-id (rv-fn (fn [a s] (min a s)) actual-weight sink-cap)}]))))
+               (alter sink-cap-ref #(rv-fn '(fn [a s] (max (- s a) 0.0)) actual-weight %))
+               [(rv-fn '(fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
+                {current-id (rv-fn '(fn [a s] (min a s)) actual-weight sink-cap)}]))))
         [actual-weight {}]))))
 
 (def ^:dynamic *max-levee-distance* 100.0) ;; in meters
@@ -299,38 +300,48 @@
       @in-stream-map)))
 
 (defmethod distribute-flow! "FloodWaterMovement"
-  [_ cell-width cell-height rows cols _ cache-layer possible-flow-layer actual-flow-layer
+  [_ value-type cell-width cell-height rows cols _ cache-layer possible-flow-layer actual-flow-layer
    source-layer sink-layer _ source-points sink-points use-points
    {stream-layer "River", elevation-layer "Altitude", levees-layer "Levees",
     floodplain-layer100 "Floodplains100Code", floodplain-layer500 "Floodplains500Code"}]
   (println "Operating in" (if floodplain-layer500 "500" "100") "year floodplain.")
-  (let [floodplain-layer    (or floodplain-layer500 floodplain-layer100)
-        levee?              (memoize #(if-let [val (get-in levees-layer     %)] (not= _0_ val)))
-        in-stream?          (memoize #(if-let [val (get-in stream-layer     %)] (not= _0_ val)))
-        in-floodplain?      (memoize #(if-let [val (get-in floodplain-layer %)] (not= _0_ val)))
-        floodplain-sinks    (filter in-floodplain? sink-points)
-        floodplain-users    (filter in-floodplain? use-points)
-        sink-stream-intakes (find-nearest-stream-points in-stream? rows cols floodplain-sinks)
-        use-stream-intakes  (find-nearest-stream-points in-stream? rows cols floodplain-users)
-        sink-AFs            (flood-activation-factors in-floodplain? sink-stream-intakes)
-        use-AFs             (flood-activation-factors in-floodplain? use-stream-intakes)
-        mm2-per-cell        (* cell-width cell-height (Math/pow 10.0 6.0))
-        sink-caps           (make-buckets mm2-per-cell sink-layer sink-points)]
-    (propagate-runoff! cache-layer
-                       possible-flow-layer
-                       actual-flow-layer
-                       source-layer
-                       source-points
-                       mm2-per-cell
-                       sink-caps
-                       levee?
-                       in-stream?
-                       sink-stream-intakes
-                       use-stream-intakes
-                       sink-AFs
-                       use-AFs
-                       elevation-layer
-                       cell-width
-                       cell-height
-                       rows
-                       cols)))
+  (let [prob-ns (case value-type
+                  :numbers  'clj-misc.numbers
+                  :varprop  'clj-misc.varprop
+                  :randvars 'clj-misc.randvars)]
+    (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
+              _+_   (var-get (ns-resolve prob-ns '_+_))
+              *_    (var-get (ns-resolve prob-ns '*_))
+              _d    (var-get (ns-resolve prob-ns '_d))
+              rv-fn (var-get (ns-resolve prob-ns 'rv-fn))
+              _min_ (var-get (ns-resolve prob-ns '_min_))]
+      (let [floodplain-layer    (or floodplain-layer500 floodplain-layer100)
+            levee?              (memoize #(if-let [val (get-in levees-layer     %)] (not= _0_ val)))
+            in-stream?          (memoize #(if-let [val (get-in stream-layer     %)] (not= _0_ val)))
+            in-floodplain?      (memoize #(if-let [val (get-in floodplain-layer %)] (not= _0_ val)))
+            floodplain-sinks    (filter in-floodplain? sink-points)
+            floodplain-users    (filter in-floodplain? use-points)
+            sink-stream-intakes (find-nearest-stream-points in-stream? rows cols floodplain-sinks)
+            use-stream-intakes  (find-nearest-stream-points in-stream? rows cols floodplain-users)
+            sink-AFs            (flood-activation-factors in-floodplain? sink-stream-intakes)
+            use-AFs             (flood-activation-factors in-floodplain? use-stream-intakes)
+            mm2-per-cell        (* cell-width cell-height (Math/pow 10.0 6.0))
+            sink-caps           (make-buckets mm2-per-cell sink-layer sink-points)]
+        (propagate-runoff! cache-layer
+                           possible-flow-layer
+                           actual-flow-layer
+                           source-layer
+                           source-points
+                           mm2-per-cell
+                           sink-caps
+                           levee?
+                           in-stream?
+                           sink-stream-intakes
+                           use-stream-intakes
+                           sink-AFs
+                           use-AFs
+                           elevation-layer
+                           cell-width
+                           cell-height
+                           rows
+                           cols)))))

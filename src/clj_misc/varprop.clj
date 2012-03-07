@@ -31,7 +31,7 @@
   [mean var]
   (FuzzyNumber. mean var))
 
-(defn fuzzy-number-from-states
+(defn create-from-states
   "Constructs a FuzzyNumber from n states and n probs, corresponding
    to a finite discrete distribution."
   [states probs]
@@ -39,7 +39,7 @@
         var  (reduce + (map (fn [x p] (* (Math/pow (- x mean) 2) p)) states probs))]
     (fuzzy-number mean var)))
 
-(defn fuzzy-number-from-ranges
+(defn create-from-ranges
   "Constructs a FuzzyNumber from n bounds and n-1 probs corresponding
    to a piecewise continuous uniform distribution with
    discontinuities (i.e. jumps) at the bounds. prob i represents the
@@ -367,12 +367,19 @@
           f))
       f)))
 
-(defmacro rv-fn
+;; (defmacro rv-fn
+;;   "Transforms f into its fuzzy arithmetic equivalent, fuzzy-f, and
+;;    calls (apply fuzzy-f Xs). Uses reflection on the types of Xs as
+;;    well as any numeric literal values used in f."
+;;   [f & Xs]
+;;   `(~(fuzzify-fn f) ~@Xs))
+
+(defn rv-fn
   "Transforms f into its fuzzy arithmetic equivalent, fuzzy-f, and
    calls (apply fuzzy-f Xs). Uses reflection on the types of Xs as
    well as any numeric literal values used in f."
   [f & Xs]
-  `(~(fuzzify-fn f) ~@Xs))
+  (apply (eval (fuzzify-fn f)) Xs))
 
 (defn rv-mean
   "Returns the mean of a FuzzyNumber."

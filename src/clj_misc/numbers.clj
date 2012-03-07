@@ -24,13 +24,13 @@
 
 (ns clj-misc.numbers)
 
-(defn number-from-states
+(defn create-from-states
   "Constructs a Number from n states and n probs, which is simply the
    expected value of the passed in distribution."
   [states probs]
   (reduce + (map * states probs)))
 
-(defn number-from-ranges
+(defn create-from-ranges
   "Constructs a Number from n bounds and n-1 probs corresponding
    to a piecewise continuous uniform distribution with
    discontinuities (i.e. jumps) at the bounds. prob i represents the
@@ -71,7 +71,7 @@
 (defn rv-fn
   "Calls (apply f Xs)."
   [f & Xs]
-  (apply f Xs))
+  (apply (eval f) Xs))
 
 (def ^{:doc "Returns the mean of a Number, which is itself."} rv-mean identity)
 

@@ -51,13 +51,15 @@
                                     find-in-range
                                     find-line-between)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier *value-type*))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-;; Symbol table voodoo
-(case *value-type*
-  :numbers  (use '[clj-misc.numbers  :only (_0_ *_ _d _*_ _+_ _> rv-fn)])
-  :varprop  (use '[clj-misc.varprop  :only (_0_ *_ _d _*_ _+_ _> rv-fn)])
-  :randvars (use '[clj-misc.randvars :only (_0_ *_ _d _*_ _+_ _> rv-fn)]))
+(def ^:dynamic _0_)
+(def ^:dynamic *_)
+(def ^:dynamic _d)
+(def ^:dynamic _*_)
+(def ^:dynamic _+_)
+(def ^:dynamic _>)
+(def ^:dynamic rv-fn)
 
 (defstruct fisherman :need :route :cache :fishing-area)
 
@@ -70,9 +72,9 @@
          local-supply     (deref local-supply-ref)
          need-remaining   (if (_> local-supply 0.0) ;; Check for fish locally.
                             ;; There are fish here. Let's get some.
-                            (let [fish-caught         (rv-fn min local-supply need)
-                                  fish-remaining      (rv-fn (fn [s n] (- s (min s n))) local-supply need)
-                                  need-remaining      (rv-fn (fn [s n] (- n (min s n))) local-supply need)
+                            (let [fish-caught         (rv-fn 'min local-supply need)
+                                  fish-remaining      (rv-fn '(fn [s n] (- s (min s n))) local-supply need)
+                                  need-remaining      (rv-fn '(fn [s n] (- n (min s n))) local-supply need)
                                   fish-caught-per-km2 (_d fish-caught km2-per-cell)]
                               ;; Reduce the local-supply-ref by this amount.
                               (alter local-supply-ref (constantly fish-remaining))
@@ -211,19 +213,30 @@
 ;;        Possible/Actual Use are in kg/km^2*year, Inaccessible Use
 ;;        will not make sense.
 (defmethod distribute-flow! "SubsistenceFishAccessibility"
-  [_ cell-width cell-height rows cols _ cache-layer possible-flow-layer
+  [_ value-type cell-width cell-height rows cols _ cache-layer possible-flow-layer
    actual-flow-layer source-layer _ use-layer source-points _ use-points
    {path-layer "Path", population-density-layer "PopulationDensity"}]
-  (let [km2-per-cell   (* cell-width cell-height (Math/pow 10.0 -6.0))
-        fish-supply    (seq2map source-points
-                                (fn [id] [id (ref (*_ km2-per-cell ;; km^2
-                                                      (get-in source-layer id)))])) ;; kg/km^2*year
-        fish-demand    (map (fn [id] (*_ km2-per-cell ;; km^2
-                                         (_*_ (get-in use-layer id) ;; kg/person*year
-                                              (get-in population-density-layer id)))) ;; person/km^2
-                            use-points)
-        path?          (set (filter-matrix-for-coords (p not= _0_) path-layer))
-        fishing-spot?  (set source-points)
-        fishing-routes (find-shortest-paths-to-coast path? fishing-spot? rows cols use-points)
-        fishermen      (make-fishermen fishing-spot? fish-demand fishing-routes cache-layer cell-width cell-height rows cols)]
-    (send-forth-fishermen! fishermen fish-supply possible-flow-layer actual-flow-layer km2-per-cell)))
+  (let [prob-ns (case value-type
+                  :numbers  'clj-misc.numbers
+                  :varprop  'clj-misc.varprop
+                  :randvars 'clj-misc.randvars)]
+    (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
+              *_    (var-get (ns-resolve prob-ns '*_))
+              _d    (var-get (ns-resolve prob-ns '_d))
+              _*_   (var-get (ns-resolve prob-ns '_*_))
+              _+_   (var-get (ns-resolve prob-ns '_+_))
+              _>    (var-get (ns-resolve prob-ns '_>))
+              rv-fn (var-get (ns-resolve prob-ns 'rv-fn))]
+      (let [km2-per-cell   (* cell-width cell-height (Math/pow 10.0 -6.0))
+            fish-supply    (seq2map source-points
+                                    (fn [id] [id (ref (*_ km2-per-cell ;; km^2
+                                                          (get-in source-layer id)))])) ;; kg/km^2*year
+            fish-demand    (map (fn [id] (*_ km2-per-cell ;; km^2
+                                             (_*_ (get-in use-layer id) ;; kg/person*year
+                                                  (get-in population-density-layer id)))) ;; person/km^2
+                                use-points)
+            path?          (set (filter-matrix-for-coords (p not= _0_) path-layer))
+            fishing-spot?  (set source-points)
+            fishing-routes (find-shortest-paths-to-coast path? fishing-spot? rows cols use-points)
+            fishermen      (make-fishermen fishing-spot? fish-demand fishing-routes cache-layer cell-width cell-height rows cols)]
+        (send-forth-fishermen! fishermen fish-supply possible-flow-layer actual-flow-layer km2-per-cell)))))
