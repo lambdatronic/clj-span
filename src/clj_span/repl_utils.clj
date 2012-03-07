@@ -217,9 +217,9 @@
              :flow-layers        flow-layers
              :cell-width         cell-width
              :cell-height        cell-height
-             :source-threshold   5.0
-             :sink-threshold     5.0
-             :use-threshold      0.1
+             :source-threshold   25.0
+             :sink-threshold     25.0
+             :use-threshold      0.2
              :trans-threshold    1.0
              :source-type        :infinite
              :sink-type          :infinite
