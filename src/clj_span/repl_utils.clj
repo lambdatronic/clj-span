@@ -1,8 +1,30 @@
+;;; Copyright 2010 Gary Johnson
+;;;
+;;; This file is part of clj-span.
+;;;
+;;; clj-span is free software: you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published
+;;; by the Free Software Foundation, either version 3 of the License,
+;;; or (at your option) any later version.
+;;;
+;;; clj-span is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines functions for testing the various SPAN
+;;; simulations at the REPL.
+
 (ns clj-span.repl-utils
   (:use (clj-span core commandline aries-span-bridge analyzer gui)
-        (clj-misc utils matrix-ops varprop stats)
+        (clj-misc utils matrix-ops stats)
         clojure.pprint)
-  (:require [clj-misc.randvars :as rv]))
+  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
 (defn load-layers
   [filename]
@@ -17,23 +39,27 @@
     (def cols (get-cols s))))
 
 (defn extract-results
-  [result-map]
-  (def tsrc  (let [rmap ((:theoretical-source  result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def isrc  (let [rmap ((:inaccessible-source result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def psrc  (let [rmap ((:possible-source     result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def bsrc  (let [rmap ((:blocked-source      result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def asrc  (let [rmap ((:actual-source       result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def tsnk  (let [rmap ((:theoretical-sink    result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def isnk  (let [rmap ((:inaccessible-sink   result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def asnk  (let [rmap ((:actual-sink         result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def tuse  (let [rmap ((:theoretical-use     result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def iuse  (let [rmap ((:inaccessible-use    result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def puse  (let [rmap ((:possible-use        result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def buse  (let [rmap ((:blocked-use         result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def ause  (let [rmap ((:actual-use          result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def pflow (let [rmap ((:possible-flow       result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def bflow (let [rmap ((:blocked-flow        result-map))] (make-matrix rows cols #(get rmap % _0_))))
-  (def aflow (let [rmap ((:actual-flow         result-map))] (make-matrix rows cols #(get rmap % _0_)))))
+  [value-type result-map]
+  (let [_0_ (case value-type
+              :numbers  nb/_0_
+              :varprop  vp/_0_
+              :randvars rv/_0_)]
+    (def tsrc  (let [rmap ((:theoretical-source  result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def isrc  (let [rmap ((:inaccessible-source result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def psrc  (let [rmap ((:possible-source     result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def bsrc  (let [rmap ((:blocked-source      result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def asrc  (let [rmap ((:actual-source       result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def tsnk  (let [rmap ((:theoretical-sink    result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def isnk  (let [rmap ((:inaccessible-sink   result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def asnk  (let [rmap ((:actual-sink         result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def tuse  (let [rmap ((:theoretical-use     result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def iuse  (let [rmap ((:inaccessible-use    result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def puse  (let [rmap ((:possible-use        result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def buse  (let [rmap ((:blocked-use         result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def ause  (let [rmap ((:actual-use          result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def pflow (let [rmap ((:possible-flow       result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def bflow (let [rmap ((:blocked-flow        result-map))] (make-matrix rows cols #(get rmap % _0_))))
+    (def aflow (let [rmap ((:actual-flow         result-map))] (make-matrix rows cols #(get rmap % _0_))))))
 
 (defn test-run-sediment
   []
@@ -52,6 +78,7 @@
              :sink-type          :finite
              :use-type           :infinite
              :benefit-type       :rival ;; or :non-rival for turbidity
+             :value-type         :varprop
              :downscaling-factor 3
              :rv-max-states      10
              :animation?         false
@@ -74,6 +101,7 @@
              :sink-type          :finite
              :use-type           :infinite
              :benefit-type       :non-rival
+             :value-type         :varprop
              :downscaling-factor 3
              :rv-max-states      10
              :animation?         false
@@ -96,6 +124,7 @@
              :sink-type          :infinite
              :use-type           :infinite
              :benefit-type       :non-rival
+             :value-type         :varprop
              :downscaling-factor 1
              :rv-max-states      10
              :animation?         true
@@ -118,6 +147,7 @@
              :sink-type          nil
              :use-type           :finite
              :benefit-type       :rival
+             :value-type         :varprop
              :downscaling-factor 1
              :rv-max-states      10
              :animation?         false
@@ -140,6 +170,7 @@
              :sink-type          :finite
              :use-type           :finite
              :benefit-type       :rival
+             :value-type         :varprop
              :downscaling-factor 1
              :rv-max-states      10
              :animation?         false
@@ -162,6 +193,7 @@
              :sink-type          :finite
              :use-type           :finite
              :benefit-type       :rival
+             :value-type         :varprop
              :downscaling-factor 20
              :rv-max-states      10
              :animation?         false

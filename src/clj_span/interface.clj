@@ -23,15 +23,8 @@
 
 (ns clj-span.interface
   (:use [clj-misc.utils      :only (& p mapmap)]
-        [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)]))
-
-(refer 'clj-span.core :only '(*value-type*))
-
-;; Symbol table voodoo
-(case *value-type*
-  :numbers  (use '[clj-misc.numbers  :only (_0_)])
-  :varprop  (use '[clj-misc.varprop  :only (_0_)])
-  :randvars (use '[clj-misc.randvars :only (_0_)]))
+        [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)])
+  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
 (defn- select-location
   "Prompts for coords and returns the selected [i j] pair."
@@ -112,10 +105,10 @@
   ;;                 keywords and matrices (vals) are transformed into
   ;;                 maps of {[i j] -> RV}, excluding all locations
   ;;                 whose values equal _0_."
-  (fn [result-type source-layer sink-layer use-layer flow-layers results-menu] result-type))
+  (fn [result-type value-type source-layer sink-layer use-layer flow-layers results-menu] result-type))
 
 (defmethod provide-results :cli-menu
-  [_ source-layer sink-layer use-layer flow-layers results-menu]
+  [_ _ source-layer sink-layer use-layer flow-layers results-menu]
   (let [rows        (get-rows source-layer)
         cols        (get-cols source-layer)
         menu-extras (array-map
@@ -137,11 +130,16 @@
         (recur (menu (select-menu-option prompts)))))))
 
 (defmethod provide-results :closure-map
-  [_ _ _ _ _ results-menu]
+  [_ value-type _ _ _ _ results-menu]
   (println "Returning the results map to Ferd's code.")
   (mapmap
    (fn [label]
      (let [[_ word1 word2] (re-find #"(\w+)\s+-\s+(\w+)" label)]
        (keyword (str (.toLowerCase word2) \- (.toLowerCase word1)))))
-   (fn [closure] (& (p matrix2coord-map _0_) closure))
+   (fn [closure]
+     (let [_0_ (case value-type
+                 :numbers  nb/_0_
+                 :varprop  vp/_0_
+                 :randvars rv/_0_)]
+       (& (p matrix2coord-map _0_) closure)))
    results-menu))

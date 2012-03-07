@@ -1,3 +1,26 @@
+;;; Copyright 2010 Gary Johnson
+;;;
+;;; This file is part of clj-span.
+;;;
+;;; clj-span is free software: you can redistribute it and/or modify
+;;; it under the terms of the GNU General Public License as published
+;;; by the Free Software Foundation, either version 3 of the License,
+;;; or (at your option) any later version.
+;;;
+;;; clj-span is distributed in the hope that it will be useful, but
+;;; WITHOUT ANY WARRANTY; without even the implied warranty of
+;;; MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU
+;;; General Public License for more details.
+;;;
+;;; You should have received a copy of the GNU General Public License
+;;; along with clj-span.  If not, see <http://www.gnu.org/licenses/>.
+;;;
+;;;-------------------------------------------------------------------
+;;;
+;;; This namespace defines functions for displaying matrices as color
+;;; images. The run-animation and end-animation functions provide a
+;;; somewhat ad-hoc toolkit for simple animations.
+
 (ns clj-span.gui
   (:use [clj-misc.utils      :only (&)]
         [clj-misc.matrix-ops :only (get-rows
@@ -5,17 +28,10 @@
                                     map-matrix
                                     make-matrix
                                     normalize-matrix)])
+  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (java.awt Color Graphics Dimension)
            (java.awt.image BufferedImage)
            (javax.swing JPanel JFrame)))
-
-(refer 'clj-span.core :only '(*value-type*))
-
-;; Symbol table voodoo
-(case *value-type*
-  :numbers  (use '[clj-misc.numbers  :only (rv-mean _+ _0_)])
-  :varprop  (use '[clj-misc.varprop  :only (rv-mean _+ _0_)])
-  :randvars (use '[clj-misc.randvars :only (rv-mean _+ _0_)]))
 
 (defn fill-cell [#^Graphics g x y scale color]
   (doto g
@@ -32,7 +48,7 @@
         (= type :gray)   (let [val (int (* 255.0 (- 1.0 alpha)))] (Color. val val val 255))))
 
 ;; FIXME: This is really slow. Speed it up.
-(defn render [g layer type scale x-dim y-dim]
+(defn render [g layer type scale x-dim y-dim rv-mean]
   (let [normalized-layer (normalize-matrix (map-matrix rv-mean layer))
         img              (BufferedImage. (* scale x-dim) (* scale y-dim) BufferedImage/TYPE_INT_ARGB)
         bg               (.getGraphics img)]
@@ -45,29 +61,41 @@
     (.drawImage g img 0 0 nil)
     (.dispose bg)))
 
-(defn draw-layer [title layer type scale]
-  (let [y-dim (get-rows layer)
-        x-dim (get-cols layer)
-        panel (doto (proxy [JPanel] [] (paint [g] (render g layer type scale x-dim y-dim)))
-                (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))]
+(defn draw-layer [title layer type scale value-type]
+  (let [rv-mean (case value-type
+                  :numbers  nb/rv-mean
+                  :varprop  vp/rv-mean
+                  :randvars rv/rv-mean)
+        y-dim   (get-rows layer)
+        x-dim   (get-cols layer)
+        panel   (doto (proxy [JPanel] [] (paint [g] (render g layer type scale x-dim y-dim rv-mean)))
+                  (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))]
     (doto (JFrame. title) (.add panel) .pack .show)
     panel))
 
-(defn draw-ref-layer [title ref-layer type scale]
-  (let [y-dim (get-rows ref-layer)
-        x-dim (get-cols ref-layer)
-        panel (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)]
-                                                    (render g layer type scale x-dim y-dim))))
-                (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))]
+(defn draw-ref-layer [title ref-layer type scale value-type]
+  (let [rv-mean (case value-type
+                  :numbers  nb/rv-mean
+                  :varprop  vp/rv-mean
+                  :randvars rv/rv-mean)
+        y-dim   (get-rows ref-layer)
+        x-dim   (get-cols ref-layer)
+        panel   (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)]
+                                                      (render g layer type scale x-dim y-dim rv-mean))))
+                  (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))]
     (doto (JFrame. title) (.add panel) .pack .show)
     panel))
 
-(defn draw-points [ids type scale]
-  (let [max-y       (apply max (map first  ids))
+(defn draw-points [ids type scale value-type]
+  (let [[_+ _0_]    (case value-type
+                      :numbers  [nb/_+ nb/_0_]
+                      :varprop  [vp/_+ vp/_0_]
+                      :randvars [rv/_+ rv/_0_])
+        max-y       (apply max (map first  ids))
         max-x       (apply max (map second ids))
         point-vals  (zipmap ids (repeat (_+ _0_ 1.0)))
         point-layer (make-matrix (inc max-y) (inc max-x) #(get point-vals % _0_))]
-    (draw-layer "Points" point-layer type scale)))
+    (draw-layer "Points" point-layer type scale value-type)))
 
 (def ^:dynamic *animation-sleep-ms* 100)
 
