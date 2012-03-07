@@ -8,6 +8,10 @@
    :name "clj-misc.memtest",
    :doc nil}
   {:source-url nil,
+   :wiki-url "clj-misc.numbers-api.html",
+   :name "clj-misc.numbers",
+   :doc nil}
+  {:source-url nil,
    :wiki-url "clj-misc.point-algebra-api.html",
    :name "clj-misc.point-algebra",
    :doc nil}
@@ -96,10 +100,6 @@
    :name "clj-span.models.surface-water-topologic",
    :doc nil}
   {:source-url nil,
-   :wiki-url "clj-span.params-api.html",
-   :name "clj-span.params",
-   :doc nil}
-  {:source-url nil,
    :wiki-url "clj-span.repl-utils-api.html",
    :name "clj-span.repl-utils",
    :doc nil}
@@ -117,7 +117,7 @@
    "/clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/divides?",
    :doc "Is y divisible by x? (i.e. x is the denominator)",
    :var-type "function",
-   :line 219,
+   :line 223,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([rows cols points]),
    :name "find-bounding-box",
@@ -129,7 +129,7 @@
    :doc
    "Returns a new list of points which completely bounds the\nrectangular region defined by points and remains within the bounds\n[0-rows],[0-cols], inclusive below, exclusive above.",
    :var-type "function",
-   :line 406,
+   :line 410,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([[pi pj] [bi bj]]),
    :name "find-line-between",
@@ -141,7 +141,7 @@
    :doc
    "Returns the sequence of all points [i j] intersected by the line\nfrom provider to beneficiary.  Since this is calculated over a\nregular integer-indexed grid, diagonal lines will be approximated\nby lines bending at right angles along the p-to-b line.  This\ncalculation imagines the indeces of each point to be located at the\ncenter of a square of side length 1.  Note that the first point in\neach path will be the provider id, and the last will be the\nbeneficiary id.  If provider=beneficiary, the path will contain\nonly this one point.",
    :var-type "function",
-   :line 357,
+   :line 361,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists
    ([[y1 x1 :as A] [y2 x2 :as B] [y3 x3 :as C] [y4 x4 :as D]]),
@@ -154,7 +154,7 @@
    :doc
    "Points must be specified in either clockwise or counterclockwise order.",
    :var-type "function",
-   :line 480,
+   :line 484,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([rows cols [i j]]),
    :name "get-neighbors",
@@ -166,7 +166,7 @@
    :doc
    "Return a sequence of neighboring points within the map bounds.",
    :var-type "function",
-   :line 283,
+   :line 287,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([& matrices]),
    :name "grids-align?",
@@ -190,7 +190,7 @@
    :doc
    "Returns true if the point is within the map bounds defined by\n[0 rows] and [0 cols], inclusive below and exclusive above.",
    :var-type "function",
-   :line 268,
+   :line 272,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([rows cols val-fn]),
    :name "make-matrix",
@@ -225,7 +225,7 @@
    "/clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/matrix-max",
    :doc "Returns the maximum value in the matrix.",
    :var-type "function",
-   :line 334,
+   :line 338,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([A B]),
    :name "matrix-mult",
@@ -237,7 +237,7 @@
    :doc
    "Returns a new matrix whose values are the element-by-element\nproducts of the values in A and B.",
    :var-type "function",
-   :line 328,
+   :line 332,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([matrix]),
    :name "matrix2seq",
@@ -260,7 +260,31 @@
    "/clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/normalize-matrix",
    :doc "Normalizes the values in the matrix to the interval [0,1].",
    :var-type "function",
-   :line 339,
+   :line 343,
+   :file "src/clj_misc/matrix_ops.clj"}
+  {:arglists ([coverage]),
+   :name "numeric-extensive-sampler",
+   :namespace "clj-misc.matrix-ops",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/numeric-extensive-sampler",
+   :doc
+   "Returns the extensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 144,
+   :file "src/clj_misc/matrix_ops.clj"}
+  {:arglists ([coverage]),
+   :name "numeric-intensive-sampler",
+   :namespace "clj-misc.matrix-ops",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/numeric-intensive-sampler",
+   :doc
+   "Returns the intensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 150,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([rows cols [i j]]),
    :name "on-bounds?",
@@ -272,7 +296,7 @@
    :doc
    "Returns true if the point occurs anywhere on the bounds\n[[0 rows][0 cols]].",
    :var-type "function",
-   :line 274,
+   :line 278,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([matrix] [matrix format-string]),
    :name "printf-matrix",
@@ -284,7 +308,7 @@
    :doc
    "Pretty prints a matrix to *out* according to format-string. Index\n[0,0] will be on the bottom left corner.",
    :var-type "function",
-   :line 302,
+   :line 306,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([rows cols aseq]),
    :name "seq2matrix",
@@ -298,6 +322,335 @@
    :var-type "function",
    :line 89,
    :file "src/clj_misc/matrix_ops.clj"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/*_",
+   :namespace "clj-misc.numbers",
+   :line 64,
+   :var-type "var",
+   :doc "Returns the product of a scalar and one or more Numbers.",
+   :name "*_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/+_",
+   :namespace "clj-misc.numbers",
+   :line 62,
+   :var-type "var",
+   :doc "Returns the sum of a scalar and one or more Numbers.",
+   :name "+_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/-_",
+   :namespace "clj-misc.numbers",
+   :line 63,
+   :var-type "var",
+   :doc "Returns the difference of a scalar and one or more Numbers.",
+   :name "-_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/<_",
+   :namespace "clj-misc.numbers",
+   :line 66,
+   :var-type "var",
+   :doc
+   "Compares a scalar and one or more Numbers and returns true if they are in ascending order.",
+   :name "<_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/>_",
+   :namespace "clj-misc.numbers",
+   :line 67,
+   :var-type "var",
+   :doc
+   "Compares a scalar and one or more Numbers and returns true if they are in descending order.",
+   :name ">_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_*",
+   :namespace "clj-misc.numbers",
+   :line 55,
+   :var-type "var",
+   :doc "Returns the product of a Number and one or more scalars.",
+   :name "_*"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_*_",
+   :namespace "clj-misc.numbers",
+   :line 46,
+   :var-type "var",
+   :doc "Returns the product of two or more Numbers.",
+   :name "_*_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_+",
+   :namespace "clj-misc.numbers",
+   :line 53,
+   :var-type "var",
+   :doc "Returns the sum of a Number and one or more scalars.",
+   :name "_+"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_+_",
+   :namespace "clj-misc.numbers",
+   :line 44,
+   :var-type "var",
+   :doc "Returns the sum of two or more Numbers.",
+   :name "_+_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_-",
+   :namespace "clj-misc.numbers",
+   :line 54,
+   :var-type "var",
+   :doc "Returns the difference of a Number and one or more scalars.",
+   :name "_-"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_-_",
+   :namespace "clj-misc.numbers",
+   :line 45,
+   :var-type "var",
+   :doc "Returns the difference of two or more Numbers.",
+   :name "_-_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_0_",
+   :namespace "clj-misc.numbers",
+   :line 42,
+   :var-type "var",
+   :doc "The number 0.0.",
+   :name "_0_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_<",
+   :namespace "clj-misc.numbers",
+   :line 57,
+   :var-type "var",
+   :doc
+   "Compares a Number and one or more scalars and returns true if they are in ascending order.",
+   :name "_<"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_<_",
+   :namespace "clj-misc.numbers",
+   :line 48,
+   :var-type "var",
+   :doc
+   "Compares two or more Numbers and returns true if they are in ascending order.",
+   :name "_<_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_>",
+   :namespace "clj-misc.numbers",
+   :line 58,
+   :var-type "var",
+   :doc
+   "Compares a Number and one or more scalars and returns true if they are in descending order.",
+   :name "_>"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_>_",
+   :namespace "clj-misc.numbers",
+   :line 49,
+   :var-type "var",
+   :doc
+   "Compares two or more Numbers and returns true if they are in descending order.",
+   :name "_>_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_d",
+   :namespace "clj-misc.numbers",
+   :line 56,
+   :var-type "var",
+   :doc "Returns the quotient of a Number and one or more scalars.",
+   :name "_d"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_d_",
+   :namespace "clj-misc.numbers",
+   :line 47,
+   :var-type "var",
+   :doc "Returns the quotient of two or more Numbers.",
+   :name "_d_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_max",
+   :namespace "clj-misc.numbers",
+   :line 60,
+   :var-type "var",
+   :doc "Returns the greatest of a Number and one or more scalars.",
+   :name "_max"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_max_",
+   :namespace "clj-misc.numbers",
+   :line 51,
+   :var-type "var",
+   :doc "Returns the greatest of two or more Numbers.",
+   :name "_max_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_min",
+   :namespace "clj-misc.numbers",
+   :line 59,
+   :var-type "var",
+   :doc "Returns the smallest of a Number and one or more scalars.",
+   :name "_min"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/_min_",
+   :namespace "clj-misc.numbers",
+   :line 50,
+   :var-type "var",
+   :doc "Returns the smallest of two or more Numbers.",
+   :name "_min_"}
+  {:arglists ([bounds probs]),
+   :name "create-from-ranges",
+   :namespace "clj-misc.numbers",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.numbers-api.html#clj-misc.numbers/create-from-ranges",
+   :doc
+   "Constructs a Number from n bounds and n-1 probs corresponding\nto a piecewise continuous uniform distribution with\ndiscontinuities (i.e. jumps) at the bounds. prob i represents the\nprobability of being between bound i and bound i+1.",
+   :var-type "function",
+   :line 33,
+   :file "src/clj_misc/numbers.clj"}
+  {:arglists ([states probs]),
+   :name "create-from-states",
+   :namespace "clj-misc.numbers",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.numbers-api.html#clj-misc.numbers/create-from-states",
+   :doc
+   "Constructs a Number from n states and n probs, which is simply the\nexpected value of the passed in distribution.",
+   :var-type "function",
+   :line 27,
+   :file "src/clj_misc/numbers.clj"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/d_",
+   :namespace "clj-misc.numbers",
+   :line 65,
+   :var-type "var",
+   :doc "Returns the quotient of a scalar and one or more Numbers.",
+   :name "d_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/draw",
+   :namespace "clj-misc.numbers",
+   :line 96,
+   :var-type "var",
+   :doc
+   "Extracts a deterministic value from a Number by simply returning it.",
+   :name "draw"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url
+   "/clj-misc.numbers-api.html#clj-misc.numbers/draw-repeatedly",
+   :namespace "clj-misc.numbers",
+   :line 97,
+   :var-type "var",
+   :doc
+   "Returns n instances (or an infinite lazy sequence) of the passed-in Number.",
+   :name "draw-repeatedly"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/max_",
+   :namespace "clj-misc.numbers",
+   :line 69,
+   :var-type "var",
+   :doc "Returns the greatest of a scalar and one or more Numbers.",
+   :name "max_"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/min_",
+   :namespace "clj-misc.numbers",
+   :line 68,
+   :var-type "var",
+   :doc "Returns the smallest of a scalar and one or more Numbers.",
+   :name "min_"}
+  {:arglists ([coverage]),
+   :name "rv-extensive-sampler",
+   :namespace "clj-misc.numbers",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.numbers-api.html#clj-misc.numbers/rv-extensive-sampler",
+   :doc
+   "Returns the extensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 83,
+   :file "src/clj_misc/numbers.clj"}
+  {:arglists ([f & Xs]),
+   :name "rv-fn",
+   :namespace "clj-misc.numbers",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/rv-fn",
+   :doc "Calls (apply f Xs).",
+   :var-type "function",
+   :line 71,
+   :file "src/clj_misc/numbers.clj"}
+  {:arglists ([coverage]),
+   :name "rv-intensive-sampler",
+   :namespace "clj-misc.numbers",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.numbers-api.html#clj-misc.numbers/rv-intensive-sampler",
+   :doc
+   "Returns the intensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 89,
+   :file "src/clj_misc/numbers.clj"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/rv-mean",
+   :namespace "clj-misc.numbers",
+   :line 76,
+   :var-type "var",
+   :doc "Returns the mean of a Number, which is itself.",
+   :name "rv-mean"}
+  {:arglists ([Xs]),
+   :name "rv-sum",
+   :namespace "clj-misc.numbers",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/rv-sum",
+   :doc "Returns the sum of a sequence of Numbers.",
+   :var-type "function",
+   :line 78,
+   :file "src/clj_misc/numbers.clj"}
   {:arglists ([[x y & more :as point] bounds]),
    :name "in-bounds-full?",
    :namespace "clj-misc.point-algebra",
@@ -357,6 +710,42 @@
    :var-type "function",
    :line 57,
    :file "src/clj_misc/point_algebra.clj"}
+  {:arglists ([bounds probs]),
+   :name "create-from-ranges",
+   :namespace "clj-misc.randvars",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.randvars-api.html#clj-misc.randvars/create-from-ranges",
+   :doc
+   "Constructs a discrete Randvar from n bounds and n-1 probs\ncorresponding to a piecewise continuous uniform distribution with\ndiscontinuities (i.e. jumps) at the bounds. prob i represents the\nprobability of being between bound i and bound i+1.",
+   :var-type "function",
+   :line 78,
+   :file "src/clj_misc/randvars.clj"}
+  {:arglists ([bounds probs]),
+   :name "create-from-ranges-continuous",
+   :namespace "clj-misc.randvars",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.randvars-api.html#clj-misc.randvars/create-from-ranges-continuous",
+   :doc
+   "Constructs a continuous Randvar from n bounds and n-1 probs\ncorresponding to a piecewise continuous uniform distribution with\ndiscontinuities (i.e. jumps) at the bounds. prob i represents the\nprobability of being between bound i and bound i+1.",
+   :var-type "function",
+   :line 87,
+   :file "src/clj_misc/randvars.clj"}
+  {:arglists ([states probs]),
+   :name "create-from-states",
+   :namespace "clj-misc.randvars",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.randvars-api.html#clj-misc.randvars/create-from-states",
+   :doc
+   "Constructs a discrete Randvar from n states and n probs,\ncorresponding to a finite discrete distribution.",
+   :var-type "function",
+   :line 69,
+   :file "src/clj_misc/randvars.clj"}
   {:arglists ([X] [n X]),
    :name "draw-repeatedly",
    :namespace "clj-misc.randvars",
@@ -366,7 +755,7 @@
    "/clj-misc.randvars-api.html#clj-misc.randvars/draw-repeatedly",
    :doc "Extracts values from X using a uniform distribution.",
    :var-type "function",
-   :line 462,
+   :line 494,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([values] [f values]),
    :name "minimum-discrepancy-partition",
@@ -378,7 +767,7 @@
    :doc
    "Given a sequence of sorted values, partition them into two\nsequences (preserving their order), so as to minimize the\ndifference between their sums.  If an optional function f is passed\nit will be applied to the values before they are summed.",
    :var-type "function",
-   :line 89,
+   :line 117,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([max-partitions X]),
    :name "partition-by-probs",
@@ -390,7 +779,31 @@
    :doc
    "Given a random variable X, returns a partition of its states which\nattempts to minimize the difference between each partition's total\nprobability.",
    :var-type "function",
-   :line 111,
+   :line 139,
+   :file "src/clj_misc/randvars.clj"}
+  {:arglists ([coverage]),
+   :name "rv-extensive-sampler",
+   :namespace "clj-misc.randvars",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.randvars-api.html#clj-misc.randvars/rv-extensive-sampler",
+   :doc
+   "Returns the extensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 481,
+   :file "src/clj_misc/randvars.clj"}
+  {:arglists ([coverage]),
+   :name "rv-intensive-sampler",
+   :namespace "clj-misc.randvars",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.randvars-api.html#clj-misc.randvars/rv-intensive-sampler",
+   :doc
+   "Returns the intensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 487,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([X]),
    :name "rv-pos",
@@ -400,7 +813,7 @@
    :wiki-url "/clj-misc.randvars-api.html#clj-misc.randvars/rv-pos",
    :doc "Sets all negative values in X to 0.",
    :var-type "function",
-   :line 501,
+   :line 522,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([X y]),
    :name "rv-zero-above-scalar",
@@ -412,7 +825,7 @@
    :doc
    "Sets all values greater than y in the random variable X to 0.",
    :var-type "function",
-   :line 491,
+   :line 512,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([X y]),
    :name "rv-zero-below-scalar",
@@ -423,7 +836,7 @@
    "/clj-misc.randvars-api.html#clj-misc.randvars/rv-zero-below-scalar",
    :doc "Sets all values less than y in the random variable X to 0.",
    :var-type "function",
-   :line 496,
+   :line 517,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([x mu sigma]),
    :name "normalize",
@@ -768,7 +1181,7 @@
    :doc
    "Returns the product of a scalar and one or more FuzzyNumbers.",
    :var-type "function",
-   :line 197,
+   :line 191,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([x Y] [x Y & more]),
    :name "+_",
@@ -778,7 +1191,7 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/+_",
    :doc "Returns the sum of a scalar and one or more FuzzyNumbers.",
    :var-type "function",
-   :line 183,
+   :line 177,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([x Y] [x Y & more]),
    :name "-_",
@@ -789,7 +1202,7 @@
    :doc
    "Returns the difference of a scalar and one or more FuzzyNumbers.",
    :var-type "function",
-   :line 190,
+   :line 184,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([x Y] [x Y & more]),
    :name "<_",
@@ -800,7 +1213,7 @@
    :doc
    "Compares a scalar and one or more FuzzyNumbers and returns true if\nP(Y > x) > 0.5 and all Ys are in monotonically increasing order by\n_<_.",
    :var-type "function",
-   :line 211,
+   :line 205,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([x Y] [x Y & more]),
    :name ">_",
@@ -811,7 +1224,7 @@
    :doc
    "Compares a scalar and one or more FuzzyNumbers and returns true if\nP(Y < x) > 0.5 and all Ys are in monotonically decreasing order by\n_>_.",
    :var-type "function",
-   :line 221,
+   :line 215,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X y] [X y & more]),
    :name "_*",
@@ -822,7 +1235,7 @@
    :doc
    "Returns the product of a FuzzyNumber and one or more scalars.",
    :var-type "function",
-   :line 137,
+   :line 131,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([{mx :mean, vx :var} {my :mean, vy :var}] [X Y & more]),
    :name "_*_",
@@ -832,7 +1245,7 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/_*_",
    :doc "Returns the product of two or more FuzzyNumbers.",
    :var-type "function",
-   :line 79,
+   :line 73,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X y] [X y & more]),
    :name "_+",
@@ -842,7 +1255,7 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/_+",
    :doc "Returns the sum of a FuzzyNumber and one or more scalars.",
    :var-type "function",
-   :line 123,
+   :line 117,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X Y] [X Y & more]),
    :name "_+_",
@@ -852,7 +1265,7 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/_+_",
    :doc "Returns the sum of two or more FuzzyNumbers.",
    :var-type "function",
-   :line 65,
+   :line 59,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X y] [X y & more]),
    :name "_-",
@@ -863,7 +1276,7 @@
    :doc
    "Returns the difference of a FuzzyNumber and one or more scalars.",
    :var-type "function",
-   :line 130,
+   :line 124,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X Y] [X Y & more]),
    :name "_-_",
@@ -873,16 +1286,16 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/_-_",
    :doc "Returns the difference of two or more FuzzyNumbers.",
    :var-type "function",
-   :line 72,
+   :line 66,
    :file "src/clj_misc/varprop.clj"}
   {:file "src/clj_misc/varprop.clj",
    :raw-source-url nil,
    :source-url nil,
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/_0_",
    :namespace "clj-misc.varprop",
-   :line 63,
+   :line 57,
    :var-type "var",
-   :doc "A fuzzy number with mean and variance of 0.",
+   :doc "A FuzzyNumber with mean and variance of 0.",
    :name "_0_"}
   {:arglists ([X y] [X y & more]),
    :name "_<",
@@ -893,7 +1306,7 @@
    :doc
    "Compares a FuzzyNumber and one or more scalars and returns true if\nP(X < y_1) > 0.5 and all ys are in monotonically increasing order.",
    :var-type "function",
-   :line 151,
+   :line 145,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X Y] [X Y & more]),
    :name "_<_",
@@ -904,7 +1317,7 @@
    :doc
    "Compares two or more FuzzyNumbers and returns true if P(X_i < X_i+1) > 0.5 for all i in [1,n].",
    :var-type "function",
-   :line 95,
+   :line 89,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X y] [X y & more]),
    :name "_>",
@@ -915,7 +1328,7 @@
    :doc
    "Compares a FuzzyNumber and one or more scalars and returns true if\nP(X > y_1) > 0.5 and all ys are in monotonically decreasing order.",
    :var-type "function",
-   :line 160,
+   :line 154,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X Y] [X Y & more]),
    :name "_>_",
@@ -926,7 +1339,7 @@
    :doc
    "Compares two or more FuzzyNumbers and returns true if P(X_i > X_i+1) > 0.5 for all i in [1,n].",
    :var-type "function",
-   :line 102,
+   :line 96,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X y] [X y & more]),
    :name "_d",
@@ -937,7 +1350,7 @@
    :doc
    "Returns the quotient of a FuzzyNumber and one or more scalars.",
    :var-type "function",
-   :line 144,
+   :line 138,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X Y] [X Y & more]),
    :name "_d_",
@@ -947,7 +1360,7 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/_d_",
    :doc "Returns the quotient of two or more FuzzyNumbers.",
    :var-type "function",
-   :line 88,
+   :line 82,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X y] [X y & more]),
    :name "_max",
@@ -958,7 +1371,7 @@
    :doc
    "Returns the greatest of a FuzzyNumber and one or more scalars using _>.",
    :var-type "function",
-   :line 176,
+   :line 170,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X Y] [X Y & more]),
    :name "_max_",
@@ -968,7 +1381,7 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/_max_",
    :doc "Returns the greatest of two or more FuzzyNumbers using _>_.",
    :var-type "function",
-   :line 116,
+   :line 110,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X y] [X y & more]),
    :name "_min",
@@ -979,7 +1392,7 @@
    :doc
    "Returns the smallest of a FuzzyNumber and one or more scalars using _<.",
    :var-type "function",
-   :line 169,
+   :line 163,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X Y] [X Y & more]),
    :name "_min_",
@@ -989,7 +1402,7 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/_min_",
    :doc "Returns the smallest of two or more FuzzyNumbers using _<_.",
    :var-type "function",
-   :line 109,
+   :line 103,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([]),
    :name "box-muller-normal",
@@ -1001,7 +1414,31 @@
    :doc
    "Returns a value from X~N(0,1). Uses the Box-Muller\ntransform. Memoizes extra computed values for quicker lookups on\neven calls.",
    :var-type "function",
-   :line 436,
+   :line 437,
+   :file "src/clj_misc/varprop.clj"}
+  {:arglists ([bounds probs]),
+   :name "create-from-ranges",
+   :namespace "clj-misc.varprop",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.varprop-api.html#clj-misc.varprop/create-from-ranges",
+   :doc
+   "Constructs a FuzzyNumber from n bounds and n-1 probs corresponding\nto a piecewise continuous uniform distribution with\ndiscontinuities (i.e. jumps) at the bounds. prob i represents the\nprobability of being between bound i and bound i+1.",
+   :var-type "function",
+   :line 42,
+   :file "src/clj_misc/varprop.clj"}
+  {:arglists ([states probs]),
+   :name "create-from-states",
+   :namespace "clj-misc.varprop",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.varprop-api.html#clj-misc.varprop/create-from-states",
+   :doc
+   "Constructs a FuzzyNumber from n states and n probs, corresponding\nto a finite discrete distribution.",
+   :var-type "function",
+   :line 34,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([x {:keys [mean var]}] [x Y & more]),
    :name "d_",
@@ -1012,7 +1449,7 @@
    :doc
    "Returns the quotient of a scalar and one or more FuzzyNumbers.",
    :var-type "function",
-   :line 204,
+   :line 198,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X]),
    :name "draw",
@@ -1023,7 +1460,7 @@
    :doc
    "Extracts a deterministic value from a FuzzyNumber by modelling it\nas a normal distribution.",
    :var-type "function",
-   :line 453,
+   :line 454,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([{:keys [mean var]}] [n X]),
    :name "draw-repeatedly",
@@ -1033,9 +1470,21 @@
    :wiki-url
    "/clj-misc.varprop-api.html#clj-misc.varprop/draw-repeatedly",
    :doc
-   "Takes a fuzzy number X, and returns an infinite lazy sequence of\nnormally-distributed, pseudo-random numbers that match the\nparameters of X, (or a finite sequence of length n, if an integer n\nis provided).",
+   "Takes a FuzzyNumber X, and returns an infinite lazy sequence of\nnormally-distributed, pseudo-random numbers that match the\nparameters of X, (or a finite sequence of length n, if an integer n\nis provided).",
    :var-type "function",
-   :line 459,
+   :line 460,
+   :file "src/clj_misc/varprop.clj"}
+  {:arglists ([value]),
+   :name "ensure-fuzzy",
+   :namespace "clj-misc.varprop",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.varprop-api.html#clj-misc.varprop/ensure-fuzzy",
+   :doc
+   "If value is a FuzzyNumber, return it. Otherwise, make it into a\nFuzzyNumber.",
+   :var-type "function",
+   :line 349,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([f]),
    :name "fuzzify-fn",
@@ -1046,7 +1495,7 @@
    :doc
    "Transforms f into its fuzzy arithmetic equivalent, using the\nmappings defined in fuzzy-arithmetic-mapping.",
    :var-type "function",
-   :line 361,
+   :line 357,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([mean var]),
    :name "fuzzy-number",
@@ -1057,31 +1506,7 @@
    "/clj-misc.varprop-api.html#clj-misc.varprop/fuzzy-number",
    :doc "Constructs a FuzzyNumber.",
    :var-type "function",
-   :line 35,
-   :file "src/clj_misc/varprop.clj"}
-  {:arglists ([bounds probs]),
-   :name "fuzzy-number-from-ranges",
-   :namespace "clj-misc.varprop",
-   :source-url nil,
-   :raw-source-url nil,
-   :wiki-url
-   "/clj-misc.varprop-api.html#clj-misc.varprop/fuzzy-number-from-ranges",
-   :doc
-   "Constructs a FuzzyNumber from n bounds and n-1 probs corresponding\nto a piecewise continuous uniform distribution with\ndiscontinuities (i.e. jumps) at the bounds. prob i represents the\nprobability of being between bound i and bound i+1.",
-   :var-type "function",
-   :line 48,
-   :file "src/clj_misc/varprop.clj"}
-  {:arglists ([states probs]),
-   :name "fuzzy-number-from-states",
-   :namespace "clj-misc.varprop",
-   :source-url nil,
-   :raw-source-url nil,
-   :wiki-url
-   "/clj-misc.varprop-api.html#clj-misc.varprop/fuzzy-number-from-states",
-   :doc
-   "Constructs a FuzzyNumber from n states and n probs, corresponding\nto a finite discrete distribution.",
-   :var-type "function",
-   :line 40,
+   :line 29,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([]),
    :name "marsaglia-normal",
@@ -1093,7 +1518,7 @@
    :doc
    "Returns a value from X~N(0,1). Uses the Marsaglia polar\nmethod. Memoizes extra computed values for quicker lookups on\neven calls.",
    :var-type "function",
-   :line 418,
+   :line 419,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([x Y] [x Y & more]),
    :name "max_",
@@ -1104,7 +1529,7 @@
    :doc
    "Returns the greatest of a scalar and one or more FuzzyNumbers using >_.",
    :var-type "function",
-   :line 238,
+   :line 232,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([x Y] [x Y & more]),
    :name "min_",
@@ -1115,7 +1540,7 @@
    :doc
    "Returns the smallest of a scalar and one or more FuzzyNumbers using <_.",
    :var-type "function",
-   :line 231,
+   :line 225,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([coverage]),
    :name "rv-extensive-sampler",
@@ -1125,9 +1550,9 @@
    :wiki-url
    "/clj-misc.varprop-api.html#clj-misc.varprop/rv-extensive-sampler",
    :doc
-   "Returns the extensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]). For use with\nclj-misc.matrix-ops/resample-matrix.",
+   "Returns the extensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
    :var-type "function",
-   :line 402,
+   :line 405,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([f & Xs]),
    :name "rv-fn",
@@ -1137,8 +1562,8 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/rv-fn",
    :doc
    "Transforms f into its fuzzy arithmetic equivalent, fuzzy-f, and\ncalls (apply fuzzy-f Xs). Uses reflection on the types of Xs as\nwell as any numeric literal values used in f.",
-   :var-type "macro",
-   :line 374,
+   :var-type "function",
+   :line 377,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([coverage]),
    :name "rv-intensive-sampler",
@@ -1148,9 +1573,9 @@
    :wiki-url
    "/clj-misc.varprop-api.html#clj-misc.varprop/rv-intensive-sampler",
    :doc
-   "Returns the intensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]). For use with\nclj-misc.matrix-ops/resample-matrix.",
+   "Returns the intensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
    :var-type "function",
-   :line 409,
+   :line 411,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X]),
    :name "rv-mean",
@@ -1160,7 +1585,7 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/rv-mean",
    :doc "Returns the mean of a FuzzyNumber.",
    :var-type "function",
-   :line 381,
+   :line 384,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([Xs]),
    :name "rv-sum",
@@ -1170,9 +1595,9 @@
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/rv-sum",
    :doc "Returns the sum of a sequence of FuzzyNumbers using _+_.",
    :var-type "function",
-   :line 386,
+   :line 389,
    :file "src/clj_misc/varprop.clj"}
-  {:arglists ([possible-flow-layer actual-flow-layer]),
+  {:arglists ([value-type possible-flow-layer actual-flow-layer]),
    :name "blocked-flow",
    :namespace "clj-span.analyzer",
    :source-url nil,
@@ -1182,9 +1607,9 @@
    :doc
    "Returns a map of {location-id -> blocked-flow}.\nBlocked-flow is the amount of the possible-flow which cannot be\nrealized due to upstream sinks or uses.",
    :var-type "function",
-   :line 237,
+   :line 290,
    :file "src/clj_span/analyzer.clj"}
-  {:arglists ([cache-layer]),
+  {:arglists ([value-type cache-layer]),
    :name "blocked-source",
    :namespace "clj-span.analyzer",
    :source-url nil,
@@ -1194,9 +1619,9 @@
    :doc
    "Returns a map of {location-id -> blocked-source}.\nBlocked-source is the amount of the possible-source which cannot be\nused by any location due to upstream sinks or uses.",
    :var-type "function",
-   :line 219,
+   :line 264,
    :file "src/clj_span/analyzer.clj"}
-  {:arglists ([cache-layer]),
+  {:arglists ([value-type cache-layer]),
    :name "blocked-use",
    :namespace "clj-span.analyzer",
    :source-url nil,
@@ -1206,9 +1631,16 @@
    :doc
    "Returns a map of {location-id -> blocked-use}.\nBlocked-use is the amount of the possible-use which cannot be\nrealized due to upstream sinks or uses.",
    :var-type "function",
-   :line 228,
+   :line 277,
    :file "src/clj_span/analyzer.clj"}
-  {:arglists ([source-layer sink-layer use-layer cache-layer]),
+  {:arglists
+   ([value-type
+     source-type
+     sink-type
+     source-layer
+     sink-layer
+     use-layer
+     cache-layer]),
    :name "inaccessible-sink",
    :namespace "clj-span.analyzer",
    :source-url nil,
@@ -1218,9 +1650,10 @@
    :doc
    "Returns a map of {location-id -> inaccessible-sink}.\nInaccessible-sink is the amount of the theoretical-sink which\ncannot be utilized by any location either due to propagation decay\nof the asset or lack of flow pathways through the sink locations.",
    :var-type "function",
-   :line 199,
+   :line 236,
    :file "src/clj_span/analyzer.clj"}
-  {:arglists ([source-layer use-layer cache-layer]),
+  {:arglists
+   ([value-type source-type source-layer use-layer cache-layer]),
    :name "inaccessible-source",
    :namespace "clj-span.analyzer",
    :source-url nil,
@@ -1230,9 +1663,10 @@
    :doc
    "Returns a map of {location-id -> inaccessible-source}.\nInaccessible-source is the amount of the theoretical-source which\ncannot be used by any location either due to propagation decay,\nlack of use capacity, or lack of flow pathways to use locations.",
    :var-type "function",
-   :line 189,
+   :line 222,
    :file "src/clj_span/analyzer.clj"}
-  {:arglists ([source-layer use-layer cache-layer]),
+  {:arglists
+   ([value-type use-type source-layer use-layer cache-layer]),
    :name "inaccessible-use",
    :namespace "clj-span.analyzer",
    :source-url nil,
@@ -1242,7 +1676,7 @@
    :doc
    "Returns a map of {location-id -> inaccessible-use}.\nInaccessible-use is the amount of the theoretical-use which cannot\nbe utilized by each location either due to propagation decay of the\nasset or lack of flow pathways to use locations.",
    :var-type "function",
-   :line 209,
+   :line 250,
    :file "src/clj_span/analyzer.clj"}
   {:arglists
    ([observation-or-model-spec
@@ -1261,11 +1695,11 @@
        sink-type
        use-type
        benefit-type
-       result-type
        value-type
        animation?
+       result-type
        save-file],
-      :or {result-type :closure-map, value-type :varprop}}]),
+      :or {value-type :varprop, result-type :closure-map}}]),
    :name "span-driver",
    :namespace "clj-span.aries-span-bridge",
    :source-url nil,
@@ -1273,9 +1707,21 @@
    :wiki-url
    "/clj-span.aries-span-bridge-api.html#clj-span.aries-span-bridge/span-driver",
    :doc
-   "Takes the source, sink, use, and flow concepts along with the\nflow-params map and an observation containing the concepts'\ndependent features (or model-spec [model-name location resolution]\nwhich produces this observation), calculates the SPAN flows, and\nreturns the results using one of the following result-types:\n(:cli-menu :closure-map). If the :save-file parameter is set in the\nflow-params map, the SPAN model will not be run, and instead the\nsource, sink, use, and flow layers will be extracted from the\nobservation and written to :save-file.",
+   "Takes the source, sink, use, and flow concepts along with the\nflow-params map and an observation containing the concepts'\ndependent features (or model-spec [model-name location resolution]\nwhich produces this observation), calculates the SPAN flows, and\nreturns the results using one of the following result-types:\n(:cli-menu :closure-map). If the :save-file parameter is set in the\nflow-params map, the SPAN model will not be run, and instead the\nsource, sink, use, and flow layers will be extracted from the\nobservation, converted to :value-type, and written to :save-file.",
    :var-type "function",
-   :line 262,
+   :line 173,
+   :file "src/clj_span/aries_span_bridge.clj"}
+  {:arglists ([value-type ds]),
+   :name "unpack-datasource",
+   :namespace "clj-span.aries-span-bridge",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-span.aries-span-bridge-api.html#clj-span.aries-span-bridge/unpack-datasource",
+   :doc
+   "Returns a seq of the values in ds, where their representations are\ndetermined by value-type. NaNs and nils are converted to 0s.",
+   :var-type "function",
+   :line 117,
    :file "src/clj_span/aries_span_bridge.clj"}
   {:arglists ([& args]),
    :name "-main",
@@ -1287,7 +1733,7 @@
    :doc
    "The compiled Java class' main method.  Pass it all the SPAN inputs\nas -key value argument pairs from the command line.  After\nvalidating your inputs and running the flow simulation, it will\npresent a text-based menu to view the model results.",
    :var-type "function",
-   :line 145,
+   :line 149,
    :file "src/clj_span/commandline.clj"}
   {:arglists
    ([flow-model
@@ -1296,6 +1742,12 @@
      orig-cols
      cell-width
      cell-height
+     trans-threshold
+     source-type
+     sink-type
+     use-type
+     benefit-type
+     value-type
      scaled-source-layer
      scaled-sink-layer
      scaled-use-layer
@@ -1311,7 +1763,7 @@
    :doc
    "Run flow model and return the results as a map of layer names to closures.",
    :var-type "function",
-   :line 183,
+   :line 199,
    :file "src/clj_span/core.clj"}
   {:arglists
    ([source-layer
@@ -1321,7 +1773,8 @@
      use-layer
      use-threshold
      flow-layers
-     downscaling-factor]),
+     downscaling-factor
+     value-type]),
    :name "preprocess-data-layers",
    :namespace "clj-span.core",
    :source-url nil,
@@ -1331,9 +1784,9 @@
    :doc
    "Preprocess data layers (downsampling and zeroing below their thresholds).",
    :var-type "function",
-   :line 66,
+   :line 69,
    :file "src/clj_span/core.clj"}
-  {:arglists ([threshold layer]),
+  {:arglists ([value-type threshold layer]),
    :name "zero-layer-below-threshold",
    :namespace "clj-span.core",
    :source-url nil,
@@ -1343,7 +1796,7 @@
    :doc
    "Takes a two dimensional array of RVs and replaces all values which\nhave a >50% likelihood of being below the threshold with _0_.",
    :var-type "function",
-   :line 55,
+   :line 54,
    :file "src/clj_span/core.clj"}
   {:arglists ([type varname & forms]),
    :name "defspan",
@@ -1365,5 +1818,5 @@
    "/clj-span.models.subsistence-fisheries-api.html#clj-span.models.subsistence-fisheries/find-shortest-paths-to-coast",
    :doc "Fuck it. I'm just drawing a line and going to bed.",
    :var-type "function",
-   :line 187,
+   :line 194,
    :file "src/clj_span/models/subsistence_fisheries.clj"})}
