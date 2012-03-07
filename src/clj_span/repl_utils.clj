@@ -21,7 +21,7 @@
 ;;; simulations at the REPL.
 
 (ns clj-span.repl-utils
-  (:use (clj-span core commandline aries-span-bridge analyzer gui)
+  (:use (clj-span core commandline aries-span-bridge analyzer gui worldgen)
         (clj-misc utils matrix-ops stats)
         clojure.pprint)
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
@@ -37,6 +37,15 @@
     (def cell-height  cell-h)
     (def rows (get-rows s))
     (def cols (get-cols s))))
+
+(defn load-layer
+  [layer-name filename]
+  (let [data (read-layer-from-file filename)]
+    (case layer-name
+      :source (def source-layer data)
+      :sink   (def sink-layer   data)
+      :use    (def use-layer    data)
+      :flow   (def flow-layers  data))))
 
 (defn extract-results
   [value-type result-map]
@@ -208,9 +217,9 @@
              :flow-layers        flow-layers
              :cell-width         cell-width
              :cell-height        cell-height
-             :source-threshold   25.0
-             :sink-threshold     25.0
-             :use-threshold      0.2
+             :source-threshold   5.0
+             :sink-threshold     5.0
+             :use-threshold      0.1
              :trans-threshold    1.0
              :source-type        :infinite
              :sink-type          :infinite
