@@ -23,7 +23,8 @@
 
 (ns clj-span.interface
   (:use [clj-misc.utils      :only (& p mapmap)]
-        [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)])
+        [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)]
+        [clj-span.gui        :only (draw-layer)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
 (defn- select-location
@@ -107,10 +108,24 @@
   ;;                 whose values equal _0_."
   (fn [result-type value-type source-layer sink-layer use-layer flow-layers results-menu] result-type))
 
+(defn get-scale
+  [rows cols]
+  (let [dimensions (.. java.awt.Toolkit getDefaultToolkit getScreenSize)
+        height     (.height dimensions)
+        width      (.width  dimensions)]
+    (if (and (< rows height)
+             (< cols width))
+      (min (/ width  cols)
+           (/ height rows))
+      (/ 1
+         (max (/ cols width)
+              (/ rows height))))))
+
 (defmethod provide-results :cli-menu
-  [_ _ source-layer sink-layer use-layer flow-layers results-menu]
+  [_ value-type source-layer sink-layer use-layer flow-layers results-menu]
   (let [rows        (get-rows source-layer)
         cols        (get-cols source-layer)
+        scale       (get-scale rows cols)
         menu-extras (array-map
                      "Location Properties"
                      #(view-location-properties (select-location rows cols) source-layer sink-layer use-layer flow-layers)
@@ -120,14 +135,12 @@
                      nil)
         menu        (apply array-map (apply concat (concat results-menu menu-extras)))
         prompts     (keys menu)]
-    (loop [action (menu (select-menu-option prompts))]
-      (when action
+    (loop [choice (select-menu-option prompts)]
+      (when-let [action (menu choice)]
         (when-let [matrix-result (action)]
-          (newline)
-          (print-matrix matrix-result)
-          (newline)
-          (println "Distinct values:" (count (distinct (matrix2seq matrix-result)))))
-        (recur (menu (select-menu-option prompts)))))))
+          (draw-layer choice matrix-result :source scale value-type)
+          (println "\nDistinct values:" (count (distinct (matrix2seq matrix-result)))))
+        (recur (select-menu-option prompts))))))
 
 (defmethod provide-results :closure-map
   [_ value-type _ _ _ _ results-menu]
