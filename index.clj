@@ -857,7 +857,7 @@
    :wiki-url "/clj-misc.utils-api.html#clj-misc.utils/add-anyway",
    :doc "Sums the non-nil argument values.",
    :var-type "function",
-   :line 96,
+   :line 97,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([[dy1 dx1 :as A] [dy2 dx2 :as B]]),
    :name "angular-distance",
@@ -868,7 +868,7 @@
    "/clj-misc.utils-api.html#clj-misc.utils/angular-distance",
    :doc "Given two vectors A and B, returns the angle between them.",
    :var-type "function",
-   :line 375,
+   :line 376,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([[dy1 dx1 :as A] [dy2 dx2 :as B]]),
    :name "angular-distance2",
@@ -879,7 +879,7 @@
    "/clj-misc.utils-api.html#clj-misc.utils/angular-distance2",
    :doc "Given two vectors A and B, returns the angle between them.",
    :var-type "function",
-   :line 385,
+   :line 386,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([[dy1 dx1 :as A] [dy2 dx2 :as B]]),
    :name "angular-rotation",
@@ -891,7 +891,7 @@
    :doc
    "Given two vectors A and B, returns the directed angle between them.",
    :var-type "function",
-   :line 370,
+   :line 371,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([vect-of-vects]),
    :name "arrayify",
@@ -901,7 +901,7 @@
    :wiki-url "/clj-misc.utils-api.html#clj-misc.utils/arrayify",
    :doc "Creates a 2D Java array (of Objects) from a vect of vects.",
    :var-type "function",
-   :line 165,
+   :line 166,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([clojure-map]),
    :name "arrayify-map",
@@ -912,7 +912,7 @@
    :doc
    "Creates a Java HashMap<String,Array[]> from a map of {keywords ->\nvect-of-vects}.",
    :var-type "function",
-   :line 176,
+   :line 177,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([open-list closed-set successors goal?]),
    :name "breadth-first-search",
@@ -924,7 +924,7 @@
    :doc
    "The classic breadth-first-search.  Bread and butter of computer\nscience.  Implemented using tail recursion, of course! ;)",
    :var-type "function",
-   :line 204,
+   :line 205,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([sequence item]),
    :name "contains-item?",
@@ -934,7 +934,7 @@
    :wiki-url "/clj-misc.utils-api.html#clj-misc.utils/contains-item?",
    :doc "Returns true if sequence contains item.  Otherwise nil.",
    :var-type "function",
-   :line 199,
+   :line 200,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([vals] [vals n]),
    :name "count-distinct",
@@ -945,7 +945,7 @@
    :doc
    "Returns a map of {distinct-val -> num-instances, ...} for all the\ndistinct values in a sequence.  If n is given, only count the first\nn distinct values and append {... -> num-distinct - n} to the map\nto indicate that more values were not examined.",
    :var-type "function",
-   :line 399,
+   :line 400,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([root successors goal?]),
    :name "depth-first-graph-search",
@@ -957,7 +957,7 @@
    :doc
    "The classic depth-first-graph-search. Bread and butter of computer\nscience. Implemented using tail recursion, of course! ;)",
    :var-type "function",
-   :line 243,
+   :line 244,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([root successors goal?]),
    :name "depth-first-tree-search",
@@ -969,7 +969,7 @@
    :doc
    "The classic depth-first-tree-search. Bread and butter of computer\nscience. Implemented using tail recursion, of course! ;)",
    :var-type "function",
-   :line 233,
+   :line 234,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([pointA pointB]),
    :name "euclidean-distance",
@@ -981,7 +981,7 @@
    :doc
    "Returns the euclidean distance between two n-dimensional points.",
    :var-type "function",
-   :line 347,
+   :line 348,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([avec]),
    :name "expand-runtime-encoded-vector",
@@ -993,7 +993,7 @@
    :doc
    "Expands a vector of the form [:foo 2 :bar 1 :baz 3] into\n[:foo :foo :bar :baz :baz :baz].",
    :var-type "function",
-   :line 187,
+   :line 188,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([m v]),
    :name "key-by-val",
@@ -1004,7 +1004,7 @@
    :doc
    "Returns the key from a map m whose corresponding value field is a\nsequence containing v.",
    :var-type "function",
-   :line 149,
+   :line 150,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([matrix]),
    :name "linearize",
@@ -1014,7 +1014,7 @@
    :wiki-url "/clj-misc.utils-api.html#clj-misc.utils/linearize",
    :doc "Transforms a 2D matrix into a 1D vector.",
    :var-type "function",
-   :line 155,
+   :line 156,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([pointA pointB]),
    :name "manhattan-distance",
@@ -1026,7 +1026,7 @@
    :doc
    "Returns the manhattan distance between two n-dimensional points.",
    :var-type "function",
-   :line 336,
+   :line 337,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([[i1 j1] [i2 j2]]),
    :name "manhattan-distance-2",
@@ -1038,7 +1038,7 @@
    :doc
    "Returns the manhattan distance between two 2-dimensional points.",
    :var-type "function",
-   :line 331,
+   :line 332,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([keyfn valfn in-map]),
    :name "mapmap",
@@ -1049,7 +1049,7 @@
    :doc
    "Creates a new map by applying keyfn to every key of in-map and\nvalfn to every corresponding val.",
    :var-type "function",
-   :line 125,
+   :line 126,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([keyfn valfn in-map]),
    :name "mapmap-java",
@@ -1060,7 +1060,7 @@
    :doc
    "Creates a new Java map by applying keyfn to every key of in-map and\nvalfn to every corresponding val.",
    :var-type "function",
-   :line 131,
+   :line 132,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([element times base-coll]),
    :name "multi-conj",
@@ -1070,7 +1070,7 @@
    :wiki-url "/clj-misc.utils-api.html#clj-misc.utils/multi-conj",
    :doc "Conjoins an element multiple times onto a base-coll.",
    :var-type "function",
-   :line 182,
+   :line 183,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([x form] [x form & more]),
    :name "my->>",
@@ -1082,7 +1082,7 @@
    :doc
    "Threads the expr through the forms. Inserts x as the\nlast item in the first form, making a list of it if it is not a\nlist already. If there are more forms, inserts the first form as the\nlast item in second form, etc.",
    :var-type "macro",
-   :line 85,
+   :line 86,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([]),
    :name "print-sysprops",
@@ -1092,7 +1092,7 @@
    :wiki-url "/clj-misc.utils-api.html#clj-misc.utils/print-sysprops",
    :doc "Print out the result of System.getProperties()",
    :var-type "function",
-   :line 34,
+   :line 35,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([f val coll]),
    :name "reduce-true",
@@ -1102,7 +1102,7 @@
    :wiki-url "/clj-misc.utils-api.html#clj-misc.utils/reduce-true",
    :doc "Like reduce but short-circuits upon logical false",
    :var-type "function",
-   :line 505,
+   :line 508,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([n total min-value]),
    :name "select-n-summands",
@@ -1114,7 +1114,7 @@
    :doc
    "Returns a list of n numbers >= min-value, which add up to total.\nIf total is a double, the summands will be doubles.  The same goes\nfor integers.",
    :var-type "function",
-   :line 553,
+   :line 556,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([aseq keyvalfn]),
    :name "seq2map",
@@ -1125,7 +1125,7 @@
    :doc
    "Constructs a map from a sequence by applying keyvalfn to each\nelement of the sequence.  keyvalfn should return a pair [key val]\nto be added to the map for each input sequence element.",
    :var-type "function",
-   :line 103,
+   :line 104,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([aseq keyvalfn mergefn]),
    :name "seq2redundant-map",
@@ -1137,7 +1137,7 @@
    :doc
    "Constructs a map from a sequence by applying keyvalfn to each\nelement of the sequence.  keyvalfn should return a pair [key val]\nto be added to the map for each input sequence element.  If key is\nalready in the map, its current value will be combined with the new\nval using (mergefn curval val).",
    :var-type "function",
-   :line 110,
+   :line 111,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([root successors goal? heuristic-filter]),
    :name "shortest-path-bfgs",
@@ -1149,7 +1149,7 @@
    :doc
    "The classic breadth-first-graph-search.  Bread and butter of computer\nscience.  Implemented using tail recursion, of course! ;)",
    :var-type "function",
-   :line 219,
+   :line 220,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([java-array]),
    :name "vectorize",
@@ -1159,7 +1159,7 @@
    :wiki-url "/clj-misc.utils-api.html#clj-misc.utils/vectorize",
    :doc "Creates a vect of vects from a 2D Java array.",
    :var-type "function",
-   :line 160,
+   :line 161,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([java-map]),
    :name "vectorize-map",
@@ -1170,7 +1170,7 @@
    :doc
    "Creates a map of {keywords -> vect-of-vects} from a Java\nHashMap<String,Array[]>.",
    :var-type "function",
-   :line 170,
+   :line 171,
    :file "src/clj_misc/utils.clj"}
   {:arglists ([x Y] [x Y & more]),
    :name "*_",
