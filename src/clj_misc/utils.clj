@@ -21,6 +21,7 @@
 ;;; moved at some point into more specific utility libraries.
 
 (ns clj-misc.utils
+  (:use [clojure.string :only [join]])
   (:import (java.util HashMap)))
 
 ;; Some useful abbreviations for point-free style.
@@ -457,7 +458,7 @@
         frac-done (/ got total)
         num-chars (Math/round (* (- width 1.0) frac-done))]
     (printf (str "|%-" width "s| Completed %" num-width "s of %s (%.1f%%)\r")
-            (str (apply str (take num-chars (repeat char))) \>) got total (* 100.0 frac-done))
+            (join (concat (repeat num-chars char) ">")) got total (* 100.0 frac-done))
     (flush)))
 
 (defmacro with-progress-bar-cool
@@ -467,21 +468,23 @@
            (let [step#       (max 1 (int (* 0.001 ~total)))
                  result-seq# (delay ~body)]
              (progress-bar 0 ~total 25 \=)
-             (reduce (fn [done# _#]
-                       (progress-bar done# ~total 25 \=)
-                       (+ done# step#))
-                     step#
-                     (take-nth step# (force result-seq#)))
+             (reduce (fn [done# work-chunk#]
+                       (let [new-done# (+ done# (count work-chunk#))]
+                         (progress-bar new-done# ~total 25 \=)
+                         new-done#))
+                     0
+                     (partition-all step# (force result-seq#)))
              (force result-seq#)))
         (= return-behavior :drop)
         `(if (pos? ~total)
            (let [step#       (max 1 (int (* 0.001 ~total)))]
              (progress-bar 0 ~total 25 \=)
-             (reduce (fn [done# _#]
-                       (progress-bar done# ~total 25 \=)
-                       (+ done# step#))
-                     step#
-                     (take-nth step# ~body))
+             (reduce (fn [done# work-chunk#]
+                       (let [new-done# (+ done# (count work-chunk#))]
+                         (progress-bar new-done# ~total 25 \=)
+                         new-done#))
+                     0
+                     (partition-all step# ~body))
              nil))
         :otherwise
         (throw (Exception. "First input to with-progress-bar-cool must be one of :keep or :drop."))))

@@ -194,7 +194,7 @@
               _max_ (var-get (ns-resolve prob-ns '_max_))
               rv-fn (var-get (ns-resolve prob-ns 'rv-fn))
               _>    (var-get (ns-resolve prob-ns '_>))]
-      (let [num-view-lines (* (long (count source-points)) (long (count use-points)))
+      (let [num-view-lines (* (count source-points) (count use-points))
             to-meters      (fn [[i j]] [(* i cell-height) (* j cell-width)])]
         (with-message (str "Scanning " num-view-lines " view lines...\n") "\nAll done."
           (with-progress-bar-cool
