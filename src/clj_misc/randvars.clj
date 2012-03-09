@@ -386,7 +386,7 @@
   (rv-map #(/ % y) X))
 
 (defmulti rv-cdf-lookup
-  ;;"Return F_X(x) = P(X<x)."
+  "Return F_X(x) = P(X<x)."
   (fn [X y] (type X)))
 
 (defmethod rv-cdf-lookup ::discrete-distribution
