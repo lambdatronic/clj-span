@@ -27,6 +27,8 @@
                                     get-cols
                                     map-matrix
                                     make-matrix
+                                    matrix-min
+                                    matrix-max
                                     normalize-matrix)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (java.awt Color Graphics Dimension)
@@ -51,19 +53,41 @@
         b (float 1.0)]
     (Color/getHSBColor h s b)))
 
-;; FIXME: This is really slow. Speed it up.
-(defn render [g layer scale x-dim y-dim rv-to-number]
-  (let [normalized-layer (normalize-matrix (map-matrix rv-to-number layer))
-        img              (BufferedImage. (* scale x-dim) (* scale y-dim) BufferedImage/TYPE_INT_ARGB)
+(defn render [^Graphics g layer scale x-dim y-dim rv-to-number]
+  (let [numeric-layer    (map-matrix rv-to-number layer)
+        min-layer-value  (matrix-min numeric-layer)
+        max-layer-value  (matrix-max numeric-layer)
+        normalized-layer (normalize-matrix numeric-layer)
+        img              (BufferedImage. (* scale x-dim) (* scale (int (* 1.15 y-dim))) BufferedImage/TYPE_INT_ARGB)
         bg               (.getGraphics img)]
+    ;; Set background color to white
     (doto bg
       (.setColor Color/WHITE)
       (.fillRect 0 0 (.getWidth img) (.getHeight img)))
+    ;; Draw map image
     (doseq [x (range x-dim)]
       (doseq [y (range y-dim)]
         (let [percentage (get-in normalized-layer [y x])]
           (if-not (zero? percentage)
             (fill-cell bg x (- y-dim y 1) scale (get-cell-color percentage))))))
+    ;; Draw color legend
+    (doseq [x (range 2 (- x-dim 2))]
+      (let [cell-color (get-cell-color (/ (inc x) (- x-dim 2)))]
+        (doseq [y (range (int (* 1.1 y-dim)) y-dim -1)]
+          (fill-cell bg x y scale cell-color))))
+    ;; Add legend text
+    (let [metrics        (.getFontMetrics bg)
+          min-val-string (format "Min: %.1f" min-layer-value)
+          min-val-width  (.stringWidth metrics min-val-string)
+          max-val-string (format "Max: %.1f" max-layer-value)
+          max-val-width  (.stringWidth metrics max-val-string)]
+      (doto bg
+        (.setColor (get-cell-color (if-not (zero? max-layer-value) (/ min-layer-value max-layer-value) 1.0)))
+        (.setColor (get-cell-color 1.0))
+        (.drawString min-val-string 2 (- (.getHeight img) 2))
+        (.setColor (get-cell-color 1.0))
+        (.drawString max-val-string (- (.getWidth img) max-val-width 2) (- (.getHeight img) 2))))
+    ;; Write BufferedImage to Graphics object
     (.drawImage g img 0 0 nil)
     (.dispose bg)))
 
@@ -75,9 +99,9 @@
         y-dim          (get-rows layer)
         x-dim          (get-cols layer)
         mean-panel     (doto (proxy [JPanel] [] (paint [g] (render g layer scale x-dim y-dim rv-mean)))
-                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))
+                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
         variance-panel (doto (proxy [JPanel] [] (paint [g] (render g layer scale x-dim y-dim rv-variance)))
-                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))]
+                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
     (doto (JFrame. (str title " Mean"))     (.add mean-panel)     .pack .show)
     (doto (JFrame. (str title " Variance")) (.add variance-panel) .pack .show)
     [mean-panel variance-panel]))
@@ -91,10 +115,10 @@
         x-dim          (get-cols ref-layer)
         mean-panel     (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)]
                                                              (render g layer scale x-dim y-dim rv-mean))))
-                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))
+                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
         variance-panel (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)]
                                                              (render g layer scale x-dim y-dim rv-variance))))
-                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))]
+                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
     (doto (JFrame. (str title " Mean"))     (.add mean-panel)     .pack .show)
     (doto (JFrame. (str title " Variance")) (.add variance-panel) .pack .show)
     [mean-panel variance-panel]))
