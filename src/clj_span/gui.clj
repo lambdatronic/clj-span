@@ -52,7 +52,7 @@
     (Color/getHSBColor h s b)))
 
 ;; FIXME: This is really slow. Speed it up.
-(defn render [g layer type scale x-dim y-dim rv-to-number]
+(defn render [g layer scale x-dim y-dim rv-to-number]
   (let [normalized-layer (normalize-matrix (map-matrix rv-to-number layer))
         img              (BufferedImage. (* scale x-dim) (* scale y-dim) BufferedImage/TYPE_INT_ARGB)
         bg               (.getGraphics img)]
@@ -67,22 +67,22 @@
     (.drawImage g img 0 0 nil)
     (.dispose bg)))
 
-(defn draw-layer [title layer type scale value-type]
+(defn draw-layer [title layer scale value-type]
   (let [[rv-mean rv-variance] (case value-type
                                 :numbers  [nb/rv-mean nb/rv-variance]
                                 :varprop  [vp/rv-mean vp/rv-variance]
                                 :randvars [rv/rv-mean rv/rv-variance])
         y-dim          (get-rows layer)
         x-dim          (get-cols layer)
-        mean-panel     (doto (proxy [JPanel] [] (paint [g] (render g layer type scale x-dim y-dim rv-mean)))
+        mean-panel     (doto (proxy [JPanel] [] (paint [g] (render g layer scale x-dim y-dim rv-mean)))
                          (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))
-        variance-panel (doto (proxy [JPanel] [] (paint [g] (render g layer type scale x-dim y-dim rv-variance)))
+        variance-panel (doto (proxy [JPanel] [] (paint [g] (render g layer scale x-dim y-dim rv-variance)))
                          (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))]
     (doto (JFrame. (str title " Mean"))     (.add mean-panel)     .pack .show)
     (doto (JFrame. (str title " Variance")) (.add variance-panel) .pack .show)
     [mean-panel variance-panel]))
 
-(defn draw-ref-layer [title ref-layer type scale value-type]
+(defn draw-ref-layer [title ref-layer scale value-type]
   (let [[rv-mean rv-variance] (case value-type
                                 :numbers  [nb/rv-mean nb/rv-variance]
                                 :varprop  [vp/rv-mean vp/rv-variance]
@@ -90,16 +90,16 @@
         y-dim          (get-rows ref-layer)
         x-dim          (get-cols ref-layer)
         mean-panel     (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)]
-                                                             (render g layer type scale x-dim y-dim rv-mean))))
+                                                             (render g layer scale x-dim y-dim rv-mean))))
                          (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))
         variance-panel (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)]
-                                                             (render g layer type scale x-dim y-dim rv-variance))))
+                                                             (render g layer scale x-dim y-dim rv-variance))))
                          (.setPreferredSize (Dimension. (* scale x-dim) (* scale y-dim))))]
     (doto (JFrame. (str title " Mean"))     (.add mean-panel)     .pack .show)
     (doto (JFrame. (str title " Variance")) (.add variance-panel) .pack .show)
     [mean-panel variance-panel]))
 
-(defn draw-points [ids type scale value-type]
+(defn draw-points [ids scale value-type]
   (let [[_+ _0_]    (case value-type
                       :numbers  [nb/_+ nb/_0_]
                       :varprop  [vp/_+ vp/_0_]
@@ -108,7 +108,7 @@
         max-x       (apply max (map second ids))
         point-vals  (zipmap ids (repeat (_+ _0_ 1.0)))
         point-layer (make-matrix (inc max-y) (inc max-x) #(get point-vals % _0_))]
-    (draw-layer "Points" point-layer type scale value-type)))
+    (draw-layer "Points" point-layer scale value-type)))
 
 (def ^:dynamic *animation-sleep-ms* 100)
 

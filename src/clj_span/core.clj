@@ -146,12 +146,10 @@
       (let [animation-pixel-size   (Math/round (/ 600.0 (max rows cols)))
             possible-flow-animator (if animation? (agent (draw-ref-layer "Possible Flow"
                                                                          possible-flow-layer
-                                                                         :pflow
                                                                          animation-pixel-size
                                                                          value-type)))
             actual-flow-animator   (if animation? (agent (draw-ref-layer "Actual Flow"
                                                                          actual-flow-layer
-                                                                         :aflow
                                                                          animation-pixel-size
                                                                          value-type)))]
         (when animation?

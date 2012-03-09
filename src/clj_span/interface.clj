@@ -138,7 +138,7 @@
     (loop [choice (select-menu-option prompts)]
       (when-let [action (menu choice)]
         (when-let [matrix-result (action)]
-          (draw-layer choice matrix-result :source scale value-type)
+          (draw-layer choice matrix-result scale value-type)
           (println "\nDistinct values:" (count (distinct (matrix2seq matrix-result)))))
         (recur (select-menu-option prompts))))))
 
