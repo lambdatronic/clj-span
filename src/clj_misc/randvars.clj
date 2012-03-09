@@ -466,6 +466,13 @@
         lower  (reduce + (map * states (rest probs)))]
     (/ (+ upper lower) 2)))
 
+;; FIXME: only works for discrete distributions
+(defn rv-variance
+  "Returns the variance of a random variable X."
+  [X]
+  (let [mean (rv-mean X)]
+    (reduce + (map (fn [[x p]] (* (Math/pow (- x mean) 2) p)) X))))
+
 (defn rv-sum
   [Xs]
   (cond (== (count Xs) 1)
@@ -490,6 +497,16 @@
   [coverage]
   (let [frac-sum (reduce + (map second coverage))]
     (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
+
+;; FIXME: only works for discrete distributions
+(defn rv-distribution-sampler
+  "Returns the distribution of the means of a coverage (i.e. a
+   sequence of pairs of [value fraction-covered])."
+  [coverage]
+  (let [frac-sum (reduce + (map second coverage))
+        states   (map (comp rv-mean first) coverage)
+        probs    (map #(/ (second %) frac-sum) coverage)]
+    (create-from-states states probs)))
 
 (defn draw-repeatedly
   "Extracts values from X using a uniform distribution."

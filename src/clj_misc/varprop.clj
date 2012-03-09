@@ -386,6 +386,11 @@
   [X]
   (:mean X))
 
+(defn rv-variance
+  "Returns the variance of a FuzzyNumber."
+  [X]
+  (:var X))
+
 (defn rv-sum
   "Returns the sum of a sequence of FuzzyNumbers using _+_."
   [Xs]
@@ -414,6 +419,15 @@
   [coverage]
   (let [frac-sum (reduce + (map second coverage))]
     (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
+
+(defn rv-distribution-sampler
+  "Returns the distribution of the means of a coverage (i.e. a
+   sequence of pairs of [value fraction-covered])."
+  [coverage]
+  (let [frac-sum (reduce + (map second coverage))
+        states   (map (comp rv-mean first) coverage)
+        probs    (map #(/ (second %) frac-sum) coverage)]
+    (create-from-states states probs)))
 
 (let [stored-val (atom nil)]
   (defn marsaglia-normal

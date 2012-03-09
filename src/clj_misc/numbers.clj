@@ -75,6 +75,8 @@
 
 (def ^{:doc "Returns the mean of a Number, which is itself."} rv-mean identity)
 
+(def ^{:doc "Returns the variance of a Number, which is always 0.0."} rv-variance (constantly 0.0))
+
 (defn rv-sum
   "Returns the sum of a sequence of Numbers."
   [Xs]
@@ -92,6 +94,12 @@
   [coverage]
   (let [frac-sum (reduce + (map second coverage))]
     (rv-sum (map (fn [[val frac]] (_* val (/ frac frac-sum))) coverage))))
+
+(defn rv-distribution-sampler
+  "Returns the distribution of the means of a coverage (i.e. a
+   sequence of pairs of [value fraction-covered])."
+  [coverage]
+  (rv-intensive-sampler coverage))
 
 (def ^{:doc "Extracts a deterministic value from a Number by simply returning it."} draw identity)
 (def ^{:doc "Returns n instances (or an infinite lazy sequence) of the passed-in Number."} draw-repeatedly repeat)
