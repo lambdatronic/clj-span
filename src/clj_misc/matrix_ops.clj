@@ -335,6 +335,11 @@
   [A B]
   (map-matrix * A B))
 
+(defn matrix-min
+  "Returns the minimum value in the matrix."
+  [matrix]
+  (apply min (for [row (seq matrix)] (apply min (seq row)))))
+
 (defn matrix-max
   "Returns the maximum value in the matrix."
   [matrix]

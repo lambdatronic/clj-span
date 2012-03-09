@@ -111,8 +111,8 @@
 (defn get-scale
   [rows cols]
   (let [dimensions (.. java.awt.Toolkit getDefaultToolkit getScreenSize)
-        height     (.height dimensions)
-        width      (.width  dimensions)]
+        height     (* 0.8 (.height dimensions)) ; we reduce these limits to provide
+        width      (* 0.8 (.width  dimensions))]; space for the map legends
     (if (and (< rows height)
              (< cols width))
       (min (/ width  cols)
