@@ -133,7 +133,7 @@
           (println "Example Probs:" example-probs)
           (if (or unbounded-from-below? unbounded-from-above?)
             (throw (Exception. "All undiscretized bounds must be closed above and below.")))
-          ;; (for [#^IndexedCategoricalDistribution dist dists]
+          ;; (for [^IndexedCategoricalDistribution dist dists]
           (for [dist dists]
             (case value-type
               :randvars (if dist (rv/create-from-ranges bounds (.getData dist)) rv/_0_)

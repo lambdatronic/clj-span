@@ -33,7 +33,7 @@
            (java.awt.image BufferedImage)
            (javax.swing JPanel JFrame)))
 
-(defn fill-cell [#^Graphics g x y scale color]
+(defn fill-cell [^Graphics g x y scale color]
   (doto g
     (.setColor color)
     (.fillRect (* x scale) (* y scale) scale scale)))

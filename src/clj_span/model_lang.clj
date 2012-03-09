@@ -138,5 +138,5 @@
                                   [nil forms])]
     (assert (and (#(or (nil? %) (string? %)) doc-string)
                  (valid-properties? type properties)))
-    `(def #^{:doc ~doc-string :span-role ~type} ~varname
+    `(def ^{:doc ~doc-string :span-role ~type} ~varname
           (struct-map ~(symbol (name type)) ~@properties))))
