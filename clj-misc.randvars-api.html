@@ -64,11 +64,15 @@ namespace.
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.randvars/partition-by-probs">partition-by-probs</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#clj-misc.randvars/rv-distribution-sampler">rv-distribution-sampler</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.randvars/rv-extensive-sampler">rv-extensive-sampler</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.randvars/rv-intensive-sampler">rv-intensive-sampler</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.randvars/rv-pos">rv-pos</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#clj-misc.randvars/rv-variance">rv-variance</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.randvars/rv-zero-above-scalar">rv-zero-above-scalar</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
@@ -173,6 +177,18 @@ probability.</pre>
 </div><div id="var-entry">
   <br />
   <hr />
+  <h2 id="clj-misc.randvars/rv-distribution-sampler">rv-distribution-sampler</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (rv-distribution-sampler coverage)
+</pre>
+  <pre id="var-docstr">Returns the distribution of the means of a coverage (i.e. a
+sequence of pairs of [value fraction-covered]).</pre>
+  
+  
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
   <h2 id="clj-misc.randvars/rv-extensive-sampler">rv-extensive-sampler</h2>
   <span id="var-type">function</span><br />
   <pre id="var-usage">Usage: (rv-extensive-sampler coverage)
@@ -202,6 +218,17 @@ of pairs of [value fraction-covered]).</pre>
   <pre id="var-usage">Usage: (rv-pos X)
 </pre>
   <pre id="var-docstr">Sets all negative values in X to 0.</pre>
+  
+  
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="clj-misc.randvars/rv-variance">rv-variance</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (rv-variance X)
+</pre>
+  <pre id="var-docstr">Returns the variance of a random variable X.</pre>
   
   
   

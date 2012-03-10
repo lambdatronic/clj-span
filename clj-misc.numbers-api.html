@@ -110,6 +110,8 @@ namespace.
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.numbers/min_">min_</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#clj-misc.numbers/rv-distribution-sampler">rv-distribution-sampler</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.numbers/rv-extensive-sampler">rv-extensive-sampler</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.numbers/rv-fn">rv-fn</a>
@@ -119,6 +121,8 @@ namespace.
       <a href="#clj-misc.numbers/rv-mean">rv-mean</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.numbers/rv-sum">rv-sum</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#clj-misc.numbers/rv-variance">rv-variance</a>
     </div>
     <br />
   </div>
@@ -435,6 +439,18 @@ expected value of the passed in distribution.</pre>
 </div><div id="var-entry">
   <br />
   <hr />
+  <h2 id="clj-misc.numbers/rv-distribution-sampler">rv-distribution-sampler</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (rv-distribution-sampler coverage)
+</pre>
+  <pre id="var-docstr">Returns the distribution of the means of a coverage (i.e. a
+sequence of pairs of [value fraction-covered]).</pre>
+  
+  
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
   <h2 id="clj-misc.numbers/rv-extensive-sampler">rv-extensive-sampler</h2>
   <span id="var-type">function</span><br />
   <pre id="var-usage">Usage: (rv-extensive-sampler coverage)
@@ -485,6 +501,16 @@ of pairs of [value fraction-covered]).</pre>
   <pre id="var-usage">Usage: (rv-sum Xs)
 </pre>
   <pre id="var-docstr">Returns the sum of a sequence of Numbers.</pre>
+  
+  
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="clj-misc.numbers/rv-variance">rv-variance</h2>
+  <span id="var-type">var</span><br />
+  <pre id="var-usage"></pre>
+  <pre id="var-docstr">Returns the variance of a Number, which is always 0.0.</pre>
   
   
   

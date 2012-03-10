@@ -120,6 +120,8 @@ namespace.
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.varprop/min_">min_</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#clj-misc.varprop/rv-distribution-sampler">rv-distribution-sampler</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.varprop/rv-extensive-sampler">rv-extensive-sampler</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.varprop/rv-fn">rv-fn</a>
@@ -129,6 +131,8 @@ namespace.
       <a href="#clj-misc.varprop/rv-mean">rv-mean</a>
     </div><div style="margin-left: 1em;" class="toc-entry">
       <a href="#clj-misc.varprop/rv-sum">rv-sum</a>
+    </div><div style="margin-left: 1em;" class="toc-entry">
+      <a href="#clj-misc.varprop/rv-variance">rv-variance</a>
     </div>
     <br />
   </div>
@@ -567,6 +571,18 @@ even calls.</pre>
 </div><div id="var-entry">
   <br />
   <hr />
+  <h2 id="clj-misc.varprop/rv-distribution-sampler">rv-distribution-sampler</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (rv-distribution-sampler coverage)
+</pre>
+  <pre id="var-docstr">Returns the distribution of the means of a coverage (i.e. a
+sequence of pairs of [value fraction-covered]).</pre>
+  
+  
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
   <h2 id="clj-misc.varprop/rv-extensive-sampler">rv-extensive-sampler</h2>
   <span id="var-type">function</span><br />
   <pre id="var-usage">Usage: (rv-extensive-sampler coverage)
@@ -620,6 +636,17 @@ of pairs of [value fraction-covered]).</pre>
   <pre id="var-usage">Usage: (rv-sum Xs)
 </pre>
   <pre id="var-docstr">Returns the sum of a sequence of FuzzyNumbers using _+_.</pre>
+  
+  
+  
+</div><div id="var-entry">
+  <br />
+  <hr />
+  <h2 id="clj-misc.varprop/rv-variance">rv-variance</h2>
+  <span id="var-type">function</span><br />
+  <pre id="var-usage">Usage: (rv-variance X)
+</pre>
+  <pre id="var-docstr">Returns the variance of a FuzzyNumber.</pre>
   
   
   

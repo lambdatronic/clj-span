@@ -129,7 +129,7 @@
    :doc
    "Returns a new list of points which completely bounds the\nrectangular region defined by points and remains within the bounds\n[0-rows],[0-cols], inclusive below, exclusive above.",
    :var-type "function",
-   :line 410,
+   :line 422,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([[pi pj] [bi bj]]),
    :name "find-line-between",
@@ -141,7 +141,7 @@
    :doc
    "Returns the sequence of all points [i j] intersected by the line\nfrom provider to beneficiary.  Since this is calculated over a\nregular integer-indexed grid, diagonal lines will be approximated\nby lines bending at right angles along the p-to-b line.  This\ncalculation imagines the indeces of each point to be located at the\ncenter of a square of side length 1.  Note that the first point in\neach path will be the provider id, and the last will be the\nbeneficiary id.  If provider=beneficiary, the path will contain\nonly this one point.",
    :var-type "function",
-   :line 361,
+   :line 373,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists
    ([[y1 x1 :as A] [y2 x2 :as B] [y3 x3 :as C] [y4 x4 :as D]]),
@@ -154,7 +154,7 @@
    :doc
    "Points must be specified in either clockwise or counterclockwise order.",
    :var-type "function",
-   :line 484,
+   :line 496,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([rows cols [i j]]),
    :name "get-neighbors",
@@ -225,6 +225,18 @@
    "/clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/matrix-max",
    :doc "Returns the maximum value in the matrix.",
    :var-type "function",
+   :line 350,
+   :file "src/clj_misc/matrix_ops.clj"}
+  {:arglists ([matrix] [matrix threshold]),
+   :name "matrix-min",
+   :namespace "clj-misc.matrix-ops",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/matrix-min",
+   :doc
+   "Returns the minimum value in the matrix or the minimum value above\nthreshold if passed in.",
+   :var-type "function",
    :line 338,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([A B]),
@@ -260,7 +272,7 @@
    "/clj-misc.matrix-ops-api.html#clj-misc.matrix-ops/normalize-matrix",
    :doc "Normalizes the values in the matrix to the interval [0,1].",
    :var-type "function",
-   :line 343,
+   :line 355,
    :file "src/clj_misc/matrix_ops.clj"}
   {:arglists ([coverage]),
    :name "numeric-extensive-sampler",
@@ -564,7 +576,7 @@
    :source-url nil,
    :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/draw",
    :namespace "clj-misc.numbers",
-   :line 96,
+   :line 104,
    :var-type "var",
    :doc
    "Extracts a deterministic value from a Number by simply returning it.",
@@ -575,7 +587,7 @@
    :wiki-url
    "/clj-misc.numbers-api.html#clj-misc.numbers/draw-repeatedly",
    :namespace "clj-misc.numbers",
-   :line 97,
+   :line 105,
    :var-type "var",
    :doc
    "Returns n instances (or an infinite lazy sequence) of the passed-in Number.",
@@ -599,6 +611,18 @@
    :doc "Returns the smallest of a scalar and one or more Numbers.",
    :name "min_"}
   {:arglists ([coverage]),
+   :name "rv-distribution-sampler",
+   :namespace "clj-misc.numbers",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.numbers-api.html#clj-misc.numbers/rv-distribution-sampler",
+   :doc
+   "Returns the distribution of the means of a coverage (i.e. a\nsequence of pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 98,
+   :file "src/clj_misc/numbers.clj"}
+  {:arglists ([coverage]),
    :name "rv-extensive-sampler",
    :namespace "clj-misc.numbers",
    :source-url nil,
@@ -608,7 +632,7 @@
    :doc
    "Returns the extensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
    :var-type "function",
-   :line 83,
+   :line 85,
    :file "src/clj_misc/numbers.clj"}
   {:arglists ([f & Xs]),
    :name "rv-fn",
@@ -630,7 +654,7 @@
    :doc
    "Returns the intensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
    :var-type "function",
-   :line 89,
+   :line 91,
    :file "src/clj_misc/numbers.clj"}
   {:file "src/clj_misc/numbers.clj",
    :raw-source-url nil,
@@ -649,8 +673,17 @@
    :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/rv-sum",
    :doc "Returns the sum of a sequence of Numbers.",
    :var-type "function",
-   :line 78,
+   :line 80,
    :file "src/clj_misc/numbers.clj"}
+  {:file "src/clj_misc/numbers.clj",
+   :raw-source-url nil,
+   :source-url nil,
+   :wiki-url "/clj-misc.numbers-api.html#clj-misc.numbers/rv-variance",
+   :namespace "clj-misc.numbers",
+   :line 78,
+   :var-type "var",
+   :doc "Returns the variance of a Number, which is always 0.0.",
+   :name "rv-variance"}
   {:arglists ([[x y & more :as point] bounds]),
    :name "in-bounds-full?",
    :namespace "clj-misc.point-algebra",
@@ -755,7 +788,7 @@
    "/clj-misc.randvars-api.html#clj-misc.randvars/draw-repeatedly",
    :doc "Extracts values from X using a uniform distribution.",
    :var-type "function",
-   :line 494,
+   :line 511,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([values] [f values]),
    :name "minimum-discrepancy-partition",
@@ -782,6 +815,18 @@
    :line 139,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([coverage]),
+   :name "rv-distribution-sampler",
+   :namespace "clj-misc.randvars",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.randvars-api.html#clj-misc.randvars/rv-distribution-sampler",
+   :doc
+   "Returns the distribution of the means of a coverage (i.e. a\nsequence of pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 502,
+   :file "src/clj_misc/randvars.clj"}
+  {:arglists ([coverage]),
    :name "rv-extensive-sampler",
    :namespace "clj-misc.randvars",
    :source-url nil,
@@ -791,7 +836,7 @@
    :doc
    "Returns the extensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
    :var-type "function",
-   :line 481,
+   :line 488,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([coverage]),
    :name "rv-intensive-sampler",
@@ -803,7 +848,7 @@
    :doc
    "Returns the intensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
    :var-type "function",
-   :line 487,
+   :line 494,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([X]),
    :name "rv-pos",
@@ -813,7 +858,18 @@
    :wiki-url "/clj-misc.randvars-api.html#clj-misc.randvars/rv-pos",
    :doc "Sets all negative values in X to 0.",
    :var-type "function",
-   :line 522,
+   :line 539,
+   :file "src/clj_misc/randvars.clj"}
+  {:arglists ([X]),
+   :name "rv-variance",
+   :namespace "clj-misc.randvars",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.randvars-api.html#clj-misc.randvars/rv-variance",
+   :doc "Returns the variance of a random variable X.",
+   :var-type "function",
+   :line 470,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([X y]),
    :name "rv-zero-above-scalar",
@@ -825,7 +881,7 @@
    :doc
    "Sets all values greater than y in the random variable X to 0.",
    :var-type "function",
-   :line 512,
+   :line 529,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([X y]),
    :name "rv-zero-below-scalar",
@@ -836,7 +892,7 @@
    "/clj-misc.randvars-api.html#clj-misc.randvars/rv-zero-below-scalar",
    :doc "Sets all values less than y in the random variable X to 0.",
    :var-type "function",
-   :line 517,
+   :line 534,
    :file "src/clj_misc/randvars.clj"}
   {:arglists ([x mu sigma]),
    :name "normalize",
@@ -1414,7 +1470,7 @@
    :doc
    "Returns a value from X~N(0,1). Uses the Box-Muller\ntransform. Memoizes extra computed values for quicker lookups on\neven calls.",
    :var-type "function",
-   :line 437,
+   :line 451,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([bounds probs]),
    :name "create-from-ranges",
@@ -1460,7 +1516,7 @@
    :doc
    "Extracts a deterministic value from a FuzzyNumber by modelling it\nas a normal distribution.",
    :var-type "function",
-   :line 454,
+   :line 468,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([{:keys [mean var]}] [n X]),
    :name "draw-repeatedly",
@@ -1472,7 +1528,7 @@
    :doc
    "Takes a FuzzyNumber X, and returns an infinite lazy sequence of\nnormally-distributed, pseudo-random numbers that match the\nparameters of X, (or a finite sequence of length n, if an integer n\nis provided).",
    :var-type "function",
-   :line 460,
+   :line 474,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([value]),
    :name "ensure-fuzzy",
@@ -1518,7 +1574,7 @@
    :doc
    "Returns a value from X~N(0,1). Uses the Marsaglia polar\nmethod. Memoizes extra computed values for quicker lookups on\neven calls.",
    :var-type "function",
-   :line 419,
+   :line 433,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([x Y] [x Y & more]),
    :name "max_",
@@ -1543,6 +1599,18 @@
    :line 225,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([coverage]),
+   :name "rv-distribution-sampler",
+   :namespace "clj-misc.varprop",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url
+   "/clj-misc.varprop-api.html#clj-misc.varprop/rv-distribution-sampler",
+   :doc
+   "Returns the distribution of the means of a coverage (i.e. a\nsequence of pairs of [value fraction-covered]).",
+   :var-type "function",
+   :line 423,
+   :file "src/clj_misc/varprop.clj"}
+  {:arglists ([coverage]),
    :name "rv-extensive-sampler",
    :namespace "clj-misc.varprop",
    :source-url nil,
@@ -1552,7 +1620,7 @@
    :doc
    "Returns the extensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
    :var-type "function",
-   :line 405,
+   :line 410,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([f & Xs]),
    :name "rv-fn",
@@ -1575,7 +1643,7 @@
    :doc
    "Returns the intensive weighted sum of a coverage (i.e. a sequence\nof pairs of [value fraction-covered]).",
    :var-type "function",
-   :line 411,
+   :line 416,
    :file "src/clj_misc/varprop.clj"}
   {:arglists ([X]),
    :name "rv-mean",
@@ -1594,6 +1662,16 @@
    :raw-source-url nil,
    :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/rv-sum",
    :doc "Returns the sum of a sequence of FuzzyNumbers using _+_.",
+   :var-type "function",
+   :line 394,
+   :file "src/clj_misc/varprop.clj"}
+  {:arglists ([X]),
+   :name "rv-variance",
+   :namespace "clj-misc.varprop",
+   :source-url nil,
+   :raw-source-url nil,
+   :wiki-url "/clj-misc.varprop-api.html#clj-misc.varprop/rv-variance",
+   :doc "Returns the variance of a FuzzyNumber.",
    :var-type "function",
    :line 389,
    :file "src/clj_misc/varprop.clj"}
@@ -1763,7 +1841,7 @@
    :doc
    "Run flow model and return the results as a map of layer names to closures.",
    :var-type "function",
-   :line 199,
+   :line 197,
    :file "src/clj_span/core.clj"}
   {:arglists
    ([source-layer
