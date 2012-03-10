@@ -22,9 +22,10 @@
 ;;; functions.
 
 (ns clj-span.interface
-  (:use [clj-misc.utils      :only (& p mapmap)]
+  (:use [clojure.java.io     :as io]
+        [clj-misc.utils      :only (& p mapmap)]
         [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)]
-        [clj-span.gui        :only (draw-layer)])
+        [clj-span.gui        :only (draw-layer write-layer-to-file)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
 (defn- select-location
@@ -121,6 +122,27 @@
          (max (/ cols width)
               (/ rows height))))))
 
+(defn label-to-keyword
+  [label]
+  (let [[_ word1 word2] (re-find #"(\w+)\s+-\s+(\w+)" label)]
+    (keyword (str (.toLowerCase word2) \- (.toLowerCase word1)))))
+
+(defn write-layers-to-directory
+  [dirname scale value-type results-map]
+  (if dirname
+    (doseq [[label layer-fn] results-map]
+      (write-layer-to-file dirname (name (label-to-keyword label)) (layer-fn) scale value-type))))
+
+(defn request-dirname
+  []
+  (print "Output Directory: ")
+  (flush)
+  (let [choice    (read)
+        directory (io/file choice)]
+    (if (and (.isDirectory directory) (.canWrite directory))
+      choice
+      (println "Invalid selection:" choice "is not a writeable directory."))))
+
 (defmethod provide-results :cli-menu
   [_ value-type source-layer sink-layer use-layer flow-layers results-menu]
   (let [rows        (get-rows source-layer)
@@ -131,6 +153,16 @@
                      #(view-location-properties (select-location rows cols) source-layer sink-layer use-layer flow-layers)
                      "Input Features"
                      #(select-map-by-feature source-layer sink-layer use-layer flow-layers)
+                     "Write All Layers to Directory"
+                     #(write-layers-to-directory (request-dirname)
+                                                 scale
+                                                 value-type
+                                                 (merge
+                                                  (assoc results-menu
+                                                    "Source - Input" (constantly source-layer)
+                                                    "Sink   - Input" (constantly sink-layer)
+                                                    "Use    - Input" (constantly use-layer))
+                                                  (mapmap (fn [label] (str label " - Input")) constantly flow-layers)))
                      "Quit"
                      nil)
         menu        (apply array-map (apply concat (concat results-menu menu-extras)))
@@ -146,9 +178,7 @@
   [_ value-type _ _ _ _ results-menu]
   (println "Returning the results map to Ferd's code.")
   (mapmap
-   (fn [label]
-     (let [[_ word1 word2] (re-find #"(\w+)\s+-\s+(\w+)" label)]
-       (keyword (str (.toLowerCase word2) \- (.toLowerCase word1)))))
+   label-to-keyword
    (fn [closure]
      (let [_0_ (case value-type
                  :numbers  nb/_0_

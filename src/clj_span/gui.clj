@@ -22,7 +22,8 @@
 ;;; somewhat ad-hoc toolkit for simple animations.
 
 (ns clj-span.gui
-  (:use [clj-misc.utils      :only (&)]
+  (:use [clojure.java.io     :as io]
+        [clj-misc.utils      :only (&)]
         [clj-misc.matrix-ops :only (get-rows
                                     get-cols
                                     map-matrix
@@ -33,7 +34,9 @@
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (java.awt Color Graphics Dimension)
            (java.awt.image BufferedImage)
-           (javax.swing JPanel JFrame)))
+           (javax.swing JPanel JFrame)
+           (javax.imageio ImageIO)
+           (java.io IOException)))
 
 (defn fill-cell [^Graphics g x y scale color]
   (doto g
@@ -53,7 +56,7 @@
         b (float 1.0)]
     (Color/getHSBColor h s b)))
 
-(defn render [^Graphics g layer scale x-dim y-dim rv-to-number]
+(defn render [layer scale x-dim y-dim rv-to-number]
   (let [numeric-layer    (map-matrix rv-to-number layer)
         min-layer-value  (matrix-min numeric-layer 0.0)
         max-layer-value  (matrix-max numeric-layer)
@@ -86,9 +89,25 @@
         (.drawString min-val-string 2 (- (.getHeight img) 2))
         (.setColor (get-cell-color 1.0))
         (.drawString max-val-string (- (.getWidth img) max-val-width 2) (- (.getHeight img) 2))))
-    ;; Write BufferedImage to Graphics object
-    (.drawImage g img 0 0 nil)
-    (.dispose bg)))
+    ;; Dispose of Graphics context and return BufferedImage
+    (.dispose bg)
+    img))
+
+(defn write-layer-to-file [dirname file-prefix layer scale value-type]
+  (let [[rv-mean rv-variance] (case value-type
+                                :numbers  [nb/rv-mean nb/rv-variance]
+                                :varprop  [vp/rv-mean vp/rv-variance]
+                                :randvars [rv/rv-mean rv/rv-variance])
+        y-dim        (get-rows layer)
+        x-dim        (get-cols layer)
+        mean-img     (render layer scale x-dim y-dim rv-mean)
+        variance-img (render layer scale x-dim y-dim rv-variance)]
+    (let [outfile (io/file dirname (str file-prefix "-mean.png"))]
+      (try (ImageIO/write mean-img "png" outfile)
+           (catch IOException e (println "Failed to write mean layer for" file-prefix "to file" (.getName outfile)))))
+    (let [outfile (io/file dirname (str file-prefix "-variance.png"))]
+      (try (ImageIO/write variance-img "png" outfile)
+           (catch IOException e (println "Failed to write variance layer for" file-prefix "to file" (.getName outfile)))))))
 
 (defn draw-layer [title layer scale value-type]
   (let [[rv-mean rv-variance] (case value-type
@@ -97,9 +116,11 @@
                                 :randvars [rv/rv-mean rv/rv-variance])
         y-dim          (get-rows layer)
         x-dim          (get-cols layer)
-        mean-panel     (doto (proxy [JPanel] [] (paint [g] (render g layer scale x-dim y-dim rv-mean)))
+        mean-panel     (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-mean)]
+                                                             (.drawImage g img 0 0 nil))))
                          (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
-        variance-panel (doto (proxy [JPanel] [] (paint [g] (render g layer scale x-dim y-dim rv-variance)))
+        variance-panel (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-variance)]
+                                                             (.drawImage g img 0 0 nil))))
                          (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
     (doto (JFrame. (str title " Mean"))     (.add mean-panel)     .pack .show)
     (doto (JFrame. (str title " Variance")) (.add variance-panel) .pack .show)
@@ -112,11 +133,13 @@
                                 :randvars [rv/rv-mean rv/rv-variance])
         y-dim          (get-rows ref-layer)
         x-dim          (get-cols ref-layer)
-        mean-panel     (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)]
-                                                             (render g layer scale x-dim y-dim rv-mean))))
+        mean-panel     (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
+                                                                 img   (render layer scale x-dim y-dim rv-mean)]
+                                                             (.drawImage g img 0 0 nil))))
                          (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
-        variance-panel (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)]
-                                                             (render g layer scale x-dim y-dim rv-variance))))
+        variance-panel (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
+                                                                 img   (render layer scale x-dim y-dim rv-variance)]
+                                                             (.drawImage g img 0 0 nil))))
                          (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
     (doto (JFrame. (str title " Mean"))     (.add mean-panel)     .pack .show)
     (doto (JFrame. (str title " Variance")) (.add variance-panel) .pack .show)
