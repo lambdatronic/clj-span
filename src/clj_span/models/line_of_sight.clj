@@ -168,10 +168,10 @@
                                   :sink-effects    sink-effects)]
               (dosync
                (doseq [id (cons use-point sight-line)]
-                 (alter (get-in possible-flow-layer id) _+_ possible-weight)
+                 (commute (get-in possible-flow-layer id) _+_ possible-weight)
                  (if (not= _0_ actual-weight)
-                   (alter (get-in actual-flow-layer id) _+_ actual-weight)))
-               (alter (get-in cache-layer use-point) conj carrier)))))))))
+                   (commute (get-in actual-flow-layer id) _+_ actual-weight)))
+               (commute (get-in cache-layer use-point) conj carrier)))))))))
 
 (defmethod distribute-flow! "LineOfSight"
   [_ value-type cell-width cell-height _ _ trans-threshold cache-layer
