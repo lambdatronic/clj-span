@@ -336,9 +336,16 @@
   (map-matrix * A B))
 
 (defn matrix-min
-  "Returns the minimum value in the matrix."
-  [matrix]
-  (apply min (for [row (seq matrix)] (apply min (seq row)))))
+  "Returns the minimum value in the matrix or the minimum value above
+   threshold if passed in."
+  ([matrix]
+     (apply min (for [row (seq matrix)] (apply min (seq row)))))
+  ([matrix threshold]
+     (if-let [vals-above-threshold (seq (remove nil? (for [row (seq matrix)]
+                                                       (if-let [vals-above-threshold (seq (filter #(> % threshold) row))]
+                                                         (apply min vals-above-threshold)))))]
+       (apply min vals-above-threshold)
+       threshold)))
 
 (defn matrix-max
   "Returns the maximum value in the matrix."

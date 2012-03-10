@@ -55,7 +55,7 @@
 
 (defn render [^Graphics g layer scale x-dim y-dim rv-to-number]
   (let [numeric-layer    (map-matrix rv-to-number layer)
-        min-layer-value  (matrix-min numeric-layer)
+        min-layer-value  (matrix-min numeric-layer 0.0)
         max-layer-value  (matrix-max numeric-layer)
         normalized-layer (normalize-matrix numeric-layer)
         img              (BufferedImage. (* scale x-dim) (* scale (int (* 1.15 y-dim))) BufferedImage/TYPE_INT_ARGB)
