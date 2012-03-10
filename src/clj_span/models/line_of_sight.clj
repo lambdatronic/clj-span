@@ -121,7 +121,7 @@
    decay function is applied to the results to compute the visual
    utility originating from the source point."
   [source-layer sink-layer elev-layer cache-layer possible-flow-layer
-   actual-flow-layer to-meters trans-threshold [source-point use-point]]
+   actual-flow-layer to-meters trans-threshold source-point use-point]
   (when (not= source-point use-point) ;; no in-situ use
     (let [use-loc-in-m    (to-meters use-point)
           source-loc-in-m (to-meters source-point)
@@ -195,19 +195,23 @@
               rv-fn (var-get (ns-resolve prob-ns 'rv-fn))
               _>    (var-get (ns-resolve prob-ns '_>))]
       (let [num-view-lines (* (count source-points) (count use-points))
-            to-meters      (fn [[i j]] [(* i cell-height) (* j cell-width)])]
-        (with-message (str "Scanning " num-view-lines " view lines...\n") "\nAll done."
+            to-meters      (fn [[i j]] [(* i cell-height) (* j cell-width)])
+            partition-size 1]
+        (with-message (str "Scanning " num-view-lines " view lines in chunks of size " partition-size "...\n") "\nAll done."
           (with-progress-bar-cool
             :drop
-            num-view-lines
-            (pmap (p raycast!
-                     source-layer
-                     sink-layer
-                     elev-layer
-                     cache-layer
-                     possible-flow-layer
-                     actual-flow-layer
-                     to-meters
-                     trans-threshold)
-                  (for [source-point source-points use-point use-points]
-                    [source-point use-point]))))))))
+            (int (Math/ceil (/ num-view-lines partition-size)))
+            (pmap (fn [view-lines]
+                    (doseq [[source-point use-point] view-lines]
+                      (raycast!
+                       source-layer
+                       sink-layer
+                       elev-layer
+                       cache-layer
+                       possible-flow-layer
+                       actual-flow-layer
+                       to-meters
+                       trans-threshold
+                       source-point
+                       use-point)))
+                  (partition-all partition-size (for [use-point use-points source-point source-points] [source-point use-point])))))))))
