@@ -21,7 +21,8 @@
 ;;; simulations at the REPL.
 
 (ns clj-span.repl-utils
-  (:use (clj-span core commandline aries-span-bridge analyzer gui worldgen)
+  (:use (clj-span core commandline aries-span-bridge analyzer gui)
+        [clj-span.worldgen :only [read-layer-from-file]]
         (clj-misc utils matrix-ops stats)
         clojure.pprint)
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
@@ -71,7 +72,7 @@
     (def aflow (let [rmap ((:actual-flow         result-map))] (make-matrix rows cols #(get rmap % _0_))))))
 
 (defn test-run-sediment
-  []
+  [value-type]
   (run-span {:flow-model         "SedimentTransport"
              :source-layer       source-layer
              :sink-layer         sink-layer
@@ -87,14 +88,14 @@
              :sink-type          :finite
              :use-type           :infinite
              :benefit-type       :rival ;; or :non-rival for turbidity
-             :value-type         :varprop
+             :value-type         value-type
              :downscaling-factor 3
              :rv-max-states      10
              :animation?         false
              :result-type        :closure-map}))
 
 (defn test-run-flood
-  []
+  [value-type]
   (run-span {:flow-model         "FloodWaterMovement"
              :source-layer       source-layer
              :sink-layer         sink-layer
@@ -110,14 +111,14 @@
              :sink-type          :finite
              :use-type           :infinite
              :benefit-type       :non-rival
-             :value-type         :varprop
+             :value-type         value-type
              :downscaling-factor 3
              :rv-max-states      10
              :animation?         false
              :result-type        :closure-map}))
 
 (defn test-run-storm
-  []
+  [value-type]
   (run-span {:flow-model         "CoastalStormMovement"
              :source-layer       source-layer
              :sink-layer         sink-layer
@@ -133,14 +134,14 @@
              :sink-type          :infinite
              :use-type           :infinite
              :benefit-type       :non-rival
-             :value-type         :varprop
+             :value-type         value-type
              :downscaling-factor 1
              :rv-max-states      10
              :animation?         true
              :result-type        :closure-map}))
 
 (defn test-run-fishing
-  []
+  [value-type]
   (run-span {:flow-model         "SubsistenceFishAccessibility"
              :source-layer       source-layer
              :sink-layer         nil
@@ -156,14 +157,14 @@
              :sink-type          nil
              :use-type           :finite
              :benefit-type       :rival
-             :value-type         :varprop
+             :value-type         value-type
              :downscaling-factor 1
              :rv-max-states      10
              :animation?         false
              :result-type        :closure-map}))
 
 (defn test-run-water
-  []
+  [value-type]
   (run-span {:flow-model         "SurfaceWaterMovement"
              :source-layer       source-layer
              :sink-layer         sink-layer
@@ -179,14 +180,14 @@
              :sink-type          :finite
              :use-type           :finite
              :benefit-type       :rival
-             :value-type         :varprop
+             :value-type         value-type
              :downscaling-factor 1
              :rv-max-states      10
              :animation?         false
              :result-type        :closure-map}))
 
 (defn test-run-carbon
-  []
+  [value-type]
   (run-span {:flow-model         "CO2Removed"
              :source-layer       source-layer
              :sink-layer         sink-layer
@@ -202,14 +203,14 @@
              :sink-type          :finite
              :use-type           :finite
              :benefit-type       :rival
-             :value-type         :varprop
+             :value-type         value-type
              :downscaling-factor 20
              :rv-max-states      10
              :animation?         false
              :result-type        :closure-map}))
 
 (defn test-run-view
-  []
+  [value-type]
   (run-span {:flow-model         "LineOfSight"
              :source-layer       source-layer
              :sink-layer         sink-layer
@@ -225,14 +226,14 @@
              :sink-type          :infinite
              :use-type           :infinite
              :benefit-type       :non-rival
-             :value-type         :varprop
+             :value-type         value-type
              :downscaling-factor 2
              :rv-max-states      10
              :animation?         false
              :result-type        :closure-map}))
 
 (defn test-run-proximity
-  []
+  [value-type]
   (run-span {:flow-model         "Proximity"
              :source-layer       source-layer
              :sink-layer         sink-layer
@@ -248,7 +249,7 @@
              :sink-type          :infinite
              :use-type           :infinite
              :benefit-type       :non-rival
-             :value-type         :varprop
+             :value-type         value-type
              :downscaling-factor 1
              :rv-max-states      10
              :animation?         false
