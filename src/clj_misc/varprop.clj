@@ -391,6 +391,11 @@
   [X]
   (:var X))
 
+(defn rv-stdev
+  "Returns the standard deviation of a FuzzyNumber."
+  [X]
+  (Math/sqrt (:var X)))
+
 (defn rv-sum
   "Returns the sum of a sequence of FuzzyNumbers using _+_."
   [Xs]

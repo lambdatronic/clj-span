@@ -77,6 +77,8 @@
 
 (def ^{:doc "Returns the variance of a Number, which is always 0.0."} rv-variance (constantly 0.0))
 
+(def ^{:doc "Returns the standard deviation of a Number, which is always 0.0."} rv-stdev (constantly 0.0))
+
 (defn rv-sum
   "Returns the sum of a sequence of Numbers."
   [Xs]

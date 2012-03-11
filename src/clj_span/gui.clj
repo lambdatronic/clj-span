@@ -43,11 +43,11 @@
     (.setColor color)
     (.fillRect (* x scale) (* y scale) scale scale)))
 
-;; (defn get-cell-color [mean variance]
+;; (defn get-cell-color [mean stdev]
 ;;   (let [r (float mean)
 ;;         g (float (- 1.0 mean))
 ;;         b (float 0.0)
-;;         a (float (- 1.0 variance))]
+;;         a (float (- 1.0 stdev))]
 ;;     (Color. r g b a)))
 
 (defn get-cell-color [percentage] ; [0-1]
@@ -94,56 +94,56 @@
     img))
 
 (defn write-layer-to-file [dirname file-prefix layer scale value-type]
-  (let [[rv-mean rv-variance] (case value-type
-                                :numbers  [nb/rv-mean nb/rv-variance]
-                                :varprop  [vp/rv-mean vp/rv-variance]
-                                :randvars [rv/rv-mean rv/rv-variance])
-        y-dim        (get-rows layer)
-        x-dim        (get-cols layer)
-        mean-img     (render layer scale x-dim y-dim rv-mean)
-        variance-img (render layer scale x-dim y-dim rv-variance)]
+  (let [[rv-mean rv-stdev] (case value-type
+                             :numbers  [nb/rv-mean nb/rv-stdev]
+                             :varprop  [vp/rv-mean vp/rv-stdev]
+                             :randvars [rv/rv-mean rv/rv-stdev])
+        y-dim     (get-rows layer)
+        x-dim     (get-cols layer)
+        mean-img  (render layer scale x-dim y-dim rv-mean)
+        stdev-img (render layer scale x-dim y-dim rv-stdev)]
     (let [outfile (io/file dirname (str file-prefix "-mean.png"))]
       (try (ImageIO/write mean-img "png" outfile)
            (catch IOException e (println "Failed to write mean layer for" file-prefix "to file" (.getName outfile)))))
-    (let [outfile (io/file dirname (str file-prefix "-variance.png"))]
-      (try (ImageIO/write variance-img "png" outfile)
-           (catch IOException e (println "Failed to write variance layer for" file-prefix "to file" (.getName outfile)))))))
+    (let [outfile (io/file dirname (str file-prefix "-stdev.png"))]
+      (try (ImageIO/write stdev-img "png" outfile)
+           (catch IOException e (println "Failed to write stdev layer for" file-prefix "to file" (.getName outfile)))))))
 
 (defn draw-layer [title layer scale value-type]
-  (let [[rv-mean rv-variance] (case value-type
-                                :numbers  [nb/rv-mean nb/rv-variance]
-                                :varprop  [vp/rv-mean vp/rv-variance]
-                                :randvars [rv/rv-mean rv/rv-variance])
-        y-dim          (get-rows layer)
-        x-dim          (get-cols layer)
-        mean-panel     (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-mean)]
-                                                             (.drawImage g img 0 0 nil))))
-                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
-        variance-panel (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-variance)]
-                                                             (.drawImage g img 0 0 nil))))
-                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
-    (doto (JFrame. (str title " Mean"))     (.add mean-panel)     .pack .show)
-    (doto (JFrame. (str title " Variance")) (.add variance-panel) .pack .show)
-    [mean-panel variance-panel]))
+  (let [[rv-mean rv-stdev] (case value-type
+                             :numbers  [nb/rv-mean nb/rv-stdev]
+                             :varprop  [vp/rv-mean vp/rv-stdev]
+                             :randvars [rv/rv-mean rv/rv-stdev])
+        y-dim       (get-rows layer)
+        x-dim       (get-cols layer)
+        mean-panel  (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-mean)]
+                                                          (.drawImage g img 0 0 nil))))
+                      (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
+        stdev-panel (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-stdev)]
+                                                          (.drawImage g img 0 0 nil))))
+                      (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
+    (doto (JFrame. (str title " Mean"))               (.add mean-panel)  .pack .show)
+    (doto (JFrame. (str title " Standard Deviation")) (.add stdev-panel) .pack .show)
+    [mean-panel stdev-panel]))
 
 (defn draw-ref-layer [title ref-layer scale value-type]
-  (let [[rv-mean rv-variance] (case value-type
-                                :numbers  [nb/rv-mean nb/rv-variance]
-                                :varprop  [vp/rv-mean vp/rv-variance]
-                                :randvars [rv/rv-mean rv/rv-variance])
-        y-dim          (get-rows ref-layer)
-        x-dim          (get-cols ref-layer)
-        mean-panel     (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
-                                                                 img   (render layer scale x-dim y-dim rv-mean)]
-                                                             (.drawImage g img 0 0 nil))))
-                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
-        variance-panel (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
-                                                                 img   (render layer scale x-dim y-dim rv-variance)]
-                                                             (.drawImage g img 0 0 nil))))
-                         (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
-    (doto (JFrame. (str title " Mean"))     (.add mean-panel)     .pack .show)
-    (doto (JFrame. (str title " Variance")) (.add variance-panel) .pack .show)
-    [mean-panel variance-panel]))
+  (let [[rv-mean rv-stdev] (case value-type
+                             :numbers  [nb/rv-mean nb/rv-stdev]
+                             :varprop  [vp/rv-mean vp/rv-stdev]
+                             :randvars [rv/rv-mean rv/rv-stdev])
+        y-dim       (get-rows ref-layer)
+        x-dim       (get-cols ref-layer)
+        mean-panel  (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
+                                                              img   (render layer scale x-dim y-dim rv-mean)]
+                                                          (.drawImage g img 0 0 nil))))
+                      (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
+        stdev-panel (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
+                                                              img   (render layer scale x-dim y-dim rv-stdev)]
+                                                          (.drawImage g img 0 0 nil))))
+                      (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
+    (doto (JFrame. (str title " Mean"))               (.add mean-panel)  .pack .show)
+    (doto (JFrame. (str title " Standard Deviation")) (.add stdev-panel) .pack .show)
+    [mean-panel stdev-panel]))
 
 (defn draw-points [ids scale value-type]
   (let [[_+ _0_]    (case value-type
@@ -158,10 +158,10 @@
 
 (def ^:dynamic *animation-sleep-ms* 100)
 
-(defn run-animation [[mean-panel variance-panel]]
+(defn run-animation [[mean-panel stdev-panel]]
   (send-off *agent* run-animation)
   (Thread/sleep *animation-sleep-ms*)
-  [(doto mean-panel     (.repaint))
-   (doto variance-panel (.repaint))])
+  [(doto mean-panel  (.repaint))
+   (doto stdev-panel (.repaint))])
 
-(defn end-animation [[mean-panel variance-panel]] [mean-panel variance-panel])
+(defn end-animation [[mean-panel stdev-panel]] [mean-panel stdev-panel])

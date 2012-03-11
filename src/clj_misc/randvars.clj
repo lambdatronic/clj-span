@@ -473,6 +473,12 @@
   (let [mean (rv-mean X)]
     (reduce + (map (fn [[x p]] (* (Math/pow (- x mean) 2) p)) X))))
 
+;; FIXME: only works for discrete distributions
+(defn rv-stdev
+  "Returns the standard deviation of a random variable X."
+  [X]
+  (Math/sqrt (rv-variance X)))
+
 (defn rv-sum
   [Xs]
   (cond (== (count Xs) 1)
