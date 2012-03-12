@@ -80,8 +80,9 @@
    out-of-stream flow path. Reduces the sink-caps for each sink which
    captures some of the service medium. Returns remaining
    actual-weight and the local sink effects."
-  [current-id possible-weight actual-weight stream-intakes possible-use-caps
-   actual-use-caps cache-layer mm2-per-cell surface-water-carrier]
+  [current-id possible-weight actual-weight stream-intakes
+   possible-use-caps actual-use-caps cache-layer possible-flow-layer
+   actual-flow-layer mm2-per-cell surface-water-carrier]
   (if-let [use-id (stream-intakes current-id)]
     (dosync
      (let [possible-use-cap-ref (possible-use-caps use-id)
@@ -105,11 +106,19 @@
                 (rv-fn '(fn [a u] (min a u))         actual-weight actual-use-cap)]))]
        (if (or (not= _0_ possible-use)
                (not= _0_ actual-use))
-         (alter (get-in cache-layer use-id) conj (assoc surface-water-carrier
-                                                   :possible-weight (_d possible-use mm2-per-cell)
-                                                   :actual-weight   (_d actual-use   mm2-per-cell)
-                                                   :sink-effects    (mapmap identity #(_d % mm2-per-cell)
-                                                                            (:sink-effects surface-water-carrier)))))
+         (let [possible-benefit (_d possible-use mm2-per-cell)
+               actual-benefit   (_d actual-use   mm2-per-cell)]
+           (doseq [id (:route surface-water-carrier)]
+             (if (not= _0_ possible-benefit)
+               (commute (get-in possible-flow-layer id) _+_ possible-benefit))
+             (if (not= _0_ actual-benefit)
+               (commute (get-in actual-flow-layer id) _+_ actual-benefit)))
+           (commute (get-in cache-layer use-id) conj (assoc surface-water-carrier
+                                                       :route           nil
+                                                       :possible-weight possible-benefit
+                                                       :actual-weight   actual-benefit
+                                                       :sink-effects    (mapmap identity #(_d % mm2-per-cell)
+                                                                                (:sink-effects surface-water-carrier))))))
        [new-possible-weight new-actual-weight]))
     [possible-weight actual-weight]))
 
@@ -143,9 +152,9 @@
   (let [current-id (peek route)
         prev-id    (peek (pop route))
         bearing    (if prev-id (subtract-ids current-id prev-id))]
-    (dosync
-     (alter (get-in possible-flow-layer current-id) _+_ (_d possible-weight mm2-per-cell))
-     (alter (get-in actual-flow-layer   current-id) _+_ (_d actual-weight   mm2-per-cell)))
+    ;; (dosync
+    ;;  (alter (get-in possible-flow-layer current-id) _+_ (_d possible-weight mm2-per-cell))
+    ;;  (alter (get-in actual-flow-layer   current-id) _+_ (_d actual-weight   mm2-per-cell)))
     (if stream-bound?
       (let [[new-possible-weight new-actual-weight] (handle-use-effects! current-id
                                                                          possible-weight
@@ -154,6 +163,8 @@
                                                                          possible-use-caps
                                                                          actual-use-caps
                                                                          cache-layer
+                                                                         possible-flow-layer
+                                                                         actual-flow-layer
                                                                          mm2-per-cell
                                                                          surface-water-carrier)]
         (if (_> new-possible-weight trans-threshold-volume)
@@ -241,6 +252,7 @@
     #(str "\nDone. [Claimed intakes: " (count %) "]")
     (let [in-stream-users (filter in-stream? use-points)
           claimed-intakes (ref (zipmap in-stream-users in-stream-users))]
+      (println "Detected" (count in-stream-users) "in-stream users.\nContinuing with out-of-stream users...")
       (with-progress-bar-cool
         :drop
         (- (count use-points) (count in-stream-users))
