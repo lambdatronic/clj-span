@@ -109,7 +109,7 @@
                   whose values equal _0_."
   (fn [result-type value-type source-layer sink-layer use-layer flow-layers results-menu] result-type))
 
-(defn get-scale
+(defn get-max-scale
   [rows cols]
   (let [dimensions (.. java.awt.Toolkit getDefaultToolkit getScreenSize)
         height     (* 0.8 (.height dimensions)) ; we reduce these limits to provide
@@ -121,6 +121,14 @@
       (/ 1
          (max (/ cols width)
               (/ rows height))))))
+
+(def ^:dynamic *scale* 1)
+
+(defn set-scale!
+  [new-scale]
+  (when new-scale
+    (alter-var-root! #'*scale* (constantly new-scale))
+    nil))
 
 (defn label-to-keyword
   [label]
@@ -143,11 +151,20 @@
       choice
       (println "Invalid selection:" choice "is not a writeable directory."))))
 
+(defn request-scale
+  []
+  (print "Pixels per cell (integer): ")
+  (flush)
+  (let [choice (read)]
+    (if (integer? choice)
+      choice
+      (println "Invalid selection:" choice "must be an integer."))))
+
 (defmethod provide-results :cli-menu
   [_ value-type source-layer sink-layer use-layer flow-layers results-menu]
   (let [rows        (get-rows source-layer)
         cols        (get-cols source-layer)
-        scale       (get-scale rows cols)
+        ;; scale       (get-max-scale rows cols)
         menu-extras (array-map
                      "Location Properties"
                      #(view-location-properties (select-location rows cols) source-layer sink-layer use-layer flow-layers)
@@ -155,7 +172,7 @@
                      #(select-map-by-feature source-layer sink-layer use-layer flow-layers)
                      "Write All Layers to Directory"
                      #(write-layers-to-directory (request-dirname)
-                                                 scale
+                                                 *scale*
                                                  value-type
                                                  (merge
                                                   (assoc results-menu
@@ -163,6 +180,8 @@
                                                     "Sink   - Input" (constantly sink-layer)
                                                     "Use    - Input" (constantly use-layer))
                                                   (mapmap (fn [label] (str label " - Input")) constantly flow-layers)))
+                     "Set Image Scale"
+                     #(set-scale! (request-scale))
                      "Quit"
                      nil)
         menu        (apply array-map (apply concat (concat results-menu menu-extras)))
@@ -170,7 +189,7 @@
     (loop [choice (select-menu-option prompts)]
       (when-let [action (menu choice)]
         (when-let [matrix-result (action)]
-          (draw-layer choice matrix-result scale value-type)
+          (draw-layer choice matrix-result *scale* value-type)
           (println "\nDistinct values:" (count (distinct (matrix2seq matrix-result)))))
         (recur (select-menu-option prompts))))))
 
