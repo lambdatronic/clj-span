@@ -127,7 +127,7 @@
 (defn set-scale!
   [new-scale]
   (when new-scale
-    (alter-var-root! #'*scale* (constantly new-scale))
+    (alter-var-root #'*scale* (constantly new-scale))
     nil))
 
 (defn label-to-keyword
