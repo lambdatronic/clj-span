@@ -51,17 +51,23 @@
 ;;     (Color. r g b a)))
 
 (defn get-cell-color [percentage] ; [0-1]
-  (let [h (float (- 0.5 (/ percentage 2.0))) ; light blue to red
+  (let [h (float (- 0.7 (* percentage 0.7))) ; blue to red
         s (float 1.0)
         b (float 1.0)]
     (Color/getHSBColor h s b)))
+
+(def ^:dynamic *legend-color-height* 20) ; pixels
+(def ^:dynamic *legend-text-height*  10) ; pixels
+(def ^:dynamic *legend-padding*       5) ; pixels
 
 (defn render [layer scale x-dim y-dim rv-to-number]
   (let [numeric-layer    (map-matrix rv-to-number layer)
         min-layer-value  (matrix-min numeric-layer 0.0)
         max-layer-value  (matrix-max numeric-layer)
         normalized-layer (normalize-matrix numeric-layer)
-        img              (BufferedImage. (* scale x-dim) (* scale (int (* 1.15 y-dim))) BufferedImage/TYPE_INT_ARGB)
+        img              (BufferedImage. (* scale x-dim)
+                                         (+ (* scale y-dim) *legend-color-height* *legend-text-height* (* *legend-padding* 3))
+                                         BufferedImage/TYPE_INT_ARGB)
         bg               (.getGraphics img)]
     ;; Set background color to white
     (doto bg
@@ -74,10 +80,10 @@
           (if-not (zero? percentage)
             (fill-cell bg x (- y-dim y 1) scale (get-cell-color percentage))))))
     ;; Draw color legend
-    (doseq [x (range 2 (- x-dim 2))]
-      (let [cell-color (get-cell-color (/ (inc x) (- x-dim 2)))]
-        (doseq [y (range (int (* 1.1 y-dim)) y-dim -1)]
-          (fill-cell bg x y scale cell-color))))
+    (doseq [x (range *legend-padding* (- (.getWidth img) *legend-padding*))] ; add whitespace padding on left and right of legend
+      (let [cell-color (get-cell-color (/ (- x *legend-padding*) (- (.getWidth img) (* 2 *legend-padding*))))] ; ranges from [0-1]
+        (doseq [y (range *legend-color-height*)]
+          (fill-cell bg x (+ (* scale y-dim) *legend-padding* y) 1 cell-color))))
     ;; Add legend text
     (let [metrics        (.getFontMetrics bg)
           min-val-string (format "Min: %.1f" min-layer-value)
@@ -86,9 +92,9 @@
           max-val-width  (.stringWidth metrics max-val-string)]
       (doto bg
         (.setColor (get-cell-color (if-not (zero? max-layer-value) (/ min-layer-value max-layer-value) 1.0)))
-        (.drawString min-val-string 2 (- (.getHeight img) 2))
+        (.drawString min-val-string *legend-padding* (- (.getHeight img) *legend-padding*))
         (.setColor (get-cell-color 1.0))
-        (.drawString max-val-string (- (.getWidth img) max-val-width 2) (- (.getHeight img) 2))))
+        (.drawString max-val-string (- (.getWidth img) *legend-padding* max-val-width) (- (.getHeight img) *legend-padding*))))
     ;; Dispose of Graphics context and return BufferedImage
     (.dispose bg)
     img))
@@ -118,10 +124,18 @@
         x-dim       (get-cols layer)
         mean-panel  (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-mean)]
                                                           (.drawImage g img 0 0 nil))))
-                      (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
+                      (.setPreferredSize (Dimension. (* scale x-dim)
+                                                     (+ (* scale y-dim)
+                                                        *legend-color-height*
+                                                        *legend-text-height*
+                                                        (* 3 *legend-padding*)))))
         stdev-panel (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-stdev)]
                                                           (.drawImage g img 0 0 nil))))
-                      (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
+                      (.setPreferredSize (Dimension. (* scale x-dim)
+                                                     (+ (* scale y-dim)
+                                                        *legend-color-height*
+                                                        *legend-text-height*
+                                                        (* 3 *legend-padding*)))))]
     (doto (JFrame. (str title " Mean"))               (.add mean-panel)  .pack .show)
     (doto (JFrame. (str title " Standard Deviation")) (.add stdev-panel) .pack .show)
     [mean-panel stdev-panel]))
@@ -136,11 +150,19 @@
         mean-panel  (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
                                                               img   (render layer scale x-dim y-dim rv-mean)]
                                                           (.drawImage g img 0 0 nil))))
-                      (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))
+                      (.setPreferredSize (Dimension. (* scale x-dim)
+                                                     (+ (* scale y-dim)
+                                                        *legend-color-height*
+                                                        *legend-text-height*
+                                                        (* 3 *legend-padding*)))))
         stdev-panel (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
                                                               img   (render layer scale x-dim y-dim rv-stdev)]
                                                           (.drawImage g img 0 0 nil))))
-                      (.setPreferredSize (Dimension. (* scale x-dim) (* scale (int (* 1.15 y-dim))))))]
+                      (.setPreferredSize (Dimension. (* scale x-dim)
+                                                     (+ (* scale y-dim)
+                                                        *legend-color-height*
+                                                        *legend-text-height*
+                                                        (* 3 *legend-padding*)))))]
     (doto (JFrame. (str title " Mean"))               (.add mean-panel)  .pack .show)
     (doto (JFrame. (str title " Standard Deviation")) (.add stdev-panel) .pack .show)
     [mean-panel stdev-panel]))
