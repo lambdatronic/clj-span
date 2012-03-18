@@ -300,15 +300,20 @@
       @in-stream-map)))
 
 (defmethod distribute-flow! "FloodWaterMovement"
-  [_ value-type cell-width cell-height rows cols _ cache-layer possible-flow-layer actual-flow-layer
-   source-layer sink-layer _ source-points sink-points use-points
-   {stream-layer "River", elevation-layer "Altitude", levees-layer "Levees",
-    floodplain-layer100 "Floodplains100Code", floodplain-layer500 "Floodplains500Code"}]
-  (println "Operating in" (if floodplain-layer500 "500" "100") "year floodplain.")
-  (let [prob-ns (case value-type
+  [{:keys [source-layer sink-layer flow-layers
+           cache-layer possible-flow-layer actual-flow-layer
+           source-points sink-points use-points
+           value-type cell-width cell-height rows cols]}]
+  (let [{stream-layer "River",
+         elevation-layer "Altitude",
+         levees-layer "Levees",
+         floodplain-layer100 "Floodplains100Code",
+         floodplain-layer500 "Floodplains500Code"} flow-layers
+        prob-ns (case value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]
+    (println "Operating in" (if floodplain-layer500 "500" "100") "year floodplain.")
     (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
               _+_   (var-get (ns-resolve prob-ns '_+_))
               *_    (var-get (ns-resolve prob-ns '*_))

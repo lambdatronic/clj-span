@@ -174,10 +174,12 @@
                (commute (get-in cache-layer use-point) conj carrier)))))))))
 
 (defmethod distribute-flow! "LineOfSight"
-  [_ value-type cell-width cell-height _ _ trans-threshold cache-layer
-   possible-flow-layer actual-flow-layer source-layer sink-layer _
-   source-points _ use-points {elev-layer "Altitude"}]
-  (let [prob-ns (case value-type
+  [{:keys [source-layer sink-layer flow-layers
+           cache-layer possible-flow-layer actual-flow-layer
+           source-points use-points cell-width cell-height
+           value-type trans-threshold]}]
+  (let [{elev-layer "Altitude"} flow-layers
+        prob-ns (case value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

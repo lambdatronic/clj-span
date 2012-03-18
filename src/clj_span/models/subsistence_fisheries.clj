@@ -213,10 +213,12 @@
 ;;        Possible/Actual Use are in kg/km^2*year, Inaccessible Use
 ;;        will not make sense.
 (defmethod distribute-flow! "SubsistenceFishAccessibility"
-  [_ value-type cell-width cell-height rows cols _ cache-layer possible-flow-layer
-   actual-flow-layer source-layer _ use-layer source-points _ use-points
-   {path-layer "Path", population-density-layer "PopulationDensity"}]
-  (let [prob-ns (case value-type
+  [{:keys [source-layer use-layer flow-layers
+           cache-layer possible-flow-layer actual-flow-layer
+           source-points use-points
+           value-type cell-width cell-height rows cols]}]
+  (let [{path-layer "Path", population-density-layer "PopulationDensity"} flow-layers
+        prob-ns (case value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

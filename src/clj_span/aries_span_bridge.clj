@@ -184,8 +184,10 @@
    {:keys [source-threshold sink-threshold use-threshold trans-threshold
            rv-max-states downscaling-factor source-type sink-type use-type benefit-type
            value-type animation? result-type save-file]
-    :or {value-type  :varprop
-         result-type :closure-map}}]
+    :or {rv-max-states      10
+         downscaling-factor 1
+         value-type         :varprop
+         result-type        :closure-map}}]
   (let [observation (if (vector? observation-or-model-spec)
                       (with-message "Running model to get observation..." "done."
                         (apply run-at-location observation-or-model-spec))

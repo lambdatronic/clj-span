@@ -495,10 +495,10 @@
   (take-while seq (iterate #(remove nil? (f %)) x)))
 
 (defmacro with-message
-  [msg msg-done body]
+  [msg msg-done & body]
   `(do (print ~msg)
        (flush)
-       (let [result# ~body]
+       (let [result# (do ~@body)]
          (println
           (if (fn? ~msg-done)
             (~msg-done result#)

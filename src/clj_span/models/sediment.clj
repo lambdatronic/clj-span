@@ -301,11 +301,15 @@
 
 ;; FIXME: 100-yr vs. 500-yr floodplains?
 (defmethod distribute-flow! "SedimentTransport"
-  [_ value-type cell-width cell-height rows cols _ cache-layer possible-flow-layer actual-flow-layer
-   source-layer sink-layer _ source-points sink-points use-points
-   {stream-layer "River", elevation-layer "Altitude", levees-layer "Levee",
-    floodplain-layer "FloodplainsCode"}]
-  (let [prob-ns (case value-type
+  [{:keys [source-layer sink-layer flow-layers
+           cache-layer possible-flow-layer actual-flow-layer
+           source-points sink-points use-points
+           value-type cell-width cell-height rows cols]}]
+  (let [{stream-layer "River",
+         elevation-layer "Altitude",
+         levees-layer "Levee",
+         floodplain-layer "FloodplainsCode"} flow-layers
+        prob-ns (case value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

@@ -154,8 +154,10 @@
                         frontier-element)))))
 
 (defmethod distribute-flow! "Proximity"
-  [_ value-type cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
-   actual-flow-layer source-layer sink-layer use-layer source-points _ _ _]
+  [{:keys [source-layer sink-layer use-layer
+           cache-layer possible-flow-layer actual-flow-layer
+           source-points cell-width cell-height rows cols
+           value-type trans-threshold]}]
   (let [prob-ns (case value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop

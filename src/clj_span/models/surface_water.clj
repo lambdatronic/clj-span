@@ -265,10 +265,14 @@
   (seq2map active-points (fn [id] [id (ref (*_ mm2-per-cell (get-in layer id)))])))
 
 (defmethod distribute-flow! "SurfaceWaterMovement"
-  [_ value-type cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
-   actual-flow-layer source-layer sink-layer use-layer source-points
-   sink-points use-points {stream-layer "River", elevation-layer "Altitude"}]
-  (let [prob-ns (case value-type
+  [{:keys [source-layer sink-layer use-layer flow-layers
+           cache-layer possible-flow-layer actual-flow-layer
+           source-points sink-points use-points
+           cell-width cell-height rows cols
+           value-type trans-threshold]}]
+  (let [{stream-layer "River",
+         elevation-layer "Altitude"} flow-layers
+        prob-ns (case value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

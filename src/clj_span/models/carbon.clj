@@ -233,8 +233,9 @@
 ;; FIXME: This algorithm eats up too much memory (related to storing
 ;; the sink-effects-seq, I believe).  Do something more intelligent.
 (defmethod distribute-flow! "CO2Removed"
-  [_ value-type cell-width cell-height _ _ _ cache-layer _ _ source-layer
-   sink-layer use-layer source-points sink-points use-points _]
+  [{:keys [source-layer sink-layer use-layer
+           source-points sink-points use-points
+           cell-width cell-height value-type cache-layer]}]
   "The amount of carbon sequestration produced is distributed among
    the consumers (carbon emitters) according to their relative use
    values after being initially reduced by the sink values due to

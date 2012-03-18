@@ -23,19 +23,14 @@
 ;;; generate its result matrix.
 
 (ns clj-span.analyzer
-  (:use [clj-misc.utils      :only (p with-progress-bar)]
-        [clj-misc.matrix-ops :only (get-rows
-                                    get-cols
-                                    matrix2seq
-                                    map-matrix
-                                    make-matrix
-                                    unbitpack-route)])
+  (:use [clj-misc.utils      :only (p)]
+        [clj-misc.matrix-ops :only (get-rows get-cols matrix2seq map-matrix make-matrix)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
 (defn theoretical-source
   "If source-type is finite, return source-layer. Else return
    source-layer * num-users."
-  [value-type source-type source-layer use-layer]
+  [{:keys [value-type source-type source-layer use-layer]}]
   (if (= source-type :finite)
     source-layer
     (let [[*_ _0_]  (case value-type
@@ -50,7 +45,7 @@
   "Returns a matrix of RVs, in which each cell contains the amount of
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
-  [value-type cache-layer]
+  [{:keys [value-type cache-layer]}]
   (let [[_+_ _0_] (case value-type
                     :numbers  [nb/_+_ nb/_0_]
                     :varprop  [vp/_+_ vp/_0_]
@@ -66,7 +61,7 @@
   "Returns a matrix of RVs, in which each cell contains the amount of
    its theoretical source that impacts a user along any flow path,
    including the negative effects of sinks and rival users."
-  [value-type cache-layer]
+  [{:keys [value-type cache-layer]}]
   (let [[_+_ _0_] (case value-type
                     :numbers  [nb/_+_ nb/_0_]
                     :varprop  [vp/_+_ vp/_0_]
@@ -83,7 +78,7 @@
    * max-flowpaths (limited by total-source if source-type is
    finite).  If sink-type is nil, we may assume that there are no
    sinks in this model."
-  [value-type source-type sink-type source-layer sink-layer use-layer]
+  [{:keys [value-type source-type sink-type source-layer sink-layer use-layer]}]
   (if (nil? sink-type)
     (let [_0_ (case value-type
                 :numbers  nb/_0_
@@ -109,7 +104,7 @@
 (defn actual-sink
   "Returns a matrix of RVs, in which each cell contains the fraction
    of its theoretical sink that impacts a user along any flow path."
-  [value-type cache-layer]
+  [{:keys [value-type cache-layer]}]
   (let [[_+_ _0_] (case value-type
                     :numbers  [nb/_+_ nb/_0_]
                     :varprop  [vp/_+_ vp/_0_]
@@ -126,7 +121,7 @@
    in which all non-zero use values have been replaced with
    total-source (or with total-source divided by num-users if
    source-type is finite)."
-  [value-type use-type source-layer use-layer]
+  [{:keys [value-type use-type source-layer use-layer]}]
   (if (= use-type :finite)
     use-layer
     (let [[_+_ _0_]    (case value-type
@@ -141,7 +136,7 @@
   "Returns a matrix of RVs, in which each cell contains the amount of
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
-  [value-type cache-layer]
+  [{:keys [value-type cache-layer]}]
   (let [[_+_ _0_] (case value-type
                     :numbers  [nb/_+_ nb/_0_]
                     :varprop  [vp/_+_ vp/_0_]
@@ -153,13 +148,21 @@
   "Returns a matrix of RVs, in which each cell contains the amount of
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
-  [value-type cache-layer]
+  [{:keys [value-type cache-layer]}]
   (let [[_+_ _0_] (case value-type
                     :numbers  [nb/_+_ nb/_0_]
                     :varprop  [vp/_+_ vp/_0_]
                     :randvars [rv/_+_ rv/_0_])]
     (map-matrix #(reduce _+_ _0_ (map :actual-weight %)) cache-layer)))
 (def actual-use (memoize actual-use))
+
+(defn possible-flow
+  [params]
+  (:possible-flow-layer params))
+
+(defn actual-flow
+  [params]
+  (:actual-flow-layer params))
 
 ;;(defn- rerun-possible-route
 ;;  [flow-model {:keys [source-id route possible-weight use-effects]}]
@@ -224,7 +227,7 @@
    Inaccessible-source is the amount of the theoretical-source which
    cannot be used by any location either due to propagation decay,
    lack of use capacity, or lack of flow pathways to use locations."
-  [value-type source-type source-layer use-layer cache-layer]
+  [{:keys [value-type source-type source-layer use-layer cache-layer]}]
   (let [rv-fn (case value-type
                 :numbers  nb/rv-fn
                 :varprop  vp/rv-fn
@@ -238,7 +241,7 @@
    Inaccessible-sink is the amount of the theoretical-sink which
    cannot be utilized by any location either due to propagation decay
    of the asset or lack of flow pathways through the sink locations."
-  [value-type source-type sink-type source-layer sink-layer use-layer cache-layer]
+  [{:keys [value-type source-type sink-type source-layer sink-layer use-layer cache-layer]}]
   (let [rv-fn (case value-type
                 :numbers  nb/rv-fn
                 :varprop  vp/rv-fn
@@ -252,7 +255,7 @@
    Inaccessible-use is the amount of the theoretical-use which cannot
    be utilized by each location either due to propagation decay of the
    asset or lack of flow pathways to use locations."
-  [value-type use-type source-layer use-layer cache-layer]
+  [{:keys [value-type use-type source-layer use-layer cache-layer]}]
   (let [rv-fn (case value-type
                 :numbers  nb/rv-fn
                 :varprop  vp/rv-fn
@@ -265,7 +268,7 @@
   "Returns a map of {location-id -> blocked-source}.
    Blocked-source is the amount of the possible-source which cannot be
    used by any location due to upstream sinks or uses."
-  [value-type cache-layer]
+  [{:keys [value-type cache-layer]}]
   (let [rv-fn (case value-type
                 :numbers  nb/rv-fn
                 :varprop  vp/rv-fn
@@ -278,7 +281,7 @@
   "Returns a map of {location-id -> blocked-use}.
    Blocked-use is the amount of the possible-use which cannot be
    realized due to upstream sinks or uses."
-  [value-type cache-layer]
+  [{:keys [value-type cache-layer]}]
   (let [rv-fn (case value-type
                 :numbers  nb/rv-fn
                 :varprop  vp/rv-fn
@@ -291,7 +294,7 @@
   "Returns a map of {location-id -> blocked-flow}.
    Blocked-flow is the amount of the possible-flow which cannot be
    realized due to upstream sinks or uses."
-  [value-type possible-flow-layer actual-flow-layer]
+  [{:keys [value-type possible-flow-layer actual-flow-layer]}]
   (let [rv-fn (case value-type
                 :numbers  nb/rv-fn
                 :varprop  vp/rv-fn

@@ -383,10 +383,12 @@
 ;; FIXME: Try a sphere or circle instead of a wave line.
 ;; FIXME: Try accounting for rotational cyclone dynamics.
 (defmethod distribute-flow! "CoastalStormMovement"
-  [_ value-type cell-width cell-height rows cols trans-threshold cache-layer possible-flow-layer
-   actual-flow-layer source-layer eco-sink-layer use-layer source-points
-   _ use-points {storm-track-layer "StormTrack", geo-sink-layer "GeomorphicWaveReduction"}]
-  (let [prob-ns (case value-type
+  [{:keys [source-layer eco-sink-layer use-layer flow-layers
+           cache-layer possible-flow-layer actual-flow-layer
+           source-points use-points value-type trans-threshold
+           cell-width cell-height rows cols]}]
+  (let [{storm-track-layer "StormTrack", geo-sink-layer "GeomorphicWaveReduction"} flow-layers
+        prob-ns (case value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]
