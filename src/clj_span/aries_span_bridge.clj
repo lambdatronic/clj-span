@@ -108,47 +108,48 @@
   [doubles]
   (map #(if (Double/isNaN %) 0.0 %) doubles))
 
-;; FIXME: If I ever need to deal with a discrete distribution rather
-;;        than continuous ranges, I can get the distribution's states
-;;        with (get-possible-states ds).
-;;
-;; FIXME: These functions from the modelling namespace don't seem to work:
-;;        (probabilistic?, binary?, encodes-continuous-distribution?, get-probabilities)
-(defn unpack-datasource
+;; NOTE: If I ever need to deal with a discrete distribution rather
+;;       than continuous ranges, I can get the distribution's states
+;;       with (get-possible-states ds).
+(defmulti unpack-datasource
   "Returns a seq of the values in ds, where their representations are
    determined by value-type. NaNs and nils are converted to 0s."
+  (fn [value-type ds] (keyword (.getName (class ds)))))
+
+(defmethod unpack-datasource :org.integratedmodelling.corescience.implementations.datasources.MemObjectContextualizedDatasource
   [value-type ds]
-  (println "Unpacking datasource" ds)
-  (case (keyword (.getName (class ds)))
+  (println "Unpacking Bayesian datasource" ds)
+  (let [dists                 (.getRawData ds)
+        example-dist          (first (remove nil? dists))
+        bounds                (seq (.getRanges example-dist))
+        example-probs         (seq (.getData   example-dist))
+        unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
+        unbounded-from-above? (== Double/POSITIVE_INFINITY (last  bounds))
+        unpack-fn             (case value-type
+                                :randvars #(if % (rv/create-from-ranges bounds (.getData %)) rv/_0_)
+                                :varprop  #(if % (vp/create-from-ranges bounds (.getData %)) vp/_0_)
+                                :numbers  #(if % (nb/create-from-ranges bounds (.getData %)) nb/_0_))]
+    (println "Breakpoints:  " bounds)
+    (println "Example Probs:" example-probs)
+    (if (or unbounded-from-below? unbounded-from-above?)
+      (throw (Exception. "All undiscretized bounds must be closed above and below.")))
+    ;; (for [^IndexedCategoricalDistribution dist dists]
+    (for [dist dists]
+      (unpack-fn dist))))
 
-    :org.integratedmodelling.corescience.implementations.datasources.MemObjectContextualizedDatasource
-    (do (println "These are BN outputs.")
-        (let [dists                 (.getRawData ds)
-              example-dist          (first (remove nil? dists))
-              bounds                (seq (.getRanges example-dist))
-              example-probs         (seq (.getData   example-dist))
-              unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
-              unbounded-from-above? (== Double/POSITIVE_INFINITY (last  bounds))]
-          (println "Breakpoints:  " bounds)
-          (println "Example Probs:" example-probs)
-          (if (or unbounded-from-below? unbounded-from-above?)
-            (throw (Exception. "All undiscretized bounds must be closed above and below.")))
-          ;; (for [^IndexedCategoricalDistribution dist dists]
-          (for [dist dists]
-            (case value-type
-              :randvars (if dist (rv/create-from-ranges bounds (.getData dist)) rv/_0_)
-              :varprop  (if dist (vp/create-from-ranges bounds (.getData dist)) vp/_0_)
-              :numbers  (if dist (nb/create-from-ranges bounds (.getData dist)) nb/_0_)))))
+(defmethod unpack-datasource :org.integratedmodelling.corescience.implementations.datasources.MemDoubleContextualizedDatasource
+  [value-type ds]
+  (println "Unpacking deterministic datasource" ds)
+  (let [unpack-fn (case value-type
+                    :randvars #(rv/make-randvar :discrete 1 [%])
+                    :varprop  #(vp/fuzzy-number % 0.0)
+                    :numbers  identity)]
+    (for [value (NaNs-to-zero (get-data ds))]
+      (unpack-fn value))))
 
-    :org.integratedmodelling.corescience.implementations.datasources.MemDoubleContextualizedDatasource
-    (do (println "These are deterministic values.")
-        (for [value (NaNs-to-zero (get-data ds))]
-          (case value-type
-            :randvars (rv/make-randvar :discrete 1 [value])
-            :varprop  (vp/fuzzy-number value 0.0)
-            :numbers  value)))
-
-    (throw (Exception. (str "Unrecognized datasource type: " (class ds))))))
+(defmethod unpack-datasource :default
+  [value-type ds]
+  (throw (Exception. (str "unpack-datasource is undefined for datasource type " (type ds)))))
 
 (defn- layer-from-observation
   "Builds a rows x cols matrix (vector of vectors) of the concept's
