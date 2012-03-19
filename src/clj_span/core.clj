@@ -165,7 +165,7 @@
   [{:keys [source-layer sink-layer use-layer rows cols value-type]
     :as params}]
   (with-message
-    "Creating simulation inputs...\n"
+    "\nCreating simulation inputs...\n"
     #(str "Source points: " (count (:source-points %)) "\n"
           "Sink points:   " (count (:sink-points   %)) "\n"
           "Use points:    " (count (:use-points    %)))

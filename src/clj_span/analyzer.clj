@@ -233,8 +233,8 @@
                 :varprop  vp/rv-fn
                 :randvars rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [t p] (max (- t p) 0.0)) %1 %2)
-                (theoretical-source value-type source-type source-layer use-layer)
-                (possible-source    value-type cache-layer))))
+                (theoretical-source {:value-type value-type :source-type source-type :source-layer source-layer :use-layer use-layer})
+                (possible-source    {:value-type value-type :cache-layer cache-layer}))))
 
 (defn inaccessible-sink
   "Returns a map of {location-id -> inaccessible-sink}.
@@ -247,8 +247,9 @@
                 :varprop  vp/rv-fn
                 :randvars rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [t a] (max (- t a) 0.0)) %1 %2)
-                (theoretical-sink value-type source-type sink-type source-layer sink-layer use-layer)
-                (actual-sink      value-type cache-layer))))
+                (theoretical-sink {:value-type value-type :source-type source-type :sink-type sink-type
+                                   :source-layer source-layer :sink-layer sink-layer :use-layer use-layer})
+                (actual-sink      {:value-type value-type :cache-layer cache-layer}))))
 
 (defn inaccessible-use
   "Returns a map of {location-id -> inaccessible-use}.
@@ -261,8 +262,8 @@
                 :varprop  vp/rv-fn
                 :randvars rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [t p] (max (- t p) 0.0)) %1 %2)
-                (theoretical-use value-type use-type source-layer use-layer)
-                (possible-use    value-type cache-layer))))
+                (theoretical-use {:value-type value-type :use-type use-type :source-layer source-layer :use-layer use-layer})
+                (possible-use    {:value-type value-type :cache-layer cache-layer}))))
 
 (defn blocked-source
   "Returns a map of {location-id -> blocked-source}.
@@ -274,8 +275,8 @@
                 :varprop  vp/rv-fn
                 :randvars rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [p a] (max (- p a) 0.0)) %1 %2)
-                (possible-source value-type cache-layer)
-                (actual-source   value-type cache-layer))))
+                (possible-source {:value-type value-type :cache-layer cache-layer})
+                (actual-source   {:value-type value-type :cache-layer cache-layer}))))
 
 (defn blocked-use
   "Returns a map of {location-id -> blocked-use}.
@@ -287,8 +288,8 @@
                 :varprop  vp/rv-fn
                 :randvars rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [p a] (max (- p a) 0.0)) %1 %2)
-                (possible-use value-type cache-layer)
-                (actual-use   value-type cache-layer))))
+                (possible-use {:value-type value-type :cache-layer cache-layer})
+                (actual-use   {:value-type value-type :cache-layer cache-layer}))))
 
 (defn blocked-flow
   "Returns a map of {location-id -> blocked-flow}.

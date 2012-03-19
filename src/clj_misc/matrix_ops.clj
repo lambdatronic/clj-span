@@ -205,8 +205,8 @@
   (let [orig-rows (get-rows matrix)
         orig-cols (get-cols matrix)]
     (with-message
-      (str "Resampling matrix from " orig-rows " x " orig-cols " to " new-rows " x " new-cols "...")
-      #(format "  Distinct Layer Values: [Pre] %d [Post] %d\n"
+      (str "\nResampling matrix from " orig-rows " x " orig-cols " to " new-rows " x " new-cols "...\n")
+      #(format "  Distinct Layer Values: [Pre] %d [Post] %d"
                (count (distinct (matrix2seq matrix)))
                (count (distinct (matrix2seq %))))
       (if (and (== orig-rows new-rows)
