@@ -23,7 +23,7 @@
 
 (ns clj-misc.matrix-ops
   (:use [clojure.set    :only (map-invert)]
-        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries magnitude between? metric-distance)]))
+        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries magnitude between? metric-distance with-message)]))
 
 (defn get-rows [matrix] (count matrix))
 (defn get-cols [matrix] (count (first matrix)))
@@ -201,24 +201,22 @@
 
 (defn resample-matrix
   [new-rows new-cols sampling-fn matrix]
-  (constraints-1.0 {:pre [(every? #(and (pos? %) (integer? %)) [new-rows new-cols])]})
+  {:pre [(every? #(and (pos? %) (integer? %)) [new-rows new-cols])]}
   (let [orig-rows (get-rows matrix)
         orig-cols (get-cols matrix)]
-    (println (str "Resampling matrix from " orig-rows " x " orig-cols " to " new-rows " x " new-cols "..."))
-    (let [new-matrix (if (and (== orig-rows new-rows)
-                              (== orig-cols new-cols))
-                       matrix
-                       (let [cell-length (float (/ orig-rows new-rows))
-                             cell-width  (float (/ orig-cols new-cols))]
-                         (make-matrix new-rows new-cols (fn [[i j]] (sampling-fn (get-matrix-coverage matrix
-                                                                                                      cell-length
-                                                                                                      cell-width
-                                                                                                      i
-                                                                                                      j))))))]
-      (printf "  Distinct Layer Values: [Pre] %d [Post] %d\n"
-              (count (distinct (matrix2seq matrix)))
-              (count (distinct (matrix2seq new-matrix))))
-      new-matrix)))
+    (with-message
+      (str "Resampling matrix from " orig-rows " x " orig-cols " to " new-rows " x " new-cols "...")
+      #(format "  Distinct Layer Values: [Pre] %d [Post] %d\n"
+               (count (distinct (matrix2seq matrix)))
+               (count (distinct (matrix2seq %))))
+      (if (and (== orig-rows new-rows)
+               (== orig-cols new-cols))
+        matrix
+        (let [cell-length (float (/ orig-rows new-rows))
+              cell-width  (float (/ orig-cols new-cols))]
+          (make-matrix new-rows
+                       new-cols
+                       (fn [[i j]] (sampling-fn (get-matrix-coverage matrix cell-length cell-width i j)))))))))
 
 (defn divides?
   "Is y divisible by x? (i.e. x is the denominator)"
