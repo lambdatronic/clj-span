@@ -1,3 +1,7 @@
+"Plain English" SPAN flow model descriptions
+Author: Gary W. Johnson
+Date: 03/19/2012
+
 * Carbon (CO2Removed)
 
 The amount of carbon sequestration produced is distributed among the
@@ -65,10 +69,88 @@ emissions.
    3. Divide the final possible-weight, actual-weight, and
       sink-effects values by ha-per-cell to turn them back into
       densities for comparison with the original input layers.
+* Line of Sight (LineOfSight)
+
+Finds a line of sight path between source and use points, checks
+for obstructions, and determines (using elevation info) how much of
+the source element can be seen from the use point.  A distance
+decay function is applied to the results to compute the visual
+utility originating from the source point.
+
+- For each pair of source point and use point, wherein the points are
+   not in the same location (no in situ use):
+
+  1. Compute the euclidean distance in meters between the center of
+     the source and use pixels.
+
+  2. Calculate the source decay at this distance, and proceed if
+     positive. Otherwise, there is no view service between this
+     source and use point.
+
+  3. Look up the elevation at every point between the source and use
+     locations.
+
+  4. Take the difference in meters between each elevation along this
+     view line and the use point's elevation. (compute the rises)
+
+  5. Calculate the euclidean distance in meters between every point
+     along this view line and the use location. (compute the runs)
+
+  6. Calculate each of the view obstruction slopes along the view
+     line by dividing each rise by its corresponding run.
+
+  7. Select the maximum view obstruction slope from these values to
+     be the determinant of how much of the source we can and cannot
+     see along this view line.
+
+  8. Compute the view elevation in meters projected onto the source
+     by multiplying the maximum view obstruction slope by the
+     euclidean distance between the source and use points in meters
+     and adding this value to the use elevation.
+
+  9. If the projected view elevation is negative (because the view
+     obstruction slope was negative), then set it to 0.
+
+  10. If the slope is positive, then we are looking up, so only count
+      the visible part of the source value. If the projected view
+      elevation is greater than the source elevation, then we can't
+      see it, so the source value is 0. Otherwise, the visible source
+      value is the fraction of the total source elevation above the
+      projected view elevation times the total source value.
+
+  11. If the slope is negative, then we are looking straight ahead or
+      down, so count the whole feature if we can see any part of
+      it. Thus, if the projected view elevation is greater than the
+      source elevation, we can't see it, and the visible source value
+      is 0. Otherwise, the visible source value is the total source
+      value.
+
+  12. Finally, multiply the visible source value by the source decay
+      at that distance to compute the possible weight transmitted
+      from this source point to the use point.
+
+  13. If the possible weight is below the transition threshold, then
+      there is no service along this view line. Otherwise, continue
+      with the next step.
+
+  14. For each sink location along the sight line, calculate the
+      visible sink value using the same algorithm as with the source
+      (e.g. project view elevation onto sink, multiply sink value by
+      fraction of sink elevation visible above the project view
+      elevation), and finally multiply the visible sink value by the
+      sink decay at its distance from the use point.
+
+  15. Compute the actual weight as the possible weight minus the sum
+      of the sink effects along the sight line. If this value is
+      negative (because sinks outweigh the source value), set it
+      to 0.
+
+- Source Decay: ramp up in 1 mile, slow decay to 5 miles, fast decay to 20 miles, moderate decay to 40 miles, then gone
+
+- Sink Decay: slow decay to 1/2 mile, fast decay to 1 mile, gone after 1 mile
 
 * Coastal Storm Protection ()
 * Flood Water ()
-* Line Of Sight ()
 * Proximity ()
 * Sediment ()
 * Subsistence Fisheries ()
