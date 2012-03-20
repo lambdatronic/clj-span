@@ -1,0 +1,75 @@
+* Carbon (CO2Removed)
+
+The amount of carbon sequestration produced is distributed among the
+consumers (carbon emitters) according to their relative use values
+after being initially reduced by the sink values due to landscape
+emissions.
+
+1. Compute ha-per-cell given cell-width and cell-height in meters.
+
+2. Draw sample worlds.
+
+   1. Multiply values in source, sink, and use layers by ha-per-cell.
+
+   2. Create 10 sample layers each for source, sink, and use by
+      drawing a deterministic value from each pixel's distribution.
+
+   3. For each sample world (i.e. one sample layer each for source, sink, and use):
+
+      1. Calculate the total source, sink, and use values (sum across all pixels).
+
+      2. Split the total source into amount sunk per pixel and source
+         remaining per pixel by comparing it with the total
+         sink. (computing actual sink)
+
+      3. Split the total source into amount used per pixel and source
+         remaining per pixel by comparing it with the total
+         use. (computing possible use)
+
+      4. Split the post-sink source remaining into amount used per
+         pixel and source remaining per pixel by comparing it with the
+         total use. (computing actual use)
+
+      5. Normalize all source and use values between [0-1] by dividing
+         by their totals.
+
+      6. Pair every source pixel with every sink pixel, and for each
+         such pair, multiply the normalized source value by the actual
+         sink value. This calculates the amount each source pixel
+         loses to each sink pixel.
+
+      7. Pair every source pixel with every use pixel, and for each
+         such pair, multiply the normalized source value by the
+         possible use value. This calculates the possible amount each
+         source pixel contributes to each use pixel.
+
+      8. Pair every source pixel with every use pixel, and for each
+         such pair, multiply the normalized source value by the actual
+         use value. This calculates the actual amount each source
+         pixel contributes to each use pixel.
+
+      9. For each triplet combination of source, sink, and use pixels,
+         multiply the normalized source value by the normalized use
+         value and then by the actual sink value to compute the effect
+         of each sink on each pair of source and use point.
+
+3. Combine sample worlds.
+
+   1. Organize all the information from the draw sample worlds step by
+      use point. {use-point -> [possible-weight actual-weight sink-effects]}
+
+   2. Merge all worlds together by building up a distribution of the
+      possible-weight, actual-weight, and sink-effects values per use
+      pixel from the 10 Monte Carlo world samples.
+
+   3. Divide the final possible-weight, actual-weight, and
+      sink-effects values by ha-per-cell to turn them back into
+      densities for comparison with the original input layers.
+
+* Coastal Storm Protection ()
+* Flood Water ()
+* Line Of Sight ()
+* Proximity ()
+* Sediment ()
+* Subsistence Fisheries ()
+* Surface Water ()
