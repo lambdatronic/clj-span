@@ -26,7 +26,7 @@
                                     with-progress-bar-cool)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? subtract-ids find-nearest)]))
 
-(refer 'clj-span.core :only '(distribute-flow! service-carrier))
+(refer 'clj-span.core :only '(distribute-flow! service-carrier with-typed-math-syms))
 
 (def ^:dynamic _0_)
 (def ^:dynamic _+_)
@@ -37,17 +37,18 @@
 (def ^:dynamic _>)
 
 (defn- lowest-neighbors
-  [id in-stream? elevation-layer rows cols]
+  [id in-stream? flow-layers rows cols]
   (if-not (on-bounds? rows cols id)
-    (let [neighbors      (if (in-stream? id)
+    (let [elev-layer     (flow-layers "Altitude")
+          neighbors      (if (in-stream? id)
                            ;; Step downstream
                            (filter in-stream? (get-neighbors rows cols id))
                            ;; Step downhill
                            (get-neighbors rows cols id))
-          local-elev     (get-in elevation-layer id)
-          neighbor-elevs (map (p get-in elevation-layer) neighbors)
+          local-elev     (get-in elev-layer id)
+          neighbor-elevs (map (p get-in elev-layer) neighbors)
           min-elev       (reduce _min_ local-elev neighbor-elevs)]
-      (filter #(= min-elev (get-in elevation-layer %)) neighbors))))
+      (filter #(= min-elev (get-in elev-layer %)) neighbors))))
 (def- lowest-neighbors (memoize-by-first-arg lowest-neighbors))
 
 (defn- nearest-to-bearing
@@ -63,14 +64,14 @@
 
 ;; FIXME: Somehow this still doesn't terminate correctly for some carriers.
 (defn- find-next-step
-  [id in-stream? elevation-layer rows cols bearing]
+  [id in-stream? flow-layers rows cols bearing]
   (let [prev-id (if bearing (subtract-ids id bearing))]
     (nearest-to-bearing bearing
                         id
                         (remove (p = prev-id)
                                 (lowest-neighbors id
                                                   in-stream?
-                                                  elevation-layer
+                                                  flow-layers
                                                   rows
                                                   cols)))))
 (def- find-next-step (memoize find-next-step))
@@ -147,7 +148,7 @@
    some water according to the remaining sink capacity at this
    location."
   [cache-layer possible-flow-layer actual-flow-layer sink-caps possible-use-caps actual-use-caps
-   in-stream? stream-intakes mm2-per-cell trans-threshold-volume elevation-layer rows cols
+   in-stream? stream-intakes mm2-per-cell trans-threshold-volume flow-layers rows cols
    {:keys [route possible-weight actual-weight sink-effects stream-bound?] :as surface-water-carrier}]
   (let [current-id (peek route)
         prev-id    (peek (pop route))
@@ -168,7 +169,7 @@
                                                                          mm2-per-cell
                                                                          surface-water-carrier)]
         (if (_> new-possible-weight trans-threshold-volume)
-          (if-let [next-id (find-next-step current-id in-stream? elevation-layer rows cols bearing)]
+          (if-let [next-id (find-next-step current-id in-stream? flow-layers rows cols bearing)]
             (assoc surface-water-carrier
               :route           (conj route next-id)
               :possible-weight new-possible-weight
@@ -176,7 +177,7 @@
       (let [[new-actual-weight new-sink-effects] (handle-sink-effects! current-id
                                                                        actual-weight
                                                                        sink-caps)]
-        (if-let [next-id (find-next-step current-id in-stream? elevation-layer rows cols bearing)]
+        (if-let [next-id (find-next-step current-id in-stream? flow-layers rows cols bearing)]
           (assoc surface-water-carrier
             :route           (conj route next-id)
             :actual-weight   new-actual-weight
@@ -198,7 +199,7 @@
    in timesteps (more or less)."
   [cache-layer possible-flow-layer actual-flow-layer source-layer
    source-points mm2-per-cell sink-caps possible-use-caps actual-use-caps
-   in-stream? stream-intakes elevation-layer rows cols trans-threshold]
+   in-stream? stream-intakes flow-layers rows cols trans-threshold]
   (with-message "Moving the surface water carriers downhill and downstream...\n" "All done."
     (dorun
      (stop-unless-reducing
@@ -223,7 +224,7 @@
                     stream-intakes
                     mm2-per-cell
                     (* mm2-per-cell trans-threshold)
-                    elevation-layer
+                    flow-layers
                     rows
                     cols)
                  surface-water-carriers)))
@@ -269,38 +270,27 @@
            cache-layer possible-flow-layer actual-flow-layer
            source-points sink-points use-points
            cell-width cell-height rows cols
-           value-type trans-threshold]}]
-  (let [{stream-layer "River",
-         elevation-layer "Altitude"} flow-layers
-        prob-ns (case value-type
-                  :numbers  'clj-misc.numbers
-                  :varprop  'clj-misc.varprop
-                  :randvars 'clj-misc.randvars)]
-    (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
-              _+_   (var-get (ns-resolve prob-ns '_+_))
-              *_    (var-get (ns-resolve prob-ns '*_))
-              _d    (var-get (ns-resolve prob-ns '_d))
-              rv-fn (var-get (ns-resolve prob-ns 'rv-fn))
-              _min_ (var-get (ns-resolve prob-ns '_min_))
-              _>    (var-get (ns-resolve prob-ns '_>))]
-      (let [mm2-per-cell      (* cell-width cell-height (Math/pow 10.0 6.0))
-            sink-caps         (make-buckets mm2-per-cell sink-layer sink-points)
-            possible-use-caps (make-buckets mm2-per-cell use-layer  use-points)
-            actual-use-caps   (mapmap identity (& ref deref) possible-use-caps)
-            in-stream?        (memoize #(not= _0_ (get-in stream-layer %)))
-            stream-intakes    (find-nearest-stream-points in-stream? rows cols use-points)]
-        (propagate-runoff! cache-layer
-                           possible-flow-layer
-                           actual-flow-layer
-                           source-layer
-                           source-points
-                           mm2-per-cell
-                           sink-caps
-                           possible-use-caps
-                           actual-use-caps
-                           in-stream?
-                           stream-intakes
-                           elevation-layer
-                           rows
-                           cols
-                           trans-threshold)))))
+           value-type trans-threshold]
+    :as params}]
+  (with-typed-math-syms value-type [_0_ _+_ *_ _d rv-fn _min_ _>]
+    (let [mm2-per-cell      (* cell-width cell-height (Math/pow 10.0 6.0))
+          sink-caps         (make-buckets mm2-per-cell sink-layer sink-points)
+          possible-use-caps (make-buckets mm2-per-cell use-layer  use-points)
+          actual-use-caps   (mapmap identity (& ref deref) possible-use-caps)
+          in-stream?        (memoize #(not= _0_ (get-in (flow-layers "River") %)))
+          stream-intakes    (find-nearest-stream-points in-stream? rows cols use-points)]
+      (propagate-runoff! cache-layer
+                         possible-flow-layer
+                         actual-flow-layer
+                         source-layer
+                         source-points
+                         mm2-per-cell
+                         sink-caps
+                         possible-use-caps
+                         actual-use-caps
+                         in-stream?
+                         stream-intakes
+                         flow-layers
+                         rows
+                         cols
+                         trans-threshold))))

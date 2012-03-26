@@ -52,6 +52,15 @@
                                     actual-flow]])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
+(defmacro with-typed-math-syms [value-type symbols & body]
+  (let [prob-ns (gensym)]
+    `(let [~prob-ns (case ~value-type
+                      :numbers  'clj-misc.numbers
+                      :varprop  'clj-misc.varprop
+                      :randvars 'clj-misc.randvars)]
+       (binding ~(vec (mapcat (fn [sym] [sym `(var-get (ns-resolve ~prob-ns '~sym))]) symbols))
+         ~@body))))
+
 (defstruct service-carrier
   :source-id      ; starting id of this flow path
   :route          ; byte array of directions from source-id to use-id or nil
