@@ -93,27 +93,30 @@
                                :numbers  nb/rv-intensive-sampler
                                :varprop  vp/rv-intensive-sampler
                                :randvars rv/rv-intensive-sampler)]
-    (apply array-map
-           (mapcat (fn [[label f]]
-                     (let [layer (f params)]
-                       [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler layer)]))
-                   (array-map
-                    "Source - Theoretical"  theoretical-source
-                    "Source - Inaccessible" inaccessible-source
-                    "Source - Possible"     possible-source
-                    "Source - Blocked"      blocked-source
-                    "Source - Actual"       actual-source
-                    "Sink   - Theoretical"  theoretical-sink
-                    "Sink   - Inaccessible" inaccessible-sink
-                    "Sink   - Actual"       actual-sink
-                    "Use    - Theoretical"  theoretical-use
-                    "Use    - Inaccessible" inaccessible-use
-                    "Use    - Possible"     possible-use
-                    "Use    - Blocked"      blocked-use
-                    "Use    - Actual"       actual-use
-                    "Flow   - Possible"     possible-flow
-                    "Flow   - Blocked"      blocked-flow
-                    "Flow   - Actual"       actual-flow)))))
+    (with-message
+      "Generating results map..."
+      "done."
+      (apply array-map
+             (mapcat (fn [[label f]]
+                       (let [layer (f params)]
+                         [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler layer)]))
+                     (array-map
+                      "Source - Theoretical"  theoretical-source
+                      "Source - Inaccessible" inaccessible-source
+                      "Source - Possible"     possible-source
+                      "Source - Blocked"      blocked-source
+                      "Source - Actual"       actual-source
+                      "Sink   - Theoretical"  theoretical-sink
+                      "Sink   - Inaccessible" inaccessible-sink
+                      "Sink   - Actual"       actual-sink
+                      "Use    - Theoretical"  theoretical-use
+                      "Use    - Inaccessible" inaccessible-use
+                      "Use    - Possible"     possible-use
+                      "Use    - Blocked"      blocked-use
+                      "Use    - Actual"       actual-use
+                      "Flow   - Possible"     possible-flow
+                      "Flow   - Blocked"      blocked-flow
+                      "Flow   - Actual"       actual-flow))))))
 
 (defn deref-result-layers
   [{:keys [cache-layer possible-flow-layer actual-flow-layer]

@@ -143,13 +143,15 @@
 
 (defn request-dirname
   []
-  (print "Output Directory: ")
+  (print "Output Directory (in double quotes): ")
   (flush)
-  (let [choice    (read)
-        directory (io/file choice)]
-    (if (and (.isDirectory directory) (.canWrite directory))
-      choice
-      (println "Invalid selection:" choice "is not a writeable directory."))))
+  (try
+    (let [choice    (read)
+          directory (io/file choice)]
+      (if (and (.isDirectory directory) (.canWrite directory))
+        choice
+        (println "Invalid selection:" choice "is not a writeable directory.")))
+    (catch Exception e (println "Invalid selection: You must enter a directory name in double quotes."))))
 
 (defn request-scale
   []
