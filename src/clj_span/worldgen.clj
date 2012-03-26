@@ -29,7 +29,8 @@
 
 (defn read-layer-from-file
   [filename]
-  (with-open [in-stream (java.io.PushbackReader. (io/reader filename))] (read in-stream)))
+  (try (with-open [in-stream (java.io.PushbackReader. (io/reader (io/resource filename)))] (read in-stream))
+       (catch Exception e (println "Filename" filename "is not a readable file. (" e ")"))))
 
 (defn write-layer-to-file
   [filename layer]

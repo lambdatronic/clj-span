@@ -37,6 +37,7 @@
 (def- usage-message
   (str
    "Usage: java -cp clj-span-standalone.jar clj_span.commandline \\ \n"
+   "            -config-file        <filepath>                 \\ \n"
    "            -source-layer       <filepath>                 \\ \n"
    "            -sink-layer         <filepath>                 \\ \n"
    "            -use-layer          <filepath>                 \\ \n"
@@ -58,24 +59,24 @@
    "            -flow-model         <line-of-sight|proximity|carbon|flood-water|surface-water|sediment|coastal-storm-protection|subsistence-fisheries> \n"))
 
 (def- param-tests
-  [["-source-layer"       #(.canRead  (io/file %))          " is not readable."                             ]
-   ["-sink-layer"         #(.canRead  (io/file %))          " is not readable."                             ]
-   ["-use-layer"          #(.canRead  (io/file %))          " is not readable."                             ]
-   ["-flow-layers"        #(.canRead  (io/file %))          " is not readable."                             ]
-   ["-source-threshold"   (& float?   read-string)          " is not a double."                             ]
-   ["-sink-threshold"     (& float?   read-string)          " is not a double."                             ]
-   ["-use-threshold"      (& float?   read-string)          " is not a double."                             ]
-   ["-trans-threshold"    (& float?   read-string)          " is not a double."                             ]
-   ["-cell-width"         (& float?   read-string)          " is not a double."                             ]
-   ["-cell-height"        (& float?   read-string)          " is not a double."                             ]
-   ["-rv-max-states"      (& integer? read-string)          " is not an integer."                           ]
-   ["-downscaling-factor" (& number?  read-string)          " is not a number."                             ]
-   ["-source-type"        #{"finite" "infinite"}            " must be one of finite or infinite."           ]
-   ["-sink-type"          #{"finite" "infinite"}            " must be one of finite or infinite."           ]
-   ["-use-type"           #{"finite" "infinite"}            " must be one of finite or infinite."           ]
-   ["-benefit-type"       #{"rival" "non-rival"}            " must be one of rival or non-rival."           ]
-   ["-value-type"         #{"numbers" "varprop" "randvars"} " must be one of numbers, varprop, or randvars."]
-   ["-animation?"         #{"true" "false"}                 " must be one of true or false."                ]
+  [["-source-layer"       #(.canRead  (io/file (io/resource %))) " is not readable."                             ]
+   ["-sink-layer"         #(.canRead  (io/file (io/resource %))) " is not readable."                             ]
+   ["-use-layer"          #(.canRead  (io/file (io/resource %))) " is not readable."                             ]
+   ["-flow-layers"        #(.canRead  (io/file (io/resource %))) " is not readable."                             ]
+   ["-source-threshold"   (& float?   read-string)               " is not a double."                             ]
+   ["-sink-threshold"     (& float?   read-string)               " is not a double."                             ]
+   ["-use-threshold"      (& float?   read-string)               " is not a double."                             ]
+   ["-trans-threshold"    (& float?   read-string)               " is not a double."                             ]
+   ["-cell-width"         (& float?   read-string)               " is not a double."                             ]
+   ["-cell-height"        (& float?   read-string)               " is not a double."                             ]
+   ["-rv-max-states"      (& integer? read-string)               " is not an integer."                           ]
+   ["-downscaling-factor" (& number?  read-string)               " is not a number."                             ]
+   ["-source-type"        #{"finite" "infinite"}                 " must be one of finite or infinite."           ]
+   ["-sink-type"          #{"finite" "infinite"}                 " must be one of finite or infinite."           ]
+   ["-use-type"           #{"finite" "infinite"}                 " must be one of finite or infinite."           ]
+   ["-benefit-type"       #{"rival" "non-rival"}                 " must be one of rival or non-rival."           ]
+   ["-value-type"         #{"numbers" "varprop" "randvars"}      " must be one of numbers, varprop, or randvars."]
+   ["-animation?"         #{"true" "false"}                      " must be one of true or false."                ]
    ["-flow-model"         #{"line-of-sight" "proximity" "carbon" "flood-water" "surface-water" "sediment" "coastal-storm-protection" "subsistence-fisheries"}
     " must be one of line-of-sight, proximity, carbon, flood-water, surface-water, sediment, coastal-storm-protection, or subsistence-fisheries."]])
 
@@ -133,29 +134,41 @@
                          "subsistence-fisheries"    "SubsistenceFishAccessibility"}
                         (params "-flow-model"))})
 
+(defn read-config-file
+  [filename]
+  (if filename
+    (let [config-file-params (read-layer-from-file filename)]
+      (if (and (map? config-file-params) (every? string? (concat (keys config-file-params) (vals config-file-params))))
+        config-file-params
+        (println (str "\nError: The config-file must contain a clojure map of quoted strings to quoted strings.\n\n" usage-message))))))
+
 (defn -main
   "The compiled Java class' main method.  Pass it all the SPAN inputs
    as -key value argument pairs from the command line.  After
    validating your inputs and running the flow simulation, it will
    present a text-based menu to view the model results."
   [& args]
-  ;; args contains -key value pairs, so must have an even number of entries.
-  (if (odd? (count args))
-    (println (str "\nError: The number of input arguments must be even.\n\n" usage-message))
-    ;; Store the args list in a map and validate it.
-    (let [params (into {} (map vec (partition 2 args)))]
-      (if-let [error-msgs (seq (collect-input-errors params))]
-        (println (str "\nError: The parameter values that you entered are incorrect.\n\t"
-                      (join "\n\t" error-msgs)
-                      "\n\n"
-                      usage-message))
-        (do
-          (println "\nAll inputs are valid.\n")
-          (doseq [[name _ _] param-tests] (println (find params name)))
-          (newline)
-          ;; Run the SPAN simulation.
-          (run-span (assoc (strings-to-better-types params) :result-type :cli-menu))
-          ;; Exit cleanly.
-          (shutdown-agents)
-          (flush)
-          (System/exit 0))))))
+  (if (empty? args)
+    (println "\n" usage-message)
+    ;; args contains -key value pairs, so must have an even number of entries.
+    (if (odd? (count args))
+      (println (str "\nError: The number of input arguments must be even.\n\n" usage-message))
+      ;; Store the args list in a map and validate it.
+      (let [command-line-params (into {} (map vec (partition 2 args)))
+            config-file-params  (read-config-file (command-line-params "-config-file"))
+            params              (dissoc (merge config-file-params command-line-params) "-config-file")]
+        (if-let [error-msgs (seq (collect-input-errors params))]
+          (println (str "\nError: The parameter values that you entered are incorrect.\n\t"
+                        (join "\n\t" error-msgs)
+                        "\n\n"
+                        usage-message))
+          (do
+            (println "\nAll inputs are valid.\n")
+            (doseq [[name _ _] param-tests] (println (find params name)))
+            (newline)
+            ;; Run the SPAN simulation.
+            (run-span (assoc (strings-to-better-types params) :result-type :cli-menu))
+            ;; Exit cleanly.
+            (shutdown-agents)
+            (flush)
+            (System/exit 0)))))))
