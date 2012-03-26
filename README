@@ -22,6 +22,7 @@ Then simply place clj-span-standalone.jar on your classpath and fire
 up your JVM as follows:
 
 java -cp clj-span-standalone.jar clj_span.commandline \
+     -config-file        <filepath>                 \
      -source-layer       <filepath>                 \
      -sink-layer         <filepath>                 \
      -use-layer          <filepath>                 \
