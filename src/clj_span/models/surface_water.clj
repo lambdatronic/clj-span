@@ -35,22 +35,31 @@
 (def ^:dynamic rv-fn)
 (def ^:dynamic _min_)
 (def ^:dynamic _>)
+(def ^:dynamic _*_)
+(def ^:dynamic _d_)
 
 (defn assign-water-to-users!
-  [{:keys [stream-intakes cache-layer]}]
-  (doseq [[stream-id use-ids] stream-intakes]
-    (let [stream-cache   (get-in cache-layer stream-id)
-          num-users      (count use-ids)
-          split-carriers (doall
-                          (for [{:keys [possible-weight actual-weight sink-effects] :as carrier} (deref stream-cache)]
+  [{:keys [stream-intakes cache-layer use-layer]}]
+  (with-message "Assigning water captured at stream intakes to use locations..." "done."
+    (doseq [[stream-id use-ids] stream-intakes]
+      (let [stream-cache     (get-in cache-layer stream-id)
+            service-carriers (deref stream-cache)
+            use-caches       (map #(get-in cache-layer %) use-ids)
+            use-values       (map #(get-in use-layer %) use-ids)
+            total-use        (reduce _+_ use-values)
+            use-percents     (map #(_d_ % total-use) use-values)]
+        (dosync
+         (ref-set stream-cache ())
+         (doseq [{:keys [possible-weight actual-weight sink-effects] :as carrier} service-carriers]
+           (dorun
+            (map (fn [cache percent]
+                   (commute cache conj
                             (assoc carrier
-                              :possible-weight (_d possible-weight num-users)
-                              :actual-weight   (_d actual-weight   num-users)
-                              :sink-effects    (mapmap identity #(_d % num-users) sink-effects))))]
-      (dosync
-       (ref-set stream-cache ())
-       (doseq [use-id use-ids]
-         (ref-set (get-in cache-layer use-id) split-carriers))))))
+                              :possible-weight (_*_ possible-weight percent)
+                              :actual-weight   (_*_ actual-weight   percent)
+                              :sink-effects    (mapmap identity #(_*_ % percent) sink-effects))))
+                 use-caches
+                 use-percents))))))))
 
 (defn nearest-to-bearing
   [bearing id neighbors]
@@ -229,13 +238,13 @@
    carriers in stream channels. All the carriers are moved together in
    timesteps (more or less)."
   [params]
-  (with-message "Moving the surface water carriers downhill and downstream...\n" "All done."
+  (with-message "Moving the surface water carriers downhill and downstream...\n" "Done moving surface water carriers."
     (stop-unless-reducing
      100
      (iterate-while-seq
       (p move-carriers-one-step-downstream params)
       (create-initial-service-carriers params))))
-  (select-keys params [:stream-intakes :cache-layer]))
+  (select-keys params [:stream-intakes :cache-layer :use-layer]))
 
 (defn make-buckets
   "Stores maps from {ids -> mm3-ref} for sink-caps, possible-use-caps, and actual-use-caps in params."
@@ -299,7 +308,7 @@
            cell-width cell-height rows cols
            value-type trans-threshold]
     :as params}]
-  (with-typed-math-syms value-type [_0_ _+_ *_ _d rv-fn _min_ _>]
+  (with-typed-math-syms value-type [_0_ _+_ *_ _d rv-fn _min_ _> _*_ _d_]
     (-> params
         compute-mm2-per-cell
         compute-trans-threshold-volume
