@@ -22,7 +22,7 @@
 
 (ns clj-span.models.surface-water
   (:use [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
-                                    memoize-by-first-arg angular-distance p &
+                                    memoize-by-first-arg angular-distance p
                                     with-progress-bar-cool)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? subtract-ids find-nearest filter-matrix-for-coords)]))
 
@@ -126,18 +126,15 @@
    out-of-stream flow path. Reduces the sink-caps for each sink which
    captures some of the service medium. Returns remaining
    actual-weight and the local sink effects."
-  [current-id actual-weight sink-caps]
-  (if-let [sink-cap-ref (sink-caps current-id)]
-    (dosync
-     (let [sink-cap (deref sink-cap-ref)]
-       (if (or (= _0_ actual-weight)
-               (= _0_ sink-cap))
-         [actual-weight {}]
-         (do
-           (alter sink-cap-ref #(rv-fn '(fn [a s] (max (- s a) 0.0)) actual-weight %))
-           [(rv-fn '(fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
-            {current-id (rv-fn '(fn [a s] (min a s)) actual-weight sink-cap)}]))))
-    [actual-weight {}]))
+  [current-id actual-weight sink-cap-ref]
+  (dosync
+   (let [sink-cap (deref sink-cap-ref)]
+     (if (= sink-cap _0_)
+       [actual-weight {}]
+       (do
+         (alter sink-cap-ref #(rv-fn '(fn [a s] (max (- s a) 0.0)) actual-weight %))
+         [(rv-fn '(fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
+          {current-id (rv-fn '(fn [a s] (min a s)) actual-weight sink-cap)}])))))
 
 (defn handle-use-effects!
   [current-id params surface-water-carrier]
@@ -150,12 +147,16 @@
 
 (defn handle-sink-effects!
   [current-id {:keys [sink-caps]} {:keys [actual-weight sink-effects] :as surface-water-carrier}]
-  (let [[new-actual-weight new-sink-effects] (local-sink! current-id
-                                                          actual-weight
-                                                          sink-caps)]
-    (assoc surface-water-carrier
-      :actual-weight new-actual-weight
-      :sink-effects  (merge-with _+_ sink-effects new-sink-effects))))
+  (if (not= actual-weight _0_)
+    (if-let [sink-cap-ref (sink-caps current-id)]
+      (let [[new-actual-weight new-sink-effects] (local-sink! current-id
+                                                              actual-weight
+                                                              sink-cap-ref)]
+        (assoc surface-water-carrier
+          :actual-weight new-actual-weight
+          :sink-effects  (merge-with _+_ sink-effects new-sink-effects)))
+      surface-water-carrier)
+    surface-water-carrier))
 
 (defn take-next-step
   [current-id
