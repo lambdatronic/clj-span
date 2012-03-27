@@ -36,6 +36,22 @@
 (def ^:dynamic _min_)
 (def ^:dynamic _>)
 
+(defn assign-water-to-users!
+  [{:keys [stream-intakes cache-layer]}]
+  (doseq [[stream-id use-ids] stream-intakes]
+    (let [stream-cache   (get-in cache-layer stream-id)
+          num-users      (count use-ids)
+          split-carriers (doall
+                          (for [{:keys [possible-weight actual-weight sink-effects] :as carrier} (deref stream-cache)]
+                            (assoc carrier
+                              :possible-weight (_d possible-weight num-users)
+                              :actual-weight   (_d actual-weight   num-users)
+                              :sink-effects    (mapmap identity #(_d % num-users) sink-effects))))]
+      (dosync
+       (ref-set stream-cache ())
+       (doseq [use-id use-ids]
+         (ref-set (get-in cache-layer use-id) split-carriers))))))
+
 (defn nearest-to-bearing
   [bearing id neighbors]
   (if (seq neighbors)
@@ -219,7 +235,7 @@
      (iterate-while-seq
       (p move-carriers-one-step-downstream params)
       (create-initial-service-carriers params))))
-  params)
+  (select-keys params [:stream-intakes :cache-layer]))
 
 (defn make-buckets
   "Stores maps from {ids -> mm3-ref} for sink-caps, possible-use-caps, and actual-use-caps in params."
@@ -240,7 +256,7 @@
   [in-stream? rows cols use-points]
   (with-message
     "Finding nearest stream points to all users...\n"
-    #(str "\nDone. (Found " (count %) " intake points.)")
+    #(str "\nDone. Found " (count %) " intake points.")
     (let [in-stream-users (filter in-stream? use-points)
           claimed-intakes (zipmap in-stream-users (map vector in-stream-users))]
       (println "Detected" (count in-stream-users) "in-stream users.\nContinuing with out-of-stream users...")
@@ -290,4 +306,5 @@
         create-in-stream-test
         link-streams-to-users
         make-buckets
-        propagate-runoff!)))
+        propagate-runoff!
+        assign-water-to-users!)))
