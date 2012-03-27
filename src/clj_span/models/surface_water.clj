@@ -147,8 +147,8 @@
    another step downhill.  If it encounters a sink location, it drops
    some water according to the remaining sink capacity at this
    location."
-  [cache-layer possible-flow-layer actual-flow-layer sink-caps possible-use-caps actual-use-caps
-   in-stream? stream-intakes mm2-per-cell trans-threshold-volume flow-layers rows cols
+  [{:keys [cache-layer possible-flow-layer actual-flow-layer sink-caps possible-use-caps actual-use-caps
+           in-stream? stream-intakes mm2-per-cell trans-threshold-volume flow-layers rows cols] :as params}
    {:keys [route possible-weight actual-weight sink-effects stream-bound?] :as surface-water-carrier}]
   (let [current-id (peek route)
         prev-id    (peek (pop route))
@@ -184,9 +184,36 @@
             :sink-effects    (merge-with _+_ sink-effects new-sink-effects)
             :stream-bound?   (in-stream? next-id)))))))
 
+(defn report-carrier-counts
+  [surface-water-carriers]
+  (let [on-land-carriers   (count (remove :stream-bound? surface-water-carriers))
+        in-stream-carriers (- (count surface-water-carriers) on-land-carriers)]
+    (printf "Carriers: %10d | On Land: %10d | In Stream: %10d%n"
+            (+ on-land-carriers in-stream-carriers)
+            on-land-carriers
+            in-stream-carriers)))
+
+(defn move-carriers-one-step-downstream
+  [params surface-water-carriers]
+  (report-carrier-counts surface-water-carriers)
+  (pmap (p to-the-ocean! params) surface-water-carriers))
+
+(defn create-initial-service-carriers
+  [{:keys [source-layer source-points mm2-per-cell in-stream?]}]
+  (map
+   #(let [source-weight (*_ mm2-per-cell (get-in source-layer %))]
+      (struct-map service-carrier
+        :source-id       %
+        :route           [%]
+        :possible-weight source-weight
+        :actual-weight   source-weight
+        :sink-effects    {}
+        :stream-bound?   (in-stream? %)))
+   source-points))
+
 (defn stop-unless-reducing
   [n coll]
-  (take-while (fn [[p c]] (> p c)) (partition 2 1 (map count (take-nth n coll)))))
+  (dorun (take-while (fn [[p c]] (> p c)) (partition 2 1 (map count (take-nth n coll))))))
 
 (defn propagate-runoff!
   "Constructs a sequence of surface-water-carrier objects (one per
@@ -197,49 +224,13 @@
    stream course.  Sinks affect carriers overland.  Users affect
    carriers in stream channels.  All the carriers are moved together
    in timesteps (more or less)."
-  [{:keys [cache-layer possible-flow-layer actual-flow-layer
-           source-layer source-points mm2-per-cell sink-caps
-           possible-use-caps actual-use-caps in-stream? stream-intakes
-           flow-layers rows cols trans-threshold]
-    :as params}]
+  [params]
   (with-message "Moving the surface water carriers downhill and downstream...\n" "All done."
-    (dorun
-     (stop-unless-reducing
-      100
-      (iterate-while-seq
-       (fn [surface-water-carriers]
-         (let [on-land-carriers   (count (remove :stream-bound? surface-water-carriers))
-               in-stream-carriers (- (count surface-water-carriers) on-land-carriers)]
-           (printf "Carriers: %10d | On Land: %10d | In Stream: %10d%n"
-                   (+ on-land-carriers in-stream-carriers)
-                   on-land-carriers
-                   in-stream-carriers)
-           (flush)
-           (pmap (p to-the-ocean!
-                    cache-layer
-                    possible-flow-layer
-                    actual-flow-layer
-                    sink-caps
-                    possible-use-caps
-                    actual-use-caps
-                    in-stream?
-                    stream-intakes
-                    mm2-per-cell
-                    (* mm2-per-cell trans-threshold)
-                    flow-layers
-                    rows
-                    cols)
-                 surface-water-carriers)))
-       (map
-        #(let [source-weight (*_ mm2-per-cell (get-in source-layer %))]
-           (struct-map service-carrier
-             :source-id       %
-             :route           [%]
-             :possible-weight source-weight
-             :actual-weight   source-weight
-             :sink-effects    {}
-             :stream-bound?   (in-stream? %)))
-        source-points))))))
+    (stop-unless-reducing
+     100
+     (iterate-while-seq
+      (p move-carriers-one-step-downstream params)
+      (create-initial-service-carriers params)))))
 
 (defn find-nearest-stream-point!
   [in-stream? claimed-intakes rows cols id]
@@ -284,6 +275,12 @@
   (assoc params
     :in-stream? (set (filter-matrix-for-coords #(not= _0_ %) (flow-layers "River")))))
 
+(defn compute-trans-threshold-volume
+  "Stores trans-threshold * mm2-per-cell under (params :trans-threshold-volume)."
+  [{:keys [trans-threshold mm2-per-cell] :as params}]
+  (assoc params
+    :trans-threshold-volume (* trans-threshold mm2-per-cell)))
+
 (defn compute-mm2-per-cell
   "Stores cell-width * cell-height * 10^6 under (params :mm2-per-cell)."
   [{:keys [cell-width cell-height] :as params}]
@@ -300,6 +297,7 @@
   (with-typed-math-syms value-type [_0_ _+_ *_ _d rv-fn _min_ _>]
     (-> params
         compute-mm2-per-cell
+        compute-trans-threshold-volume
         create-in-stream-test
         make-buckets
         link-streams-to-users
