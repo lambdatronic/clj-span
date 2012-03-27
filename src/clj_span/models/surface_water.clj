@@ -74,52 +74,51 @@
          (remove (p = prev-id))
          (nearest-to-bearing bearing current-id))))
 
+(defn calculate-use!
+  [current-id use-caps weight]
+  (let [use-cap-ref (use-caps current-id)
+        use-cap     (deref use-cap-ref)]
+    (if (or (= use-cap _0_)
+            (= weight  _0_))
+      [weight _0_]
+      (do (alter use-cap-ref #(rv-fn '(fn [w u] (max (- u w) 0.0)) weight %))
+          [(rv-fn '(fn [w u] (max (- w u) 0.0)) weight use-cap)
+           (rv-fn '(fn [w u] (min w u))         weight use-cap)]))))
+
 (defn local-use!
-  "Computes the amount sunk by each sink encountered along an
-   out-of-stream flow path. Reduces the sink-caps for each sink which
-   captures some of the service medium. Returns remaining
-   actual-weight and the local sink effects."
   [current-id
-   {:keys [cache-layer possible-flow-layer actual-flow-layer possible-use-caps actual-use-caps stream-intakes mm2-per-cell]}
-   {:keys [possible-weight actual-weight] :as surface-water-carrier}]
-  (if-let [use-id (stream-intakes current-id)]
-    (dosync
-     (let [possible-use-cap-ref (possible-use-caps use-id)
-           actual-use-cap-ref   (actual-use-caps   use-id)
-           possible-use-cap     (deref possible-use-cap-ref)
-           actual-use-cap       (deref actual-use-cap-ref)
-           [new-possible-weight possible-use]
-           (if (= _0_ possible-use-cap)
-             [possible-weight _0_]
-             (do
-               (alter possible-use-cap-ref #(rv-fn '(fn [p u] (max (- u p) 0.0)) possible-weight %))
-               [(rv-fn '(fn [p u] (max (- p u) 0.0)) possible-weight possible-use-cap)
-                (rv-fn '(fn [p u] (min p u))         possible-weight possible-use-cap)]))
-           [new-actual-weight actual-use]
-           (if (or (= _0_ actual-use-cap)
-                   (= _0_ actual-weight))
-             [actual-weight _0_]
-             (do
-               (alter actual-use-cap-ref #(rv-fn '(fn [a u] (max (- u a) 0.0)) actual-weight %))
-               [(rv-fn '(fn [a u] (max (- a u) 0.0)) actual-weight actual-use-cap)
-                (rv-fn '(fn [a u] (min a u))         actual-weight actual-use-cap)]))]
-       (if (or (not= _0_ possible-use)
-               (not= _0_ actual-use))
-         (let [possible-benefit (_d possible-use mm2-per-cell)
-               actual-benefit   (_d actual-use   mm2-per-cell)]
-           (doseq [id (:route surface-water-carrier)]
-             (if (not= _0_ possible-benefit)
-               (commute (get-in possible-flow-layer id) _+_ possible-benefit))
-             (if (not= _0_ actual-benefit)
-               (commute (get-in actual-flow-layer id) _+_ actual-benefit)))
-           (commute (get-in cache-layer use-id) conj (assoc surface-water-carrier
-                                                       :route           nil
-                                                       :possible-weight possible-benefit
-                                                       :actual-weight   actual-benefit
-                                                       :sink-effects    (mapmap identity #(_d % mm2-per-cell)
-                                                                                (:sink-effects surface-water-carrier))))))
-       [new-possible-weight new-actual-weight]))
-    [possible-weight actual-weight]))
+   {:keys [cache-layer possible-flow-layer actual-flow-layer possible-use-caps actual-use-caps mm2-per-cell]}
+   {:keys [route possible-weight actual-weight sink-effects] :as surface-water-carrier}]
+  (dosync
+   (let [[new-possible-weight possible-use] (calculate-use! current-id possible-use-caps possible-weight)
+         [new-actual-weight   actual-use]   (calculate-use! current-id actual-use-caps   actual-weight)]
+     (if-not (and (= possible-use _0_)
+                  (= actual-use   _0_))
+       (let [possible-density (_d possible-use mm2-per-cell)
+             actual-density   (_d actual-use   mm2-per-cell)]
+         (if (not= possible-density _0_)
+           (doseq [id route]
+             (commute (get-in possible-flow-layer id) _+_ possible-density)))
+         (if (not= actual-density _0_)
+           (doseq [id route]
+             (commute (get-in actual-flow-layer id) _+_ actual-density)))
+         (commute (get-in cache-layer current-id) conj (assoc surface-water-carrier
+                                                         :route           nil
+                                                         :possible-weight possible-density
+                                                         :actual-weight   actual-density
+                                                         :sink-effects    (mapmap identity #(_d % mm2-per-cell) sink-effects)))))
+     [new-possible-weight new-actual-weight])))
+
+(defn handle-use-effects!
+  [current-id {:keys [possible-use-caps] :as params} surface-water-carrier]
+  (if (possible-use-caps current-id)
+    (let [[new-possible-weight new-actual-weight] (local-use! current-id
+                                                              params
+                                                              surface-water-carrier)]
+      (assoc surface-water-carrier
+        :possible-weight new-possible-weight
+        :actual-weight   new-actual-weight))
+    surface-water-carrier))
 
 (defn local-sink!
   "Computes the amount sunk by each sink encountered along an
@@ -135,15 +134,6 @@
          (alter sink-cap-ref #(rv-fn '(fn [a s] (max (- s a) 0.0)) actual-weight %))
          [(rv-fn '(fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
           {current-id (rv-fn '(fn [a s] (min a s)) actual-weight sink-cap)}])))))
-
-(defn handle-use-effects!
-  [current-id params surface-water-carrier]
-  (let [[new-possible-weight new-actual-weight] (local-use! current-id
-                                                            params
-                                                            surface-water-carrier)]
-    (assoc surface-water-carrier
-      :possible-weight new-possible-weight
-      :actual-weight   new-actual-weight)))
 
 (defn handle-sink-effects!
   [current-id {:keys [sink-caps]} {:keys [actual-weight sink-effects] :as surface-water-carrier}]
@@ -228,44 +218,45 @@
      100
      (iterate-while-seq
       (p move-carriers-one-step-downstream params)
-      (create-initial-service-carriers params)))))
+      (create-initial-service-carriers params))))
+  params)
 
-(defn find-nearest-stream-point!
-  [in-stream? claimed-intakes rows cols id]
-  (dosync
-   (let [available-intake? (complement @claimed-intakes)
-         stream-point      (find-nearest #(and (in-stream? %) (available-intake? %)) rows cols id)]
-     (if stream-point (alter claimed-intakes conj [stream-point id])))))
+(defn make-buckets
+  "Stores maps from {ids -> mm3-ref} for sink-caps, possible-use-caps, and actual-use-caps in params."
+  [{:keys [sink-layer sink-points use-layer stream-intakes mm2-per-cell] :as params}]
+  (let [in-stream-points    (keys stream-intakes)
+        total-use-by-intake (for [id in-stream-points :let [use-ids (stream-intakes id)]]
+                              (reduce _+_ (map #(get-in use-layer %) use-ids)))]
+    (assoc params
+      :sink-caps         (seq2map sink-points (fn [id] [id (ref (*_ mm2-per-cell (get-in sink-layer id)))]))
+      :possible-use-caps (into {} (map (fn [stream-id total-use] [stream-id (ref (*_ mm2-per-cell total-use))])
+                                       in-stream-points
+                                       total-use-by-intake))
+      :actual-use-caps   (into {} (map (fn [stream-id total-use] [stream-id (ref (*_ mm2-per-cell total-use))])
+                                       in-stream-points
+                                       total-use-by-intake)))))
 
-;; FIXME: Try shuffling the (remove in-stream? use-points) line to reduce transaction clashes.
 (defn find-nearest-stream-points
   [in-stream? rows cols use-points]
   (with-message
     "Finding nearest stream points to all users...\n"
-    #(str "\nDone. [Claimed intakes: " (count %) "]")
+    #(str "\nDone. (Found " (count %) " intake points.)")
     (let [in-stream-users (filter in-stream? use-points)
-          claimed-intakes (ref (zipmap in-stream-users in-stream-users))]
+          claimed-intakes (zipmap in-stream-users (map vector in-stream-users))]
       (println "Detected" (count in-stream-users) "in-stream users.\nContinuing with out-of-stream users...")
-      (with-progress-bar-cool
-        :drop
-        (- (count use-points) (count in-stream-users))
-        (pmap (p find-nearest-stream-point! in-stream? claimed-intakes rows cols)
-              (remove in-stream? use-points)))
-      @claimed-intakes)))
+      (apply merge-with concat
+             claimed-intakes
+             (with-progress-bar-cool
+               :keep
+               (- (count use-points) (count in-stream-users))
+               (pmap #(if-let [stream-id (find-nearest in-stream? rows cols %)] {stream-id [%]})
+                     (remove in-stream? use-points)))))))
 
 (defn link-streams-to-users
   "Stores a map of {stream-ids -> nearest-use-ids} under (params :stream-intakes)."
-  [{:keys [rows cols use-points in-stream?] :as params}]
+  [{:keys [in-stream? rows cols use-points] :as params}]
   (assoc params
     :stream-intakes (find-nearest-stream-points in-stream? rows cols use-points)))
-
-(defn make-buckets
-  "Stores maps from {ids -> mm3-ref} for sink, possible-use, and actual-use in params."
-  [{:keys [sink-layer sink-points use-layer use-points mm2-per-cell] :as params}]
-  (assoc params
-    :sink-caps         (seq2map sink-points (fn [id] [id (ref (*_ mm2-per-cell (get-in sink-layer id)))]))
-    :possible-use-caps (seq2map use-points  (fn [id] [id (ref (*_ mm2-per-cell (get-in use-layer  id)))]))
-    :actual-use-caps   (seq2map use-points  (fn [id] [id (ref (*_ mm2-per-cell (get-in use-layer  id)))]))))
 
 (defn create-in-stream-test
   "Stores a set of all in-stream ids under (params :in-stream?)."
@@ -297,6 +288,6 @@
         compute-mm2-per-cell
         compute-trans-threshold-volume
         create-in-stream-test
-        make-buckets
         link-streams-to-users
+        make-buckets
         propagate-runoff!)))
