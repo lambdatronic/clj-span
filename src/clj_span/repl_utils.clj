@@ -172,16 +172,16 @@
              :flow-layers        flow-layers
              :cell-width         cell-width
              :cell-height        cell-height
-             :source-threshold   nil ;; 1500.0
-             :sink-threshold     nil ;; 300.0
-             :use-threshold      nil ;; 500.0
-             :trans-threshold    0.1
+             :source-threshold   0.0
+             :sink-threshold     0.0
+             :use-threshold      1.0
+             :trans-threshold    1.0
              :source-type        :finite
              :sink-type          :finite
              :use-type           :finite
              :benefit-type       :rival
              :value-type         value-type
-             :downscaling-factor 1
+             :downscaling-factor 8
              :rv-max-states      10
              :animation?         false
              :result-type        :closure-map}))
