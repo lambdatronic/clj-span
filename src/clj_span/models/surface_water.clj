@@ -22,7 +22,7 @@
 
 (ns clj-span.models.surface-water
   (:use [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
-                                    memoize-by-first-arg angular-distance p & def-
+                                    memoize-by-first-arg angular-distance p &
                                     with-progress-bar-cool)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? subtract-ids find-nearest filter-matrix-for-coords)]))
 
@@ -36,21 +36,6 @@
 (def ^:dynamic _min_)
 (def ^:dynamic _>)
 
-(defn lowest-neighbors
-  [id in-stream? flow-layers rows cols]
-  (if-not (on-bounds? rows cols id)
-    (let [elev-layer     (flow-layers "Altitude")
-          neighbors      (if (in-stream? id)
-                           ;; Step downstream
-                           (filter in-stream? (get-neighbors rows cols id))
-                           ;; Step downhill
-                           (get-neighbors rows cols id))
-          local-elev     (get-in elev-layer id)
-          neighbor-elevs (map (p get-in elev-layer) neighbors)
-          min-elev       (reduce _min_ local-elev neighbor-elevs)]
-      (filter #(= min-elev (get-in elev-layer %)) neighbors))))
-(def- lowest-neighbors (memoize-by-first-arg lowest-neighbors))
-
 (defn nearest-to-bearing
   [bearing id neighbors]
   (if (seq neighbors)
@@ -61,29 +46,42 @@
                                          %]))]
         (bearing-changes (apply min (keys bearing-changes))))
       (first neighbors))))
+(def nearest-to-bearing (memoize nearest-to-bearing))
+
+(defn lowest-neighbors
+  [id in-stream? flow-layers rows cols]
+  (if-not (on-bounds? rows cols id)
+    (let [elev-layer     (flow-layers "Altitude")
+          neighbors      (if (in-stream? id)
+                           (filter in-stream? (get-neighbors rows cols id)) ; Step downstream
+                           (get-neighbors rows cols id)) ; Step downhill
+          local-elev     (get-in elev-layer id)
+          neighbor-elevs (map (p get-in elev-layer) neighbors)
+          min-elev       (reduce _min_ local-elev neighbor-elevs)]
+      (filter #(= min-elev (get-in elev-layer %)) neighbors))))
+(def lowest-neighbors (memoize-by-first-arg lowest-neighbors))
 
 ;; FIXME: Somehow this still doesn't terminate correctly for some carriers.
 (defn find-next-step
-  [id in-stream? flow-layers rows cols bearing]
-  (let [prev-id (if bearing (subtract-ids id bearing))]
-    (nearest-to-bearing bearing
-                        id
-                        (remove (p = prev-id)
-                                (lowest-neighbors id
-                                                  in-stream?
-                                                  flow-layers
-                                                  rows
-                                                  cols)))))
-(def- find-next-step (memoize find-next-step))
+  [current-id in-stream? flow-layers rows cols route]
+  (let [prev-id (peek (pop route))
+        bearing (if prev-id (subtract-ids current-id prev-id))]
+    (->> (lowest-neighbors current-id
+                           in-stream?
+                           flow-layers
+                           rows
+                           cols)
+         (remove (p = prev-id))
+         (nearest-to-bearing bearing current-id))))
 
-(defn handle-use-effects!
+(defn local-use!
   "Computes the amount sunk by each sink encountered along an
    out-of-stream flow path. Reduces the sink-caps for each sink which
    captures some of the service medium. Returns remaining
    actual-weight and the local sink effects."
-  [current-id possible-weight actual-weight stream-intakes
-   possible-use-caps actual-use-caps cache-layer possible-flow-layer
-   actual-flow-layer mm2-per-cell surface-water-carrier]
+  [current-id
+   {:keys [cache-layer possible-flow-layer actual-flow-layer possible-use-caps actual-use-caps stream-intakes mm2-per-cell]}
+   {:keys [possible-weight actual-weight] :as surface-water-carrier}]
   (if-let [use-id (stream-intakes current-id)]
     (dosync
      (let [possible-use-cap-ref (possible-use-caps use-id)
@@ -123,7 +121,7 @@
        [new-possible-weight new-actual-weight]))
     [possible-weight actual-weight]))
 
-(defn handle-sink-effects!
+(defn local-sink!
   "Computes the amount sunk by each sink encountered along an
    out-of-stream flow path. Reduces the sink-caps for each sink which
    captures some of the service medium. Returns remaining
@@ -141,48 +139,46 @@
             {current-id (rv-fn '(fn [a s] (min a s)) actual-weight sink-cap)}]))))
     [actual-weight {}]))
 
+(defn handle-use-effects!
+  [current-id params surface-water-carrier]
+  (let [[new-possible-weight new-actual-weight] (local-use! current-id
+                                                            params
+                                                            surface-water-carrier)]
+    (assoc surface-water-carrier
+      :possible-weight new-possible-weight
+      :actual-weight   new-actual-weight)))
+
+(defn handle-sink-effects!
+  [current-id {:keys [sink-caps]} {:keys [actual-weight sink-effects] :as surface-water-carrier}]
+  (let [[new-actual-weight new-sink-effects] (local-sink! current-id
+                                                          actual-weight
+                                                          sink-caps)]
+    (assoc surface-water-carrier
+      :actual-weight new-actual-weight
+      :sink-effects  (merge-with _+_ sink-effects new-sink-effects))))
+
+(defn take-next-step
+  [current-id
+   {:keys [trans-threshold-volume in-stream? flow-layers rows cols]}
+   {:keys [possible-weight route] :as surface-water-carrier}]
+  (if (_> possible-weight trans-threshold-volume)
+    (if-let [next-id (find-next-step current-id in-stream? flow-layers rows cols route)]
+      (assoc surface-water-carrier
+        :route         (conj route next-id)
+        :stream-bound? (in-stream? next-id)))))
+
 ;; FIXME: Make sure carriers can hop from stream to stream as necessary.
 (defn to-the-ocean!
   "Computes the state of the surface-water-carrier after it takes
-   another step downhill.  If it encounters a sink location, it drops
+   another step downhill. If it encounters a sink location, it drops
    some water according to the remaining sink capacity at this
    location."
-  [{:keys [cache-layer possible-flow-layer actual-flow-layer sink-caps possible-use-caps actual-use-caps
-           in-stream? stream-intakes mm2-per-cell trans-threshold-volume flow-layers rows cols] :as params}
-   {:keys [route possible-weight actual-weight sink-effects stream-bound?] :as surface-water-carrier}]
-  (let [current-id (peek route)
-        prev-id    (peek (pop route))
-        bearing    (if prev-id (subtract-ids current-id prev-id))]
-    ;; (dosync
-    ;;  (alter (get-in possible-flow-layer current-id) _+_ (_d possible-weight mm2-per-cell))
-    ;;  (alter (get-in actual-flow-layer   current-id) _+_ (_d actual-weight   mm2-per-cell)))
-    (if stream-bound?
-      (let [[new-possible-weight new-actual-weight] (handle-use-effects! current-id
-                                                                         possible-weight
-                                                                         actual-weight
-                                                                         stream-intakes
-                                                                         possible-use-caps
-                                                                         actual-use-caps
-                                                                         cache-layer
-                                                                         possible-flow-layer
-                                                                         actual-flow-layer
-                                                                         mm2-per-cell
-                                                                         surface-water-carrier)]
-        (if (_> new-possible-weight trans-threshold-volume)
-          (if-let [next-id (find-next-step current-id in-stream? flow-layers rows cols bearing)]
-            (assoc surface-water-carrier
-              :route           (conj route next-id)
-              :possible-weight new-possible-weight
-              :actual-weight   new-actual-weight))))
-      (let [[new-actual-weight new-sink-effects] (handle-sink-effects! current-id
-                                                                       actual-weight
-                                                                       sink-caps)]
-        (if-let [next-id (find-next-step current-id in-stream? flow-layers rows cols bearing)]
-          (assoc surface-water-carrier
-            :route           (conj route next-id)
-            :actual-weight   new-actual-weight
-            :sink-effects    (merge-with _+_ sink-effects new-sink-effects)
-            :stream-bound?   (in-stream? next-id)))))))
+  [params {:keys [route stream-bound?] :as surface-water-carrier}]
+  (let [current-id        (peek route)
+        local-effects-fn! (if stream-bound? handle-use-effects! handle-sink-effects!)]
+    (->> surface-water-carrier
+         (local-effects-fn! current-id params)
+         (take-next-step current-id params))))
 
 (defn report-carrier-counts
   [surface-water-carriers]
@@ -191,7 +187,8 @@
     (printf "Carriers: %10d | On Land: %10d | In Stream: %10d%n"
             (+ on-land-carriers in-stream-carriers)
             on-land-carriers
-            in-stream-carriers)))
+            in-stream-carriers)
+    (flush)))
 
 (defn move-carriers-one-step-downstream
   [params surface-water-carriers]
@@ -219,11 +216,11 @@
   "Constructs a sequence of surface-water-carrier objects (one per
    source point) and then iteratively propagates them downhill until
    they reach a stream location, get stuck in a low elevation point,
-   or fall off the map bounds.  Once they reach a stream location, the
+   or fall off the map bounds. Once they reach a stream location, the
    carriers will attempt to continue downhill while staying in a
-   stream course.  Sinks affect carriers overland.  Users affect
-   carriers in stream channels.  All the carriers are moved together
-   in timesteps (more or less)."
+   stream course. Sinks affect carriers overland. Users affect
+   carriers in stream channels. All the carriers are moved together in
+   timesteps (more or less)."
   [params]
   (with-message "Moving the surface water carriers downhill and downstream...\n" "All done."
     (stop-unless-reducing
