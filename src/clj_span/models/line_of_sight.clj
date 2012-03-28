@@ -33,24 +33,24 @@
 ;;;   source point.
 
 (ns clj-span.models.line-of-sight
-  (:use [clj-misc.utils      :only (euclidean-distance p def- between? with-progress-bar-cool with-message)]
+  (:use [clj-misc.utils      :only (euclidean-distance p def- between? with-progress-bar-cool with-message my-partition-all)]
         [clj-misc.matrix-ops :only (find-line-between get-line-fn)]))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-(def ^:dynamic _0_)
-(def ^:dynamic _+_)
-(def ^:dynamic _-_)
-(def ^:dynamic _*_)
-(def ^:dynamic _d_)
-(def ^:dynamic _*)
-(def ^:dynamic *_)
-(def ^:dynamic _d)
-(def ^:dynamic -_)
-(def ^:dynamic _>_)
-(def ^:dynamic _max_)
-(def ^:dynamic rv-fn)
-(def ^:dynamic _>)
+(def #^{:dynamic true} _0_)
+(def #^{:dynamic true} _+_)
+(def #^{:dynamic true} _-_)
+(def #^{:dynamic true} _*_)
+(def #^{:dynamic true} _d_)
+(def #^{:dynamic true} _*)
+(def #^{:dynamic true} *_)
+(def #^{:dynamic true} _d)
+(def #^{:dynamic true} -_)
+(def #^{:dynamic true} _>_)
+(def #^{:dynamic true} _max_)
+(def #^{:dynamic true} rv-fn)
+(def #^{:dynamic true} _>)
 
 ;; in meters
 (def- half-mile    805.0)
@@ -179,7 +179,7 @@
            source-points use-points cell-width cell-height
            value-type trans-threshold]}]
   (let [{elev-layer "Altitude"} flow-layers
-        prob-ns (case value-type
+        prob-ns (condp = value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]
@@ -216,4 +216,4 @@
                        trans-threshold
                        source-point
                        use-point)))
-                  (partition-all partition-size (for [use-point use-points source-point source-points] [source-point use-point])))))))))
+                  (my-partition-all partition-size (for [use-point use-points source-point source-points] [source-point use-point])))))))))

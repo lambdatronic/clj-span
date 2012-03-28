@@ -53,13 +53,13 @@
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-(def ^:dynamic _0_)
-(def ^:dynamic *_)
-(def ^:dynamic _d)
-(def ^:dynamic _*_)
-(def ^:dynamic _+_)
-(def ^:dynamic _>)
-(def ^:dynamic rv-fn)
+(def #^{:dynamic true} _0_)
+(def #^{:dynamic true} *_)
+(def #^{:dynamic true} _d)
+(def #^{:dynamic true} _*_)
+(def #^{:dynamic true} _+_)
+(def #^{:dynamic true} _>)
+(def #^{:dynamic true} rv-fn)
 
 (defstruct fisherman :need :route :cache :fishing-area)
 
@@ -107,7 +107,7 @@
                  (doall (pmap (p go-fish! fish-supply fish-left? possible-flow-layer actual-flow-layer km2-per-cell) %)))
               fishermen)))))
 
-(def ^:dynamic *fishing-range* 5000.0) ;; max distance in meters that a fisherman can sail from shore
+(def #^{:dynamic true} *fishing-range* 5000.0) ;; max distance in meters that a fisherman can sail from shore
 
 ;; FIXME: Use locations with no path to the coast will not create fishermen agents.
 (defn make-fishermen
@@ -218,7 +218,7 @@
            source-points use-points
            value-type cell-width cell-height rows cols]}]
   (let [{path-layer "Path", population-density-layer "PopulationDensity"} flow-layers
-        prob-ns (case value-type
+        prob-ns (condp = value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

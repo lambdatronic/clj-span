@@ -32,12 +32,12 @@
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-(def ^:dynamic _0_)
-(def ^:dynamic _+_)
-(def ^:dynamic _*)
-(def ^:dynamic _>_)
-(def ^:dynamic rv-fn)
-(def ^:dynamic _>)
+(def #^{:dynamic true} _0_)
+(def #^{:dynamic true} _+_)
+(def #^{:dynamic true} _*)
+(def #^{:dynamic true} _>_)
+(def #^{:dynamic true} rv-fn)
+(def #^{:dynamic true} _>)
 
 ;; in meters
 (def- half-mile    805.0)
@@ -158,7 +158,7 @@
            cache-layer possible-flow-layer actual-flow-layer
            source-points cell-width cell-height rows cols
            value-type trans-threshold]}]
-  (let [prob-ns (case value-type
+  (let [prob-ns (condp = value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

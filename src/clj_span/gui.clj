@@ -22,8 +22,7 @@
 ;;; somewhat ad-hoc toolkit for simple animations.
 
 (ns clj-span.gui
-  (:use [clojure.java.io     :as io]
-        [clj-misc.utils      :only (&)]
+  (:use [clj-misc.utils      :only (&)]
         [clj-misc.matrix-ops :only (get-rows
                                     get-cols
                                     map-matrix
@@ -36,9 +35,9 @@
            (java.awt.image BufferedImage)
            (javax.swing JPanel JFrame)
            (javax.imageio ImageIO)
-           (java.io IOException)))
+           (java.io IOException File)))
 
-(defn fill-cell [^Graphics g x y scale color]
+(defn fill-cell [#^Graphics g x y scale color]
   (doto g
     (.setColor color)
     (.fillRect (* x scale) (* y scale) scale scale)))
@@ -56,9 +55,9 @@
         b (float 1.0)]
     (Color/getHSBColor h s b)))
 
-(def ^:dynamic *legend-color-height* 20) ; pixels
-(def ^:dynamic *legend-text-height*  10) ; pixels
-(def ^:dynamic *legend-padding*       5) ; pixels
+(def #^{:dynamic true} *legend-color-height* 20) ; pixels
+(def #^{:dynamic true} *legend-text-height*  10) ; pixels
+(def #^{:dynamic true} *legend-padding*       5) ; pixels
 
 (defn render [layer scale x-dim y-dim rv-to-number]
   (let [numeric-layer    (map-matrix rv-to-number layer)
@@ -100,22 +99,22 @@
     img))
 
 (defn write-layer-to-file [dirname file-prefix layer scale value-type]
-  (let [[rv-mean rv-stdev] (case value-type
+  (let [[rv-mean rv-stdev] (condp = value-type
                              :numbers  [nb/rv-mean nb/rv-stdev]
                              :varprop  [vp/rv-mean vp/rv-stdev]
                              :randvars [rv/rv-mean rv/rv-stdev])
         y-dim (get-rows layer)
         x-dim (get-cols layer)]
-    (let [outfile (io/file dirname (str file-prefix "-mean.png"))]
+    (let [outfile (File. dirname (str file-prefix "-mean.png"))]
       (try (ImageIO/write (render layer scale x-dim y-dim rv-mean) "png" outfile)
            (catch IOException e (println "Failed to write mean layer for" file-prefix "to file" (.getName outfile)))))
     (if-not (= value-type :numbers)
-      (let [outfile (io/file dirname (str file-prefix "-stdev.png"))]
+      (let [outfile (File. dirname (str file-prefix "-stdev.png"))]
         (try (ImageIO/write (render layer scale x-dim y-dim rv-stdev) "png" outfile)
              (catch IOException e (println "Failed to write stdev layer for" file-prefix "to file" (.getName outfile))))))))
 
 (defn draw-layer [title layer scale value-type]
-  (let [[rv-mean rv-stdev] (case value-type
+  (let [[rv-mean rv-stdev] (condp = value-type
                              :numbers  [nb/rv-mean nb/rv-stdev]
                              :varprop  [vp/rv-mean vp/rv-stdev]
                              :randvars [rv/rv-mean rv/rv-stdev])
@@ -141,7 +140,7 @@
     [mean-panel stdev-panel]))
 
 (defn draw-ref-layer [title ref-layer scale value-type]
-  (let [[rv-mean rv-stdev] (case value-type
+  (let [[rv-mean rv-stdev] (condp = value-type
                              :numbers  [nb/rv-mean nb/rv-stdev]
                              :varprop  [vp/rv-mean vp/rv-stdev]
                              :randvars [rv/rv-mean rv/rv-stdev])
@@ -169,7 +168,7 @@
     [mean-panel stdev-panel]))
 
 (defn draw-points [ids scale value-type]
-  (let [[_+ _0_]    (case value-type
+  (let [[_+ _0_]    (condp = value-type
                       :numbers  [nb/_+ nb/_0_]
                       :varprop  [vp/_+ vp/_0_]
                       :randvars [rv/_+ rv/_0_])
@@ -179,7 +178,7 @@
         point-layer (make-matrix (inc max-y) (inc max-x) #(get point-vals % _0_))]
     (draw-layer "Points" point-layer scale value-type)))
 
-(def ^:dynamic *animation-sleep-ms* 100)
+(def #^{:dynamic true} *animation-sleep-ms* 100)
 
 (defn run-animation [[mean-panel stdev-panel]]
   (send-off *agent* run-animation)

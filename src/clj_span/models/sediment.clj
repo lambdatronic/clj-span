@@ -39,12 +39,12 @@
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-(def ^:dynamic _0_)
-(def ^:dynamic _+_)
-(def ^:dynamic *_)
-(def ^:dynamic _d)
-(def ^:dynamic rv-fn)
-(def ^:dynamic _min_)
+(def #^{:dynamic true} _0_)
+(def #^{:dynamic true} _+_)
+(def #^{:dynamic true} *_)
+(def #^{:dynamic true} _d)
+(def #^{:dynamic true} rv-fn)
+(def #^{:dynamic true} _min_)
 
 (defn- lowest-neighbors
   [id in-stream? elevation-layer rows cols]
@@ -137,7 +137,7 @@
                 {current-id (rv-fn (fn [a s] (min a s)) actual-weight sink-cap)}]))))
         [actual-weight {}]))))
 
-(def ^:dynamic *max-levee-distance* 100.0) ;; in meters
+(def #^{:dynamic true} *max-levee-distance* 100.0) ;; in meters
 
 (defn- nearby-levees
   [origin bearing levee? cell-width cell-height]
@@ -309,7 +309,7 @@
          elevation-layer "Altitude",
          levees-layer "Levee",
          floodplain-layer "FloodplainsCode"} flow-layers
-        prob-ns (case value-type
+        prob-ns (condp = value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

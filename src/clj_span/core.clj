@@ -54,7 +54,7 @@
 
 (defmacro with-typed-math-syms [value-type symbols & body]
   (let [prob-ns (gensym)]
-    `(let [~prob-ns (case ~value-type
+    `(let [~prob-ns (condp = ~value-type
                       :numbers  'clj-misc.numbers
                       :varprop  'clj-misc.varprop
                       :randvars 'clj-misc.randvars)]
@@ -98,7 +98,7 @@
   "Return the simulation results as a map of layer names to closures."
   [{:keys [value-type orig-rows orig-cols]
     :as params}]
-  (let [rv-intensive-sampler (case value-type
+  (let [rv-intensive-sampler (condp = value-type
                                :numbers  nb/rv-intensive-sampler
                                :varprop  vp/rv-intensive-sampler
                                :randvars rv/rv-intensive-sampler)]
@@ -137,22 +137,23 @@
 
 (defmacro with-animation
   [value-type possible-flow-layer actual-flow-layer & body]
-  `(let [[rows# cols#]           ((juxt get-rows get-cols) ~possible-flow-layer)
-         animation-pixel-size#   (quot 600 (max rows# cols#))
-         possible-flow-animator# (agent (draw-ref-layer "Possible Flow"
-                                                        ~possible-flow-layer
-                                                        animation-pixel-size#
-                                                        ~value-type))
-         actual-flow-animator#   (agent (draw-ref-layer "Actual Flow"
-                                                        ~actual-flow-layer
-                                                        animation-pixel-size#
-                                                        ~value-type))]
-     (send-off possible-flow-animator# run-animation)
-     (send-off actual-flow-animator#   run-animation)
-     (let [result# ~@body]
-       (send-off possible-flow-animator# end-animation)
-       (send-off actual-flow-animator#   end-animation)
-       result#)))
+  (let [f (gensym)]
+    `(let [[rows# cols#]           (map (fn [~f] (~f ~possible-flow-layer)) [get-rows get-cols])
+           animation-pixel-size#   (quot 600 (max rows# cols#))
+           possible-flow-animator# (agent (draw-ref-layer "Possible Flow"
+                                                          ~possible-flow-layer
+                                                          animation-pixel-size#
+                                                          ~value-type))
+           actual-flow-animator#   (agent (draw-ref-layer "Actual Flow"
+                                                          ~actual-flow-layer
+                                                          animation-pixel-size#
+                                                          ~value-type))]
+       (send-off possible-flow-animator# run-animation)
+       (send-off actual-flow-animator#   run-animation)
+       (let [result# ~@body]
+         (send-off possible-flow-animator# end-animation)
+         (send-off actual-flow-animator#   end-animation)
+         result#))))
 
 (defn count-affected-users
   [{:keys [cache-layer]}]
@@ -181,7 +182,7 @@
     #(str "Source points: " (count (:source-points %)) "\n"
           "Sink points:   " (count (:sink-points   %)) "\n"
           "Use points:    " (count (:use-points    %)))
-    (let [_0_ (case value-type
+    (let [_0_ (condp = value-type
                 :numbers  nb/_0_
                 :varprop  vp/_0_
                 :randvars rv/_0_)]
@@ -202,7 +203,7 @@
     #(format "  Distinct Layer Values: [Pre] %d [Post] %d"
              (count (distinct (matrix2seq layer)))
              (count (distinct (matrix2seq %))))
-    (let [[_< _0_] (case value-type
+    (let [[_< _0_] (condp = value-type
                      :numbers  [nb/_< nb/_0_]
                      :varprop  [vp/_< vp/_0_]
                      :randvars [rv/_< rv/_0_])]
@@ -210,7 +211,7 @@
 
 (defn resample-and-zero
   [value-type scaled-rows scaled-cols layer threshold]
-  (let [[rv-intensive-sampler _0_] (case value-type
+  (let [[rv-intensive-sampler _0_] (condp = value-type
                                      :numbers  [nb/rv-intensive-sampler nb/_0_]
                                      :varprop  [vp/rv-intensive-sampler vp/_0_]
                                      :randvars [rv/rv-intensive-sampler rv/_0_])]
@@ -227,7 +228,7 @@
            cell-width cell-height downscaling-factor value-type]
     :as params}]
   (println "Preprocessing the input data layers.")
-  (let [[rows cols] ((juxt get-rows get-cols) source-layer)
+  (let [[rows cols] (map #(% source-layer) [get-rows get-cols])
         scaled-rows (quot rows downscaling-factor)
         scaled-cols (quot cols downscaling-factor)
         r-and-z     (p resample-and-zero value-type scaled-rows scaled-cols)]
@@ -292,11 +293,11 @@
            sink-layer use-layer flow-layers]
     :as params}]
   (set-global-vars! params)
-  (->> params
-       verify-params-or-throw
-       preprocess-data-layers
-       create-simulation-inputs
-       run-simulation
-       deref-result-layers
-       generate-results-map
-       (provide-results result-type value-type source-layer sink-layer use-layer flow-layers)))
+  (provide-results result-type value-type source-layer sink-layer use-layer flow-layers
+                   (-> params
+                       verify-params-or-throw
+                       preprocess-data-layers
+                       create-simulation-inputs
+                       run-simulation
+                       deref-result-layers
+                       generate-results-map)))

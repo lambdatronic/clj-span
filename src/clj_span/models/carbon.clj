@@ -86,13 +86,13 @@
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-(def ^:dynamic *_)
-(def ^:dynamic _d)
-(def ^:dynamic draw)
-(def ^:dynamic create-from-states)
+(def #^{:dynamic true} *_)
+(def #^{:dynamic true} _d)
+(def #^{:dynamic true} draw)
+(def #^{:dynamic true} create-from-states)
 
-(def ^:dynamic *num-world-samples* 10)
-(def ^:dynamic *sample-prob*       (/ 1.0 *num-world-samples*))
+(def #^{:dynamic true} *num-world-samples* 10)
+(def #^{:dynamic true} *sample-prob*       (/ 1.0 *num-world-samples*))
 
 (defn- get-carrier-cache
   [source-percents actual-sinks-by-source possible-use actual-use use-percent]
@@ -240,7 +240,7 @@
    the consumers (carbon emitters) according to their relative use
    values after being initially reduced by the sink values due to
    landscape emissions."
-  (let [prob-ns (case value-type
+  (let [prob-ns (condp = value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

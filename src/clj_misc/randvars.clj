@@ -26,12 +26,12 @@
 (ns clj-misc.randvars
   (:use [clj-misc.utils :only [p constraints-1.0 seq2map dissoc-vec
                                seq2redundant-map successive-sums
-                               successive-differences
+                               successive-differences my-partition-all
                                select-n-distinct select-n-summands]]))
 
 ;; -------------------- Begin utility functions --------------------
 
-(def ^:dynamic *rv-max-states* 10) ;; sensible default
+(def #^{:dynamic true} *rv-max-states* 10) ;; sensible default
 
 (defn reset-rv-max-states!
   [new-val]
@@ -489,7 +489,7 @@
 
         :otherwise
         (recur (pmap rv-sum
-                     (partition-all 20 Xs)))))
+                     (my-partition-all 20 Xs)))))
 
 (defn rv-extensive-sampler
   "Returns the extensive weighted sum of a coverage (i.e. a sequence

@@ -22,11 +22,11 @@
 ;;; functions.
 
 (ns clj-span.interface
-  (:use [clojure.java.io     :as io]
-        [clj-misc.utils      :only (& p mapmap)]
+  (:use [clj-misc.utils      :only (& p mapmap)]
         [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)]
         [clj-span.gui        :only (draw-layer write-layer-to-file)])
-  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
+  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
+  (:import (java.io File)))
 
 (defn- select-location
   "Prompts for coords and returns the selected [i j] pair."
@@ -122,7 +122,7 @@
          (max (/ cols width)
               (/ rows height))))))
 
-(def ^:dynamic *scale* 1)
+(def #^{:dynamic true} *scale* 1)
 
 (defn set-scale!
   [new-scale]
@@ -147,7 +147,7 @@
   (flush)
   (try
     (let [choice    (read)
-          directory (io/file choice)]
+          directory (File. choice)]
       (if (and (.isDirectory directory) (.canWrite directory))
         choice
         (println "Invalid selection:" choice "is not a writeable directory.")))
@@ -201,7 +201,7 @@
   (mapmap
    label-to-keyword
    (fn [closure]
-     (let [_0_ (case value-type
+     (let [_0_ (condp = value-type
                  :numbers  nb/_0_
                  :varprop  vp/_0_
                  :randvars rv/_0_)]

@@ -22,14 +22,14 @@
 ;;; var].
 
 (ns clj-misc.varprop
-  (:use [clj-misc.utils :only [replace-all]]))
+  (:use [clj-misc.utils :only [replace-all my-partition-all]]))
 
-(defrecord FuzzyNumber [mean var])
+(defstruct FuzzyNumber :mean :var)
 
 (defn fuzzy-number
   "Constructs a FuzzyNumber."
   [mean var]
-  (FuzzyNumber. mean var))
+  (struct FuzzyNumber mean var))
 
 (defn create-from-states
   "Constructs a FuzzyNumber from n states and n probs, corresponding
@@ -54,7 +54,7 @@
         var           (- second-moment (* mean mean))]
     (fuzzy-number mean var)))
 
-(def ^{:doc "A FuzzyNumber with mean and variance of 0."} _0_ (fuzzy-number 0.0 0.0))
+(def #^{:doc "A FuzzyNumber with mean and variance of 0."} _0_ (fuzzy-number 0.0 0.0))
 
 (defn _+_
   "Returns the sum of two or more FuzzyNumbers."
@@ -410,7 +410,7 @@
 
         :otherwise
         (recur (pmap rv-sum
-                     (partition-all 20 Xs)))))
+                     (my-partition-all 20 Xs)))))
 
 (defn rv-extensive-sampler
   "Returns the extensive weighted sum of a coverage (i.e. a sequence

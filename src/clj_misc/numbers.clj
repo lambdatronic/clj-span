@@ -39,45 +39,45 @@
   (let [midpoints (map (fn [next prev] (/ (+ next prev) 2.0)) (rest bounds) bounds)]
     (reduce + (map * midpoints probs))))
 
-(def ^{:doc "The number 0.0."} _0_ 0.0)
+(def #^{:doc "The number 0.0."} _0_ 0.0)
 
-(def ^{:doc "Returns the sum of two or more Numbers."} _+_ +)
-(def ^{:doc "Returns the difference of two or more Numbers."} _-_ -)
-(def ^{:doc "Returns the product of two or more Numbers."} _*_ *)
-(def ^{:doc "Returns the quotient of two or more Numbers."} _d_ /)
-(def ^{:doc "Compares two or more Numbers and returns true if they are in ascending order."} _<_ <)
-(def ^{:doc "Compares two or more Numbers and returns true if they are in descending order."} _>_ >)
-(def ^{:doc "Returns the smallest of two or more Numbers."} _min_ min)
-(def ^{:doc "Returns the greatest of two or more Numbers."} _max_ max)
+(def #^{:doc "Returns the sum of two or more Numbers."} _+_ +)
+(def #^{:doc "Returns the difference of two or more Numbers."} _-_ -)
+(def #^{:doc "Returns the product of two or more Numbers."} _*_ *)
+(def #^{:doc "Returns the quotient of two or more Numbers."} _d_ /)
+(def #^{:doc "Compares two or more Numbers and returns true if they are in ascending order."} _<_ <)
+(def #^{:doc "Compares two or more Numbers and returns true if they are in descending order."} _>_ >)
+(def #^{:doc "Returns the smallest of two or more Numbers."} _min_ min)
+(def #^{:doc "Returns the greatest of two or more Numbers."} _max_ max)
 
-(def ^{:doc "Returns the sum of a Number and one or more scalars."} _+ +)
-(def ^{:doc "Returns the difference of a Number and one or more scalars."} _- -)
-(def ^{:doc "Returns the product of a Number and one or more scalars."} _* *)
-(def ^{:doc "Returns the quotient of a Number and one or more scalars."} _d /)
-(def ^{:doc "Compares a Number and one or more scalars and returns true if they are in ascending order."} _< <)
-(def ^{:doc "Compares a Number and one or more scalars and returns true if they are in descending order."} _> >)
-(def ^{:doc "Returns the smallest of a Number and one or more scalars."} _min min)
-(def ^{:doc "Returns the greatest of a Number and one or more scalars."} _max max)
+(def #^{:doc "Returns the sum of a Number and one or more scalars."} _+ +)
+(def #^{:doc "Returns the difference of a Number and one or more scalars."} _- -)
+(def #^{:doc "Returns the product of a Number and one or more scalars."} _* *)
+(def #^{:doc "Returns the quotient of a Number and one or more scalars."} _d /)
+(def #^{:doc "Compares a Number and one or more scalars and returns true if they are in ascending order."} _< <)
+(def #^{:doc "Compares a Number and one or more scalars and returns true if they are in descending order."} _> >)
+(def #^{:doc "Returns the smallest of a Number and one or more scalars."} _min min)
+(def #^{:doc "Returns the greatest of a Number and one or more scalars."} _max max)
 
-(def ^{:doc "Returns the sum of a scalar and one or more Numbers."} +_ +)
-(def ^{:doc "Returns the difference of a scalar and one or more Numbers."} -_ -)
-(def ^{:doc "Returns the product of a scalar and one or more Numbers."} *_ *)
-(def ^{:doc "Returns the quotient of a scalar and one or more Numbers."} d_ /)
-(def ^{:doc "Compares a scalar and one or more Numbers and returns true if they are in ascending order."} <_ <)
-(def ^{:doc "Compares a scalar and one or more Numbers and returns true if they are in descending order."} >_ >)
-(def ^{:doc "Returns the smallest of a scalar and one or more Numbers."} min_ min)
-(def ^{:doc "Returns the greatest of a scalar and one or more Numbers."} max_ max)
+(def #^{:doc "Returns the sum of a scalar and one or more Numbers."} +_ +)
+(def #^{:doc "Returns the difference of a scalar and one or more Numbers."} -_ -)
+(def #^{:doc "Returns the product of a scalar and one or more Numbers."} *_ *)
+(def #^{:doc "Returns the quotient of a scalar and one or more Numbers."} d_ /)
+(def #^{:doc "Compares a scalar and one or more Numbers and returns true if they are in ascending order."} <_ <)
+(def #^{:doc "Compares a scalar and one or more Numbers and returns true if they are in descending order."} >_ >)
+(def #^{:doc "Returns the smallest of a scalar and one or more Numbers."} min_ min)
+(def #^{:doc "Returns the greatest of a scalar and one or more Numbers."} max_ max)
 
 (defn rv-fn
   "Calls (apply f Xs)."
   [f & Xs]
   (apply (eval f) Xs))
 
-(def ^{:doc "Returns the mean of a Number, which is itself."} rv-mean identity)
+(def #^{:doc "Returns the mean of a Number, which is itself."} rv-mean identity)
 
-(def ^{:doc "Returns the variance of a Number, which is always 0.0."} rv-variance (constantly 0.0))
+(def #^{:doc "Returns the variance of a Number, which is always 0.0."} rv-variance (constantly 0.0))
 
-(def ^{:doc "Returns the standard deviation of a Number, which is always 0.0."} rv-stdev (constantly 0.0))
+(def #^{:doc "Returns the standard deviation of a Number, which is always 0.0."} rv-stdev (constantly 0.0))
 
 (defn rv-sum
   "Returns the sum of a sequence of Numbers."
@@ -103,5 +103,5 @@
   [coverage]
   (rv-intensive-sampler coverage))
 
-(def ^{:doc "Extracts a deterministic value from a Number by simply returning it."} draw identity)
-(def ^{:doc "Returns n instances (or an infinite lazy sequence) of the passed-in Number."} draw-repeatedly repeat)
+(def #^{:doc "Extracts a deterministic value from a Number by simply returning it."} draw identity)
+(def #^{:doc "Returns n instances (or an infinite lazy sequence) of the passed-in Number."} draw-repeatedly repeat)

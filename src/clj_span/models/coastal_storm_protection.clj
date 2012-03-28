@@ -69,13 +69,13 @@
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier))
 
-(def ^:dynamic _0_)
-(def ^:dynamic _+_)
-(def ^:dynamic _*_)
-(def ^:dynamic *_)
-(def ^:dynamic _d)
-(def ^:dynamic rv-fn)
-(def ^:dynamic _>)
+(def #^{:dynamic true} _0_)
+(def #^{:dynamic true} _+_)
+(def #^{:dynamic true} _*_)
+(def #^{:dynamic true} *_)
+(def #^{:dynamic true} _d)
+(def #^{:dynamic true} rv-fn)
+(def #^{:dynamic true} _>)
 
 (defn handle-sink-effects
   [current-id possible-weight actual-weight eco-sink-layer geo-sink-layer m2-per-cell]
@@ -145,8 +145,8 @@
      (map (fn [id] [id :left  (subtract-ids id storm-centerpoint)]) left-storm-surge-cells)
      (map (fn [id] [id :right (subtract-ids id storm-centerpoint)]) right-storm-surge-cells))))
 
-(def ^:dynamic *storm-surge-width* 100000.0) ;; in meters
-(def ^:dynamic *storm-surge-depth* 5000.0)   ;; in meters
+(def #^{:dynamic true} *storm-surge-width* 100000.0) ;; in meters
+(def #^{:dynamic true} *storm-surge-depth* 5000.0)   ;; in meters
 
 (defn make-storm-surge
   [source-layer get-next-bearing storm-centerpoint storm-bearing sample-bearing m2-per-cell cell-width cell-height rows cols]
@@ -205,7 +205,7 @@
           :bearing (mean-bearing (map second samples))
           :length  length)))))
 
-(def ^:dynamic *max-sample-window-size* 10000.0) ; in meters
+(def #^{:dynamic true} *max-sample-window-size* 10000.0) ; in meters
 
 (defn make-storm-track-sample
   [get-next-bearing storm-centerpoint storm-bearing cell-width cell-height rows cols]
@@ -388,7 +388,7 @@
            source-points use-points value-type trans-threshold
            cell-width cell-height rows cols]}]
   (let [{storm-track-layer "StormTrack", geo-sink-layer "GeomorphicWaveReduction"} flow-layers
-        prob-ns (case value-type
+        prob-ns (condp = value-type
                   :numbers  'clj-misc.numbers
                   :varprop  'clj-misc.varprop
                   :randvars 'clj-misc.randvars)]

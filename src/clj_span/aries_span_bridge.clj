@@ -125,7 +125,7 @@
         example-probs         (seq (.getData   example-dist))
         unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
         unbounded-from-above? (== Double/POSITIVE_INFINITY (last  bounds))
-        unpack-fn             (case value-type
+        unpack-fn             (condp = value-type
                                 :randvars #(if % (rv/create-from-ranges bounds (.getData %)) rv/_0_)
                                 :varprop  #(if % (vp/create-from-ranges bounds (.getData %)) vp/_0_)
                                 :numbers  #(if % (nb/create-from-ranges bounds (.getData %)) nb/_0_))]
@@ -140,7 +140,7 @@
 (defmethod unpack-datasource :org.integratedmodelling.corescience.implementations.datasources.MemDoubleContextualizedDatasource
   [value-type ds]
   (println "Unpacking deterministic datasource" ds)
-  (let [unpack-fn (case value-type
+  (let [unpack-fn (condp = value-type
                     :randvars #(rv/make-randvar :discrete 1 [%])
                     :varprop  #(vp/fuzzy-number % 0.0)
                     :numbers  identity)]

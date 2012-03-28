@@ -28,15 +28,15 @@
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier with-typed-math-syms))
 
-(def ^:dynamic _0_)
-(def ^:dynamic _+_)
-(def ^:dynamic *_)
-(def ^:dynamic _d)
-(def ^:dynamic rv-fn)
-(def ^:dynamic _min_)
-(def ^:dynamic _>)
-(def ^:dynamic _*_)
-(def ^:dynamic _d_)
+(def #^{:dynamic true} _0_)
+(def #^{:dynamic true} _+_)
+(def #^{:dynamic true} *_)
+(def #^{:dynamic true} _d)
+(def #^{:dynamic true} rv-fn)
+(def #^{:dynamic true} _min_)
+(def #^{:dynamic true} _>)
+(def #^{:dynamic true} _*_)
+(def #^{:dynamic true} _d_)
 
 (defn assign-water-to-users!
   [{:keys [stream-intakes cache-layer use-layer]}]
@@ -91,13 +91,13 @@
   [current-id in-stream? flow-layers rows cols route]
   (let [prev-id (peek (pop route))
         bearing (if prev-id (subtract-ids current-id prev-id))]
-    (->> (lowest-neighbors current-id
-                           in-stream?
-                           flow-layers
-                           rows
-                           cols)
-         (remove (p = prev-id))
-         (nearest-to-bearing bearing current-id))))
+    (nearest-to-bearing bearing current-id
+                        (remove (p = prev-id)
+                                (lowest-neighbors current-id
+                                                  in-stream?
+                                                  flow-layers
+                                                  rows
+                                                  cols)))))
 
 (defn calculate-use!
   [current-id use-caps weight]
@@ -192,9 +192,9 @@
   [params {:keys [route stream-bound?] :as surface-water-carrier}]
   (let [current-id        (peek route)
         local-effects-fn! (if stream-bound? handle-use-effects! handle-sink-effects!)]
-    (->> surface-water-carrier
-         (local-effects-fn! current-id params)
-         (take-next-step current-id params))))
+    (take-next-step current-id params
+                    (local-effects-fn! current-id params
+                                       surface-water-carrier))))
 
 (defn report-carrier-counts
   [surface-water-carriers]
