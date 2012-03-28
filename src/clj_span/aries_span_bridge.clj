@@ -31,25 +31,26 @@
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (java.io File FileWriter FileReader PushbackReader)))
 
-#_(import org.integratedmodelling.corescience.literals.IndexedCategoricalDistribution)
+(import org.integratedmodelling.corescience.literals.IndexedCategoricalDistribution)
 
-#_(refer 'geospace :only '(grid-rows
-                           grid-columns
-                           grid-extent?
-                           cell-dimensions))
+(refer 'geospace :only '(grid-rows
+                         grid-columns
+                         grid-extent?
+                         cell-dimensions))
 
-#_(refer 'corescience :only '(find-state
-                              collect-states
-                              get-observable-class))
+(refer 'corescience :only '(find-state
+                            collect-states
+                            get-observable-class))
 
-#_(refer 'modelling   :only '(probabilistic?
-                              binary?
-                              encodes-continuous-distribution?
-                              get-possible-states
-                              get-probabilities
-                              get-data
-                              run-at-location))
+(refer 'modelling   :only '(probabilistic?
+                            binary?
+                            encodes-continuous-distribution?
+                            get-possible-states
+                            get-probabilities
+                            get-data
+                            run-at-location))
 
+(comment
 (declare grid-rows
          grid-columns
          grid-extent?
@@ -64,6 +65,7 @@
          get-probabilities
          get-data
          run-at-location)
+)
 
 (defn save-span-layers
   [filename source-layer sink-layer use-layer flow-layers cell-width cell-height]

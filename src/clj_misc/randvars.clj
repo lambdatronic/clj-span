@@ -247,7 +247,7 @@
                             (rest convolution))]
     all-unique))
 
-#_(defn rv-convolute-3
+(comment (defn rv-convolute-3
     [f X Y]
     (let [convolution (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)])
           all-unique  (reduce (fn [amap [v2 p2]]
@@ -256,7 +256,7 @@
                                   (assoc! amap v2 p2)))
                               (transient (apply array-map (first convolution)))
                               (rest convolution))]
-      (persistent! all-unique)))
+      (persistent! all-unique))))
 
 (defn rv-convolute-4
   [f X Y]
@@ -270,7 +270,7 @@
                             (rest convolution))]
     (into {} all-unique)))
 
-#_(defn rv-convolute-5
+(comment (defn rv-convolute-5
     [f X Y]
     (let [convolution (sort (for [[v1 p1] X [v2 p2] Y] [(f v1 v2) (* p1 p2)]))
           all-unique  (reduce (fn [acc [v2 p2 :as n]]
@@ -281,7 +281,7 @@
                                     (conj!  acc n))))
                               (transient (vector (first convolution)))
                               (rest convolution))]
-      (into {} (persistent! all-unique))))
+      (into {} (persistent! all-unique)))))
 
 (defn rv-convolute-6
   [f X Y]
@@ -299,7 +299,7 @@
                                 (assoc fXY v (+ old-p p))
                                 (assoc fXY v p))))))))
 
-#_(defn rv-convolute-7
+(comment (defn rv-convolute-7
     [f X Y]
     (loop [X* X, Y* Y, fXY (transient {})]
       (if (empty? X*)
@@ -312,7 +312,7 @@
                                     p       (* p1 p2)]
                                 (if-let [old-p (fXY v)]
                                   (assoc! fXY v (+ old-p p))
-                                  (assoc! fXY v p))))))))
+                                  (assoc! fXY v p)))))))))
 
 ;;; finish testing functions
 ;; rv-convolute-6 was fastest before (without transients)
