@@ -30,8 +30,7 @@
         [clj-misc.utils          :only (remove-nil-val-entries constraints-1.0 with-message)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (java.io File FileWriter FileReader PushbackReader)))
-
-#_(import org.integratedmodelling.corescience.literals.IndexedCategoricalDistribution)
+           ;; (org.integratedmodelling.corescience.literals IndexedCategoricalDistribution)))
 
 #_(refer 'geospace :only '(grid-rows
                            grid-columns
@@ -67,7 +66,6 @@
 
 (defn save-span-layers
   [filename source-layer sink-layer use-layer flow-layers cell-width cell-height]
-  (constraints-1.0 {:pre [(.canWrite (File. filename))]})
   (let [dummy-map    {:theoretical-source  (constantly {})
                       :inaccessible-source (constantly {})
                       :possible-source     (constantly {})
