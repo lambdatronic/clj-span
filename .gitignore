@@ -1,7 +1,7 @@
 resources/pics
 autodoc
 pom.xml
-*jar
+clj-span*jar
 lib
 classes
 .lein-deps-sum

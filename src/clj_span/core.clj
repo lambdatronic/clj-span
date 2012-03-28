@@ -103,12 +103,13 @@
                                :varprop  vp/rv-intensive-sampler
                                :randvars rv/rv-intensive-sampler)]
     (with-message
-      "Generating results map..."
-      "done."
+      "Generating result maps...\n"
+      "Finished generating result maps."
       (apply array-map
              (mapcat (fn [[label f]]
-                       (let [layer (f params)]
-                         [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler layer)]))
+                       (with-message (str "Producing " label "...") "done"
+                         (let [layer (f params)]
+                           [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler layer)])))
                      (array-map
                       "Source - Theoretical"  theoretical-source
                       "Source - Inaccessible" inaccessible-source
