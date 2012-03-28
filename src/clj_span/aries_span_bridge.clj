@@ -116,9 +116,9 @@
 (defmulti unpack-datasource
   "Returns a seq of the values in ds, where their representations are
    determined by value-type. NaNs and nils are converted to 0s."
-  (fn [value-type ds] (keyword (.getName (class ds)))))
+  (fn [value-type ds] (if (.isProbabilistic ds) :probabilistic :deterministic)))
 
-(defmethod unpack-datasource :org.integratedmodelling.corescience.implementations.datasources.MemObjectContextualizedDatasource
+(defmethod unpack-datasource :probabilistic
   [value-type ds]
   (println "Unpacking Bayesian datasource" ds)
   (let [dists                 (.getRawData ds)
@@ -135,11 +135,10 @@
     (println "Example Probs:" example-probs)
     (if (or unbounded-from-below? unbounded-from-above?)
       (throw (Exception. "All undiscretized bounds must be closed above and below.")))
-    ;; (for [^IndexedCategoricalDistribution dist dists]
-    (for [dist dists]
+    (for [#^IndexedCategoricalDistribution dist dists]
       (unpack-fn dist))))
 
-(defmethod unpack-datasource :org.integratedmodelling.corescience.implementations.datasources.MemDoubleContextualizedDatasource
+(defmethod unpack-datasource :deterministic
   [value-type ds]
   (println "Unpacking deterministic datasource" ds)
   (let [unpack-fn (condp = value-type
