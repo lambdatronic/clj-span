@@ -33,10 +33,10 @@
   [{:keys [value-type source-type source-layer use-layer]}]
   (if (= source-type :finite)
     source-layer
-    (let [[*_ _0_]  (condp = value-type
-                      :numbers  [nb/*_ nb/_0_]
-                      :varprop  [vp/*_ vp/_0_]
-                      :randvars [rv/*_ rv/_0_])
+    (let [[*_ _0_]  (cond
+                     (= value-type :numbers)  [nb/*_ nb/_0_]
+                     (= value-type :varprop)  [vp/*_ vp/_0_]
+                     (= value-type :randvars) [rv/*_ rv/_0_])
           num-users (count (remove (p = _0_) (matrix2seq use-layer)))]
       (map-matrix (p *_ num-users) source-layer))))
 (def theoretical-source (memoize theoretical-source))
@@ -46,10 +46,10 @@
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
   [{:keys [value-type cache-layer]}]
-  (let [[_+_ _0_] (condp = value-type
-                    :numbers  [nb/_+_ nb/_0_]
-                    :varprop  [vp/_+_ vp/_0_]
-                    :randvars [rv/_+_ rv/_0_])
+  (let [[_+_ _0_] (cond
+                   (= value-type :numbers)  [nb/_+_ nb/_0_]
+                   (= value-type :varprop)  [vp/_+_ vp/_0_]
+                   (= value-type :randvars) [rv/_+_ rv/_0_])
         coord-map (apply merge-with _+_ {}
                          (for [cache (remove nil? (matrix2seq cache-layer))
                                {:keys [source-id possible-weight]} cache]
@@ -62,10 +62,10 @@
    its theoretical source that impacts a user along any flow path,
    including the negative effects of sinks and rival users."
   [{:keys [value-type cache-layer]}]
-  (let [[_+_ _0_] (condp = value-type
-                    :numbers  [nb/_+_ nb/_0_]
-                    :varprop  [vp/_+_ vp/_0_]
-                    :randvars [rv/_+_ rv/_0_])
+  (let [[_+_ _0_] (cond
+                   (= value-type :numbers)  [nb/_+_ nb/_0_]
+                   (= value-type :varprop)  [vp/_+_ vp/_0_]
+                   (= value-type :randvars) [rv/_+_ rv/_0_])
         coord-map (apply merge-with _+_ {}
                          (for [cache (remove nil? (matrix2seq cache-layer))
                                {:keys [source-id actual-weight]} cache]
@@ -80,17 +80,17 @@
    sinks in this model."
   [{:keys [value-type source-type sink-type source-layer sink-layer use-layer]}]
   (if (nil? sink-type)
-    (let [_0_ (condp = value-type
-                :numbers  nb/_0_
-                :varprop  vp/_0_
-                :randvars rv/_0_)]
+    (let [_0_ (cond
+               (= value-type :numbers)  nb/_0_
+               (= value-type :varprop)  vp/_0_
+               (= value-type :randvars) rv/_0_)]
       (make-matrix (get-rows source-layer) (get-cols source-layer) (constantly _0_)))
     (if (= sink-type :finite)
       sink-layer
-      (let [[_+_ _* *_ _min_ _0_] (condp = value-type
-                                    :numbers  [nb/_+_ nb/_* nb/*_ nb/_min_ nb/_0_]
-                                    :varprop  [vp/_+_ vp/_* vp/*_ vp/_min_ vp/_0_]
-                                    :randvars [rv/_+_ rv/_* rv/*_ rv/_min_ rv/_0_])
+      (let [[_+_ _* *_ _min_ _0_] (cond
+                                   (= value-type :numbers)  [nb/_+_ nb/_* nb/*_ nb/_min_ nb/_0_]
+                                   (= value-type :varprop)  [vp/_+_ vp/_* vp/*_ vp/_min_ vp/_0_]
+                                   (= value-type :randvars) [rv/_+_ rv/_* rv/*_ rv/_min_ rv/_0_])
             num-sources           (count (remove (p = _0_) (matrix2seq source-layer)))
             num-users             (count (remove (p = _0_) (matrix2seq use-layer)))
             max-flowpaths         (* num-sources num-users)
@@ -105,10 +105,10 @@
   "Returns a matrix of RVs, in which each cell contains the fraction
    of its theoretical sink that impacts a user along any flow path."
   [{:keys [value-type cache-layer]}]
-  (let [[_+_ _0_] (condp = value-type
-                    :numbers  [nb/_+_ nb/_0_]
-                    :varprop  [vp/_+_ vp/_0_]
-                    :randvars [rv/_+_ rv/_0_])
+  (let [[_+_ _0_] (cond
+                   (= value-type :numbers)  [nb/_+_ nb/_0_]
+                   (= value-type :varprop)  [vp/_+_ vp/_0_]
+                   (= value-type :randvars) [rv/_+_ rv/_0_])
         coord-map (apply merge-with _+_ {}
                          (for [cache (remove nil? (matrix2seq cache-layer))
                                {:keys [sink-effects]} cache]
@@ -124,10 +124,10 @@
   [{:keys [value-type use-type source-layer use-layer]}]
   (if (= use-type :finite)
     use-layer
-    (let [[_+_ _0_]    (condp = value-type
-                         :numbers  [nb/_+_ nb/_0_]
-                         :varprop  [vp/_+_ vp/_0_]
-                         :randvars [rv/_+_ rv/_0_])
+    (let [[_+_ _0_]    (cond
+                        (= value-type :numbers)  [nb/_+_ nb/_0_]
+                        (= value-type :varprop)  [vp/_+_ vp/_0_]
+                        (= value-type :randvars) [rv/_+_ rv/_0_])
           total-source (reduce _+_ _0_ (remove (p = _0_) (matrix2seq source-layer)))]
       (map-matrix #(if (not= _0_ %) total-source _0_) use-layer))))
 (def theoretical-use (memoize theoretical-use))
@@ -137,10 +137,10 @@
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
   [{:keys [value-type cache-layer]}]
-  (let [[_+_ _0_] (condp = value-type
-                    :numbers  [nb/_+_ nb/_0_]
-                    :varprop  [vp/_+_ vp/_0_]
-                    :randvars [rv/_+_ rv/_0_])]
+  (let [[_+_ _0_] (cond
+                   (= value-type :numbers)  [nb/_+_ nb/_0_]
+                   (= value-type :varprop)  [vp/_+_ vp/_0_]
+                   (= value-type :randvars) [rv/_+_ rv/_0_])]
     (map-matrix #(reduce _+_ _0_ (map :possible-weight %)) cache-layer)))
 (def possible-use (memoize possible-use))
 
@@ -149,10 +149,10 @@
    its theoretical source that impacts a user along any flow path,
    disregarding the negative effects of sinks and rival users."
   [{:keys [value-type cache-layer]}]
-  (let [[_+_ _0_] (condp = value-type
-                    :numbers  [nb/_+_ nb/_0_]
-                    :varprop  [vp/_+_ vp/_0_]
-                    :randvars [rv/_+_ rv/_0_])]
+  (let [[_+_ _0_] (cond
+                   (= value-type :numbers)  [nb/_+_ nb/_0_]
+                   (= value-type :varprop)  [vp/_+_ vp/_0_]
+                   (= value-type :randvars) [rv/_+_ rv/_0_])]
     (map-matrix #(reduce _+_ _0_ (map :actual-weight %)) cache-layer)))
 (def actual-use (memoize actual-use))
 
@@ -228,10 +228,10 @@
    cannot be used by any location either due to propagation decay,
    lack of use capacity, or lack of flow pathways to use locations."
   [{:keys [value-type source-type source-layer use-layer cache-layer]}]
-  (let [rv-fn (condp = value-type
-                :numbers  nb/rv-fn
-                :varprop  vp/rv-fn
-                :randvars rv/rv-fn)]
+  (let [rv-fn (cond
+               (= value-type :numbers)  nb/rv-fn
+               (= value-type :varprop)  vp/rv-fn
+               (= value-type :randvars) rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [t p] (max (- t p) 0.0)) %1 %2)
                 (theoretical-source {:value-type value-type :source-type source-type :source-layer source-layer :use-layer use-layer})
                 (possible-source    {:value-type value-type :cache-layer cache-layer}))))
@@ -242,10 +242,10 @@
    cannot be utilized by any location either due to propagation decay
    of the asset or lack of flow pathways through the sink locations."
   [{:keys [value-type source-type sink-type source-layer sink-layer use-layer cache-layer]}]
-  (let [rv-fn (condp = value-type
-                :numbers  nb/rv-fn
-                :varprop  vp/rv-fn
-                :randvars rv/rv-fn)]
+  (let [rv-fn (cond
+               (= value-type :numbers)  nb/rv-fn
+               (= value-type :varprop)  vp/rv-fn
+               (= value-type :randvars) rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [t a] (max (- t a) 0.0)) %1 %2)
                 (theoretical-sink {:value-type value-type :source-type source-type :sink-type sink-type
                                    :source-layer source-layer :sink-layer sink-layer :use-layer use-layer})
@@ -257,10 +257,10 @@
    be utilized by each location either due to propagation decay of the
    asset or lack of flow pathways to use locations."
   [{:keys [value-type use-type source-layer use-layer cache-layer]}]
-  (let [rv-fn (condp = value-type
-                :numbers  nb/rv-fn
-                :varprop  vp/rv-fn
-                :randvars rv/rv-fn)]
+  (let [rv-fn (cond
+               (= value-type :numbers)  nb/rv-fn
+               (= value-type :varprop)  vp/rv-fn
+               (= value-type :randvars) rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [t p] (max (- t p) 0.0)) %1 %2)
                 (theoretical-use {:value-type value-type :use-type use-type :source-layer source-layer :use-layer use-layer})
                 (possible-use    {:value-type value-type :cache-layer cache-layer}))))
@@ -270,10 +270,10 @@
    Blocked-source is the amount of the possible-source which cannot be
    used by any location due to upstream sinks or uses."
   [{:keys [value-type cache-layer]}]
-  (let [rv-fn (condp = value-type
-                :numbers  nb/rv-fn
-                :varprop  vp/rv-fn
-                :randvars rv/rv-fn)]
+  (let [rv-fn (cond
+               (= value-type :numbers)  nb/rv-fn
+               (= value-type :varprop)  vp/rv-fn
+               (= value-type :randvars) rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [p a] (max (- p a) 0.0)) %1 %2)
                 (possible-source {:value-type value-type :cache-layer cache-layer})
                 (actual-source   {:value-type value-type :cache-layer cache-layer}))))
@@ -283,10 +283,10 @@
    Blocked-use is the amount of the possible-use which cannot be
    realized due to upstream sinks or uses."
   [{:keys [value-type cache-layer]}]
-  (let [rv-fn (condp = value-type
-                :numbers  nb/rv-fn
-                :varprop  vp/rv-fn
-                :randvars rv/rv-fn)]
+  (let [rv-fn (cond
+               (= value-type :numbers)  nb/rv-fn
+               (= value-type :varprop)  vp/rv-fn
+               (= value-type :randvars) rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [p a] (max (- p a) 0.0)) %1 %2)
                 (possible-use {:value-type value-type :cache-layer cache-layer})
                 (actual-use   {:value-type value-type :cache-layer cache-layer}))))
@@ -296,10 +296,10 @@
    Blocked-flow is the amount of the possible-flow which cannot be
    realized due to upstream sinks or uses."
   [{:keys [value-type possible-flow-layer actual-flow-layer]}]
-  (let [rv-fn (condp = value-type
-                :numbers  nb/rv-fn
-                :varprop  vp/rv-fn
-                :randvars rv/rv-fn)]
+  (let [rv-fn (cond
+               (= value-type :numbers)  nb/rv-fn
+               (= value-type :varprop)  vp/rv-fn
+               (= value-type :randvars) rv/rv-fn)]
     (map-matrix #(rv-fn '(fn [p a] (max (- p a) 0.0)) %1 %2)
                 possible-flow-layer
                 actual-flow-layer)))

@@ -240,10 +240,10 @@
    the consumers (carbon emitters) according to their relative use
    values after being initially reduced by the sink values due to
    landscape emissions."
-  (let [prob-ns (condp = value-type
-                  :numbers  'clj-misc.numbers
-                  :varprop  'clj-misc.varprop
-                  :randvars 'clj-misc.randvars)]
+  (let [prob-ns (cond
+                 (= value-type :numbers)  'clj-misc.numbers
+                 (= value-type :varprop)  'clj-misc.varprop
+                 (= value-type :randvars) 'clj-misc.randvars)]
     (binding [*_                  (var-get (ns-resolve prob-ns '*_))
               _d                  (var-get (ns-resolve prob-ns '_d))
               draw                (var-get (ns-resolve prob-ns 'draw))

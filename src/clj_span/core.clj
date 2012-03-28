@@ -22,7 +22,7 @@
 ;;; of different options specifying the form of its results.
 
 (ns clj-span.core
-  (:use [clj-misc.utils      :only (p & with-message)]
+  (:use [clj-misc.utils      :only (p & with-message my->>)]
         [clj-misc.matrix-ops :only (map-matrix
                                     make-matrix
                                     resample-matrix
@@ -54,10 +54,10 @@
 
 (defmacro with-typed-math-syms [value-type symbols & body]
   (let [prob-ns (gensym)]
-    `(let [~prob-ns (condp = ~value-type
-                      :numbers  'clj-misc.numbers
-                      :varprop  'clj-misc.varprop
-                      :randvars 'clj-misc.randvars)]
+    `(let [~prob-ns (cond
+                     (= ~value-type :numbers)  'clj-misc.numbers
+                     (= ~value-type :varprop)  'clj-misc.varprop
+                     (= ~value-type :randvars) 'clj-misc.randvars)]
        (binding ~(vec (mapcat (fn [sym] [sym `(var-get (ns-resolve ~prob-ns '~sym))]) symbols))
          ~@body))))
 
@@ -70,14 +70,14 @@
   :use-effects)   ; map of use-ids to rival use-effects on this flow path (decayed as necessary)
 
 (defmulti distribute-flow!
-  "Creates a network of interconnected locations, and starts a
-   service-carrier propagating in every location whose source value is
-   greater than 0.  These carriers propagate child carriers through
-   the network which collect information about the routes traveled and
-   the service weight transmitted along these routes.  Over the course
-   of the simulation, this function will update the passed in
-   cache-layer, possible-flow-layer, and actual-flow-layer.  Its
-   return result is ignored."
+  ;; "Creates a network of interconnected locations, and starts a
+  ;;  service-carrier propagating in every location whose source value is
+  ;;  greater than 0.  These carriers propagate child carriers through
+  ;;  the network which collect information about the routes traveled and
+  ;;  the service weight transmitted along these routes.  Over the course
+  ;;  of the simulation, this function will update the passed in
+  ;;  cache-layer, possible-flow-layer, and actual-flow-layer.  Its
+  ;;  return result is ignored."
   :flow-model)
 
 (defmethod distribute-flow! :default
@@ -98,10 +98,10 @@
   "Return the simulation results as a map of layer names to closures."
   [{:keys [value-type orig-rows orig-cols]
     :as params}]
-  (let [rv-intensive-sampler (condp = value-type
-                               :numbers  nb/rv-intensive-sampler
-                               :varprop  vp/rv-intensive-sampler
-                               :randvars rv/rv-intensive-sampler)]
+  (let [rv-intensive-sampler (cond
+                              (= value-type :numbers)  nb/rv-intensive-sampler
+                              (= value-type :varprop)  vp/rv-intensive-sampler
+                              (= value-type :randvars) rv/rv-intensive-sampler)]
     (with-message
       "Generating result maps...\n"
       "Finished generating result maps."
@@ -183,10 +183,10 @@
     #(str "Source points: " (count (:source-points %)) "\n"
           "Sink points:   " (count (:sink-points   %)) "\n"
           "Use points:    " (count (:use-points    %)))
-    (let [_0_ (condp = value-type
-                :numbers  nb/_0_
-                :varprop  vp/_0_
-                :randvars rv/_0_)]
+    (let [_0_ (cond
+               (= value-type :numbers)  nb/_0_
+               (= value-type :varprop)  vp/_0_
+               (= value-type :randvars) rv/_0_)]
       (assoc params
         :source-points       (filter-matrix-for-coords (p not= _0_) source-layer)
         :sink-points         (filter-matrix-for-coords (p not= _0_) sink-layer)
@@ -204,18 +204,18 @@
     #(format "  Distinct Layer Values: [Pre] %d [Post] %d"
              (count (distinct (matrix2seq layer)))
              (count (distinct (matrix2seq %))))
-    (let [[_< _0_] (condp = value-type
-                     :numbers  [nb/_< nb/_0_]
-                     :varprop  [vp/_< vp/_0_]
-                     :randvars [rv/_< rv/_0_])]
+    (let [[_< _0_] (cond
+                    (= value-type :numbers)  [nb/_< nb/_0_]
+                    (= value-type :varprop)  [vp/_< vp/_0_]
+                    (= value-type :randvars) [rv/_< rv/_0_])]
       (map-matrix #(if (_< % threshold) _0_ %) layer))))
 
 (defn resample-and-zero
   [value-type scaled-rows scaled-cols layer threshold]
-  (let [[rv-intensive-sampler _0_] (condp = value-type
-                                     :numbers  [nb/rv-intensive-sampler nb/_0_]
-                                     :varprop  [vp/rv-intensive-sampler vp/_0_]
-                                     :randvars [rv/rv-intensive-sampler rv/_0_])]
+  (let [[rv-intensive-sampler _0_] (cond
+                                    (= value-type :numbers)  [nb/rv-intensive-sampler nb/_0_]
+                                    (= value-type :varprop)  [vp/rv-intensive-sampler vp/_0_]
+                                    (= value-type :randvars) [rv/rv-intensive-sampler rv/_0_])]
     (cond (nil? layer)     (make-matrix scaled-rows scaled-cols (constantly _0_))
           (nil? threshold) (resample-matrix scaled-rows scaled-cols rv-intensive-sampler layer)
           :otherwise       (zero-layer-below-threshold value-type
@@ -294,11 +294,11 @@
            sink-layer use-layer flow-layers]
     :as params}]
   (set-global-vars! params)
-  (provide-results result-type value-type source-layer sink-layer use-layer flow-layers
-                   (-> params
-                       verify-params-or-throw
-                       preprocess-data-layers
-                       create-simulation-inputs
-                       run-simulation
-                       deref-result-layers
-                       generate-results-map)))
+  (my->> params
+         verify-params-or-throw
+         preprocess-data-layers
+         create-simulation-inputs
+         run-simulation
+         deref-result-layers
+         generate-results-map
+         (provide-results result-type value-type source-layer sink-layer use-layer flow-layers)))

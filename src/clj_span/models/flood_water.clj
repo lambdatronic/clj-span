@@ -309,10 +309,10 @@
          levees-layer "Levees",
          floodplain-layer100 "Floodplains100Code",
          floodplain-layer500 "Floodplains500Code"} flow-layers
-        prob-ns (condp = value-type
-                  :numbers  'clj-misc.numbers
-                  :varprop  'clj-misc.varprop
-                  :randvars 'clj-misc.randvars)]
+        prob-ns (cond
+                 (= value-type :numbers)  'clj-misc.numbers
+                 (= value-type :varprop)  'clj-misc.varprop
+                 (= value-type :randvars) 'clj-misc.randvars)]
     (println "Operating in" (if floodplain-layer500 "500" "100") "year floodplain.")
     (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
               _+_   (var-get (ns-resolve prob-ns '_+_))

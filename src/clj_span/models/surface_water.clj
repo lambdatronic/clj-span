@@ -23,7 +23,7 @@
 (ns clj-span.models.surface-water
   (:use [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
                                     memoize-by-first-arg angular-distance p
-                                    with-progress-bar-cool)]
+                                    with-progress-bar-cool my->>)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? subtract-ids find-nearest filter-matrix-for-coords)]))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier with-typed-math-syms))
@@ -91,13 +91,13 @@
   [current-id in-stream? flow-layers rows cols route]
   (let [prev-id (peek (pop route))
         bearing (if prev-id (subtract-ids current-id prev-id))]
-    (nearest-to-bearing bearing current-id
-                        (remove (p = prev-id)
-                                (lowest-neighbors current-id
-                                                  in-stream?
-                                                  flow-layers
-                                                  rows
-                                                  cols)))))
+    (my->> (lowest-neighbors current-id
+                             in-stream?
+                             flow-layers
+                             rows
+                             cols)
+           (remove (p = prev-id))
+           (nearest-to-bearing bearing current-id))))
 
 (defn calculate-use!
   [current-id use-caps weight]
@@ -192,9 +192,9 @@
   [params {:keys [route stream-bound?] :as surface-water-carrier}]
   (let [current-id        (peek route)
         local-effects-fn! (if stream-bound? handle-use-effects! handle-sink-effects!)]
-    (take-next-step current-id params
-                    (local-effects-fn! current-id params
-                                       surface-water-carrier))))
+    (my->> surface-water-carrier
+           (local-effects-fn! current-id params)
+           (take-next-step current-id params))))
 
 (defn report-carrier-counts
   [surface-water-carriers]
@@ -209,7 +209,8 @@
 (defn move-carriers-one-step-downstream
   [params surface-water-carriers]
   (report-carrier-counts surface-water-carriers)
-  (pmap (p to-the-ocean! params) surface-water-carriers))
+  (map (p to-the-ocean! params) surface-water-carriers))
+  ;; (pmap (p to-the-ocean! params) surface-water-carriers))
 
 (defn create-initial-service-carriers
   [{:keys [source-layer source-points mm2-per-cell in-stream?]}]
@@ -250,8 +251,9 @@
   "Stores maps from {ids -> mm3-ref} for sink-caps, possible-use-caps, and actual-use-caps in params."
   [{:keys [sink-layer sink-points use-layer stream-intakes mm2-per-cell] :as params}]
   (let [in-stream-points    (keys stream-intakes)
-        total-use-by-intake (for [id in-stream-points :let [use-ids (stream-intakes id)]]
-                              (reduce _+_ (map #(get-in use-layer %) use-ids)))]
+        total-use-by-intake (for [id in-stream-points]
+                              (let [use-ids (stream-intakes id)]
+                                (reduce _+_ (map #(get-in use-layer %) use-ids))))]
     (assoc params
       :sink-caps         (seq2map sink-points (fn [id] [id (ref (*_ mm2-per-cell (get-in sink-layer id)))]))
       :possible-use-caps (into {} (map (fn [stream-id total-use] [stream-id (ref (*_ mm2-per-cell total-use))])

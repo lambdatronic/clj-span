@@ -179,10 +179,10 @@
            source-points use-points cell-width cell-height
            value-type trans-threshold]}]
   (let [{elev-layer "Altitude"} flow-layers
-        prob-ns (condp = value-type
-                  :numbers  'clj-misc.numbers
-                  :varprop  'clj-misc.varprop
-                  :randvars 'clj-misc.randvars)]
+        prob-ns (cond
+                 (= value-type :numbers)  'clj-misc.numbers
+                 (= value-type :varprop)  'clj-misc.varprop
+                 (= value-type :randvars) 'clj-misc.randvars)]
     (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
               _+_   (var-get (ns-resolve prob-ns '_+_))
               _-_   (var-get (ns-resolve prob-ns '_-_))

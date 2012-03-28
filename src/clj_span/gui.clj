@@ -99,10 +99,10 @@
     img))
 
 (defn write-layer-to-file [dirname file-prefix layer scale value-type]
-  (let [[rv-mean rv-stdev] (condp = value-type
-                             :numbers  [nb/rv-mean nb/rv-stdev]
-                             :varprop  [vp/rv-mean vp/rv-stdev]
-                             :randvars [rv/rv-mean rv/rv-stdev])
+  (let [[rv-mean rv-stdev] (cond
+                            (= value-type :numbers)  [nb/rv-mean nb/rv-stdev]
+                            (= value-type :varprop)  [vp/rv-mean vp/rv-stdev]
+                            (= value-type :randvars) [rv/rv-mean rv/rv-stdev])
         y-dim (get-rows layer)
         x-dim (get-cols layer)]
     (let [outfile (File. dirname (str file-prefix "-mean.png"))]
@@ -114,10 +114,10 @@
              (catch IOException e (println "Failed to write stdev layer for" file-prefix "to file" (.getName outfile))))))))
 
 (defn draw-layer [title layer scale value-type]
-  (let [[rv-mean rv-stdev] (condp = value-type
-                             :numbers  [nb/rv-mean nb/rv-stdev]
-                             :varprop  [vp/rv-mean vp/rv-stdev]
-                             :randvars [rv/rv-mean rv/rv-stdev])
+  (let [[rv-mean rv-stdev] (cond
+                            (= value-type :numbers)  [nb/rv-mean nb/rv-stdev]
+                            (= value-type :varprop)  [vp/rv-mean vp/rv-stdev]
+                            (= value-type :randvars) [rv/rv-mean rv/rv-stdev])
         y-dim       (get-rows layer)
         x-dim       (get-cols layer)
         mean-panel  (doto (proxy [JPanel] [] (paint [g] (let [img (render layer scale x-dim y-dim rv-mean)]
@@ -140,10 +140,10 @@
     [mean-panel stdev-panel]))
 
 (defn draw-ref-layer [title ref-layer scale value-type]
-  (let [[rv-mean rv-stdev] (condp = value-type
-                             :numbers  [nb/rv-mean nb/rv-stdev]
-                             :varprop  [vp/rv-mean vp/rv-stdev]
-                             :randvars [rv/rv-mean rv/rv-stdev])
+  (let [[rv-mean rv-stdev] (cond
+                            (= value-type :numbers)  [nb/rv-mean nb/rv-stdev]
+                            (= value-type :varprop)  [vp/rv-mean vp/rv-stdev]
+                            (= value-type :randvars) [rv/rv-mean rv/rv-stdev])
         y-dim       (get-rows ref-layer)
         x-dim       (get-cols ref-layer)
         mean-panel  (doto (proxy [JPanel] [] (paint [g] (let [layer (map-matrix deref ref-layer)
@@ -168,10 +168,10 @@
     [mean-panel stdev-panel]))
 
 (defn draw-points [ids scale value-type]
-  (let [[_+ _0_]    (condp = value-type
-                      :numbers  [nb/_+ nb/_0_]
-                      :varprop  [vp/_+ vp/_0_]
-                      :randvars [rv/_+ rv/_0_])
+  (let [[_+ _0_]    (cond
+                     (= value-type :numbers)  [nb/_+ nb/_0_]
+                     (= value-type :varprop)  [vp/_+ vp/_0_]
+                     (= value-type :randvars) [rv/_+ rv/_0_])
         max-y       (apply max (map first  ids))
         max-x       (apply max (map second ids))
         point-vals  (zipmap ids (repeat (_+ _0_ 1.0)))

@@ -38,6 +38,8 @@
   (constraints-1.0 {:pre [(and (pos? new-val) (integer? new-val))]})
   (alter-var-root #'*rv-max-states* (constantly new-val)))
 
+(def type (comp :type meta))
+
 (def cont-type {:type ::continuous-distribution})
 
 (def disc-type {:type ::discrete-distribution})
@@ -155,7 +157,7 @@
            search-depth))))
 
 (defmulti rv-resample
-  "Returns a new random variable with <=*rv-max-states* states sampled from X."
+  ;; "Returns a new random variable with <=*rv-max-states* states sampled from X."
   type)
 
 (defmethod rv-resample ::discrete-distribution
@@ -386,7 +388,7 @@
   (rv-map #(/ % y) X))
 
 (defmulti rv-cdf-lookup
-  "Return F_X(x) = P(X<x)."
+  ;; "Return F_X(x) = P(X<x)."
   (fn [X y] (type X)))
 
 (defmethod rv-cdf-lookup ::discrete-distribution
@@ -449,7 +451,7 @@
 ;; -------------------- Begin arithmetic functions --------------------
 
 (defmulti rv-mean
-  "Returns the mean value of a random variable X."
+  ;; "Returns the mean value of a random variable X."
   type)
 
 (defmethod rv-mean ::discrete-distribution

@@ -29,9 +29,8 @@
         [clj-misc.matrix-ops     :only (seq2matrix)]
         [clj-misc.utils          :only (remove-nil-val-entries constraints-1.0 with-message)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
-  (:import (java.io File FileWriter FileReader PushbackReader)))
-
-(import org.integratedmodelling.corescience.literals.IndexedCategoricalDistribution)
+  (:import (java.io File FileWriter FileReader PushbackReader)
+           (org.integratedmodelling.corescience.literals IndexedCategoricalDistribution)))
 
 (refer 'geospace :only '(grid-rows
                          grid-columns
@@ -113,8 +112,8 @@
 ;;       than continuous ranges, I can get the distribution's states
 ;;       with (get-possible-states ds).
 (defmulti unpack-datasource
-  "Returns a seq of the values in ds, where their representations are
-   determined by value-type. NaNs and nils are converted to 0s."
+  ;; "Returns a seq of the values in ds, where their representations are
+  ;;  determined by value-type. NaNs and nils are converted to 0s."
   (fn [value-type ds] (if (.isProbabilistic ds) :probabilistic :deterministic)))
 
 (defmethod unpack-datasource :probabilistic
@@ -126,10 +125,10 @@
         example-probs         (seq (.getData   example-dist))
         unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
         unbounded-from-above? (== Double/POSITIVE_INFINITY (last  bounds))
-        unpack-fn             (condp = value-type
-                                :randvars #(if % (rv/create-from-ranges bounds (.getData %)) rv/_0_)
-                                :varprop  #(if % (vp/create-from-ranges bounds (.getData %)) vp/_0_)
-                                :numbers  #(if % (nb/create-from-ranges bounds (.getData %)) nb/_0_))]
+        unpack-fn             (cond
+                               (= value-type :randvars) #(if % (rv/create-from-ranges bounds (.getData %)) rv/_0_)
+                               (= value-type :varprop)  #(if % (vp/create-from-ranges bounds (.getData %)) vp/_0_)
+                               (= value-type :numbers)  #(if % (nb/create-from-ranges bounds (.getData %)) nb/_0_))]
     (println "Breakpoints:  " bounds)
     (println "Example Probs:" example-probs)
     (if (or unbounded-from-below? unbounded-from-above?)
@@ -140,16 +139,16 @@
 (defmethod unpack-datasource :deterministic
   [value-type ds]
   (println "Unpacking deterministic datasource" ds)
-  (let [unpack-fn (condp = value-type
-                    :randvars #(rv/make-randvar :discrete 1 [%])
-                    :varprop  #(vp/fuzzy-number % 0.0)
-                    :numbers  identity)]
+  (let [unpack-fn (cond
+                   (= value-type :randvars) #(rv/make-randvar :discrete 1 [%])
+                   (= value-type :varprop)  #(vp/fuzzy-number % 0.0)
+                   (= value-type :numbers)  identity)]
     (for [value (NaNs-to-zero (get-data ds))]
       (unpack-fn value))))
 
 (defmethod unpack-datasource :default
   [value-type ds]
-  (throw (Exception. (str "unpack-datasource is undefined for datasource type " (type ds)))))
+  (throw (Exception. (str "unpack-datasource is undefined for datasource type " (class ds)))))
 
 (defn- layer-from-observation
   "Builds a rows x cols matrix (vector of vectors) of the concept's

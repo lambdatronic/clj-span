@@ -89,7 +89,7 @@
   last item in second form, etc."
   {:added "1.1"} 
   ([x form] (if (seq? form)
-              (with-meta `(~(first form) ~@(next form)  ~x) (meta form))
+              (with-meta `(~(first form) ~@(rest form)  ~x) (meta form))
               (list form x)))
   ([x form & more] `(my->> (my->> ~x ~form) ~@more)))
 
@@ -457,7 +457,7 @@
         frac-done (/ got total)
         num-chars (Math/round (* (- width 1.0) frac-done))]
     (printf (str "|%-" width "s| Completed %" num-width "s of %s (%.1f%%)\r")
-            (apply str (concat (repeat num-chars char) ">")) got total (* 100.0 frac-done))
+            (apply str (concat (take num-chars (repeat char)) ">")) got total (* 100.0 frac-done))
     (flush)))
 
 (defmacro with-progress-bar-cool
@@ -520,7 +520,7 @@
   ([total nums]
      (if (empty? nums)
        (list total)
-       (lazy-seq (cons total (successive-sums (+ total (first nums)) (rest nums)))))))
+       (lazy-cons total (successive-sums (+ total (first nums)) (rest nums))))))
 
 (defn successive-differences
   [nums]

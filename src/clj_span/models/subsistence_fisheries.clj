@@ -218,10 +218,10 @@
            source-points use-points
            value-type cell-width cell-height rows cols]}]
   (let [{path-layer "Path", population-density-layer "PopulationDensity"} flow-layers
-        prob-ns (condp = value-type
-                  :numbers  'clj-misc.numbers
-                  :varprop  'clj-misc.varprop
-                  :randvars 'clj-misc.randvars)]
+        prob-ns (cond
+                 (= value-type :numbers)  'clj-misc.numbers
+                 (= value-type :varprop)  'clj-misc.varprop
+                 (= value-type :randvars) 'clj-misc.randvars)]
     (binding [_0_   (var-get (ns-resolve prob-ns '_0_))
               *_    (var-get (ns-resolve prob-ns '*_))
               _d    (var-get (ns-resolve prob-ns '_d))
