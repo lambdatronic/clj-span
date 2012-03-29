@@ -203,7 +203,8 @@
           (with-progress-bar-cool
             :drop
             (int (Math/ceil (/ num-view-lines partition-size)))
-            (pmap (fn [view-lines]
+            ;; (pmap (fn [view-lines]
+            (map (fn [view-lines]
                     (doseq [[source-point use-point] view-lines]
                       (raycast!
                        source-layer
