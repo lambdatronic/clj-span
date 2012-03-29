@@ -187,18 +187,17 @@
           (with-progress-bar-cool
             :drop
             (int (Math/ceil (/ num-view-lines partition-size)))
-            ;; (pmap (fn [view-lines]
-            (map (fn [view-lines]
-                   (doseq [[source-point use-point] view-lines]
-                     (raycast!
-                      source-layer
-                      sink-layer
-                      elev-layer
-                      cache-layer
-                      possible-flow-layer
-                      actual-flow-layer
-                      to-meters
-                      trans-threshold
-                      source-point
-                      use-point)))
-                 (my-partition-all partition-size (for [use-point use-points source-point source-points] [source-point use-point])))))))))
+            (pmap (fn [view-lines]
+                    (doseq [[source-point use-point] view-lines]
+                      (raycast!
+                       source-layer
+                       sink-layer
+                       elev-layer
+                       cache-layer
+                       possible-flow-layer
+                       actual-flow-layer
+                       to-meters
+                       trans-threshold
+                       source-point
+                       use-point)))
+                  (my-partition-all partition-size (for [use-point use-points source-point source-points] [source-point use-point])))))))))

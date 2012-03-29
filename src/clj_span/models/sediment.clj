@@ -186,8 +186,7 @@
 (defn move-carriers-one-step-downstream!
   [params sediment-carriers]
   (report-carrier-counts sediment-carriers)
-  (map (p to-the-ocean! params) sediment-carriers))
-  ;; (pmap (p to-the-ocean! params) sediment-carriers))
+  (pmap (p to-the-ocean! params) sediment-carriers))
 
 (defn create-initial-service-carriers
   [{:keys [source-layer source-points ha-per-cell in-stream?]}]
