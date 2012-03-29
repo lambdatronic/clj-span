@@ -190,11 +190,13 @@
    some water according to the remaining sink capacity at this
    location."
   [params {:keys [route stream-bound?] :as surface-water-carrier}]
-  (let [current-id        (peek route)
-        local-effects-fn! (if stream-bound? handle-use-effects! handle-sink-effects!)]
-    (->> surface-water-carrier
-         (local-effects-fn! current-id params)
-         (take-next-step current-id params))))
+  (try
+    (let [current-id        (peek route)
+          local-effects-fn! (if stream-bound? handle-use-effects! handle-sink-effects!)]
+      (->> surface-water-carrier
+           (local-effects-fn! current-id params)
+           (take-next-step current-id params)))
+    (catch Exception _ (println "Bad agent go BOOM!"))))
 
 (defn report-carrier-counts
   [surface-water-carriers]
