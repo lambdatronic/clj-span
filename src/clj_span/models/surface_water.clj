@@ -40,10 +40,10 @@
 
 (defn assign-water-to-users!
   [{:keys [stream-intakes cache-layer use-layer]}]
-  (with-message "Assigning water captured at stream intakes to use locations..." "done."
+  (with-message "Assigning water captured at stream intakes to users..." "done."
     (doseq [[stream-id use-ids] stream-intakes]
       (let [stream-cache     (get-in cache-layer stream-id)
-            service-carriers (deref stream-cache)
+            service-carriers (map #(dissoc % :stream-bound?) (deref stream-cache))
             use-caches       (map #(get-in cache-layer %) use-ids)
             use-values       (map #(get-in use-layer %) use-ids)
             total-use        (reduce _+_ use-values)
@@ -98,6 +98,16 @@
                            cols)
          (remove (p = prev-id))
          (nearest-to-bearing bearing current-id))))
+
+(defn take-next-step
+  [current-id
+   {:keys [trans-threshold-volume in-stream? flow-layers rows cols]}
+   {:keys [possible-weight route] :as surface-water-carrier}]
+  (if (_> possible-weight trans-threshold-volume)
+    (if-let [next-id (find-next-step current-id in-stream? flow-layers rows cols route)]
+      (assoc surface-water-carrier
+        :route         (conj route next-id)
+        :stream-bound? (in-stream? next-id)))))
 
 (defn calculate-use!
   [current-id use-caps weight]
@@ -173,16 +183,6 @@
       surface-water-carrier)
     surface-water-carrier))
 
-(defn take-next-step
-  [current-id
-   {:keys [trans-threshold-volume in-stream? flow-layers rows cols]}
-   {:keys [possible-weight route] :as surface-water-carrier}]
-  (if (_> possible-weight trans-threshold-volume)
-    (if-let [next-id (find-next-step current-id in-stream? flow-layers rows cols route)]
-      (assoc surface-water-carrier
-        :route         (conj route next-id)
-        :stream-bound? (in-stream? next-id)))))
-
 ;; FIXME: Make sure carriers can hop from stream to stream as necessary.
 (defn to-the-ocean!
   "Computes the state of the surface-water-carrier after it takes
@@ -206,7 +206,7 @@
             in-stream-carriers)
     (flush)))
 
-(defn move-carriers-one-step-downstream
+(defn move-carriers-one-step-downstream!
   [params surface-water-carriers]
   (report-carrier-counts surface-water-carriers)
   (pmap (p to-the-ocean! params) surface-water-carriers))
@@ -242,7 +242,7 @@
     (stop-unless-reducing
      100
      (iterate-while-seq
-      (p move-carriers-one-step-downstream params)
+      (p move-carriers-one-step-downstream! params)
       (create-initial-service-carriers params))))
   (select-keys params [:stream-intakes :cache-layer :use-layer]))
 
