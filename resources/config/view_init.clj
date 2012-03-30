@@ -9,7 +9,7 @@
  "-cell-width"         "267.68114496097337"
  "-cell-height"        "385.45193355048565"
  "-rv-max-states"      "10"
- "-downscaling-factor" "2"
+ "-downscaling-factor" "3"
  "-source-type"        "infinite"
  "-sink-type"          "infinite"
  "-use-type"           "infinite"
