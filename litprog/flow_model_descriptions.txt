@@ -128,6 +128,16 @@ These values are given as densities in their respective matrices so as
 to be commensurate with the original input *source*, *sink*, and *use*
 matrices.
 
+In order to run in conditions of data scarcity, all of the SPAN
+implementations below were created to accept input matrices with
+either deterministic values or probability distributions per pixel,
+depending on the quality and completeness of the input data set. For
+all ecosystem services but Carbon, the SPAN model uses variance
+propagation to transmit the input uncertainties through to the
+outputs. In the special case of Carbon, in which all *source*
+locations are connected to all *use* locations, the SPAN model uses a
+Monte Carlo simulation approach.
+
 * Carbon (CO2Removed)
 
 The amount of carbon sequestration produced is distributed among the
@@ -196,84 +206,147 @@ being initially reduced by the sink values due to landscape emissions
       sink-effects values by ha-per-cell to turn them back into
       densities for comparison with the original input layers.
 * Line of Sight (LineOfSight)
+** Overview
 
-Finds a line of sight path between source and use points, checks
-for obstructions, and determines (using elevation info) how much of
-the source element can be seen from the use point.  A distance
-decay function is applied to the results to compute the visual
-utility originating from the source point.
+The line of sight SPAN model finds a line-of-sight path between source
+points (visually valued objects) and use points (housing), checks for
+obstructions and sink features (visual blight), and determines (using
+a digital elevation model) how much of the source element can be seen
+from the use point. The source, sink, and use layers will typically be
+outputs of a Bayesian network model or reclassified input data giving
+relative values (0-100) for sources, sinks, or users of visually
+valued viewsheds. A distance decay function is applied to the results
+to compute the visual utility originating from the source point that
+reaches each user. Sink features that can degrade viewsheds are
+accounted for only if they are present in the foreground of a user's
+view of a source location.
 
-- For each pair of source point and use point, wherein the points are
-   not in the same location (no in situ use):
+** Procedure
 
-  1. Compute the euclidean distance in meters between the center of
-     the source and use pixels.
+For each source point-use point pair, given that the points are not in
+the same location (no in situ use occurs), the model:
 
-  2. Calculate the source decay at this distance, and proceed if
-     positive. Otherwise, there is no view service between this
-     source and use point.
+1. Computes the Euclidean distance in meters between the center of the
+   source and use pixels.
 
-  3. Look up the elevation at every point between the source and use
-     locations.
+2. Calculates the source decay at this distance, and proceeds if
+   positive (Fig. 1). Otherwise, there is no view service between this
+   source and use point pair.
 
-  4. Take the difference in meters between each elevation along this
-     view line and the use point's elevation. (compute the rises)
+3. Looks up the elevation at every point between the source and use
+   locations.
 
-  5. Calculate the euclidean distance in meters between every point
-     along this view line and the use location. (compute the runs)
+4. Takes the difference in meters between each elevation along this
+   view line and the use point's elevation (i.e. computes the rises).
 
-  6. Calculate each of the view obstruction slopes along the view
-     line by dividing each rise by its corresponding run.
+5. Calculates the Euclidean distance in meters between every point
+   along this view line and the use location (i.e. computes the runs).
 
-  7. Select the maximum view obstruction slope from these values to
-     be the determinant of how much of the source we can and cannot
-     see along this view line.
+6. Calculates each of the view obstruction slopes along the view line
+   by dividing each rise by its corresponding run.
 
-  8. Compute the view elevation in meters projected onto the source
-     by multiplying the maximum view obstruction slope by the
-     euclidean distance between the source and use points in meters
-     and adding this value to the use elevation.
+7. Selects the maximum view obstruction slope from these values to be
+   the determinant of how much of the source a user can and cannot see
+   along this view line.
 
-  9. If the projected view elevation is negative (because the view
-     obstruction slope was negative), then set it to 0.
+8. Computes the view elevation in meters projected onto the source by
+   multiplying the maximum view obstruction slope by the Euclidean
+   distance between the source and use points in meters and adding
+   this value to the use elevation.
 
-  10. If the slope is positive, then we are looking up, so only count
-      the visible part of the source value. If the projected view
-      elevation is greater than the source elevation, then we can't
-      see it, so the source value is 0. Otherwise, the visible source
-      value is the fraction of the total source elevation above the
-      projected view elevation times the total source value.
+9. If the projected view elevation is negative (because the view
+   obstruction slope was negative), then sets it to 0.
 
-  11. If the slope is negative, then we are looking straight ahead or
-      down, so count the whole feature if we can see any part of
-      it. Thus, if the projected view elevation is greater than the
-      source elevation, we can't see it, and the visible source value
-      is 0. Otherwise, the visible source value is the total source
-      value.
+10. If the slope is positive, then the user is looking up. The model
+    only counts the visible part of the source value. If the projected
+    view elevation is greater than or equal to the source elevation,
+    then the user cannot see the source location due to intervening
+    obstructions. Therefore the source value along this line of sight
+    is 0. If the projected view elevation is less than the source
+    elevation, then the user can see some fraction of the source
+    location. The model subtracts the projected view elevation from
+    the source elevation and divides this difference by the source
+    elevation to get a number between 0 and 1, representing the
+    visible source fraction. This fraction is then multiplied by the
+    total source value to get the visible source value.
 
-  12. Finally, multiply the visible source value by the source decay
-      at that distance to compute the possible weight transmitted
-      from this source point to the use point.
+11. If the slope is negative, then the user is looking straight ahead
+    or down (e.g. looking from a hill down at a lake). If the
+    projected view elevation is greater than the source elevation,
+    then the user cannot see it, and the visible source value
+    is 0. Otherwise, if the projected view elevation is less than or
+    equal to the source elevation, then the user can see the entire
+    source element. Thus, the model sets the visible source value to
+    be the total source value.
 
-  13. If the possible weight is below the transition threshold, then
-      there is no service along this view line. Otherwise, continue
-      with the next step.
+12. Finally, multiplies the visible source value by the source decay
+    at that user-to-source distance (Fig. 1) to compute the possible
+    weight transmitted from the source point to the use point.
 
-  14. For each sink location along the sight line, calculate the
-      visible sink value using the same algorithm as with the source
-      (e.g. project view elevation onto sink, multiply sink value by
-      fraction of sink elevation visible above the project view
-      elevation), and finally multiply the visible sink value by the
-      sink decay at its distance from the use point.
+13. If the possible weight is below the transition threshold, then
+    there is no service along this view line. Otherwise, continues
+    with the next step.
 
-  15. Compute the actual weight as the possible weight minus the sum
-      of the sink effects along the sight line. If this value is
-      negative (because sinks outweigh the source value), set it
-      to 0.
+14. For each sink location along the sight line, calculates the
+    visible sink value using the same algorithm as for the source
+    (e.g. projects view elevation onto the sink, multiplies sink value
+    by fraction of sink elevation visible above the projected view
+    elevation), and finally multiplies the visible sink value by the
+    sink decay (Fig. 2) at its distance from the use point.
 
-- Source Decay: ramp up in 1 mile, slow decay to 5 miles, fast decay to 20 miles, moderate decay to 40 miles, then gone
+15. Computes the actual weight as the possible weight minus the sum of
+    the sink effects along the sight line. If this value is negative
+    (because sinks outweigh the source value), sets the actual weight
+    to 0.
 
-- Sink Decay: slow decay to 1/2 mile, fast decay to 1 mile, gone after 1 mile
+16. Stores a carrier on the use point with the possible and actual
+    weights computed as described above, the line of sight route
+    between the source and use point, and a list of sinks and their
+    visual blight impacts on the actual weight value.
+
+file:./source-decay.png
+
+Fig 1. Source Decay: Grow from 0% to 100% over first mile. Next,
+reduce from 100% to 75% from mile 1 to mile 5. Then, reduce from 75%
+to 25% from mile 5 to mile 20. Finally, reduce from 25% to 0% from
+mile 20 to mile 60.
+
+file:./sink-decay.png
+
+Fig 2. Sink Decay: Reduce from 100% to 75% over first 1/2 mile. Then
+reduce from 75% to 0% over the next 1/2 mile.
+
+** Outputs
+
+The line-of-sight model produces theoretical, possible, actual,
+inaccessible, and blocked viewshed sources, sinks, uses, and
+flows. While the input source, sink, and use data were in relative
+values from 0-100, the flow model outputs can have much higher
+values. The reason for this is that the service medium moving between
+locations is scenic beauty transmitted by light, which is
+predominantly informational and is not subject to the laws of
+conservation of mass or energy. That is, if many users all have a view
+of the same mountain, they can all benefit from this view without
+competing with one another.
+
+Therefore, since at best each source location could potentially
+provide a fully unobstructed, undecayed view to every user, the
+theoretical source matrix contains the input source values (from
+0-100) times the number of use locations.
+
+Since each sink could at worst impact every line-of-sight path once,
+the theoretical sink matrix contains the input sink values (from
+0-100) times the number of line-of-sight paths possible (i.e. the
+number of source point-use point pairs).
+
+Finally, since each user could at best have a fully unobstructed,
+undecayed view of every source point, the theoretical use map contains
+the sum of all the input source values (each from 0-100) assigned
+uniformly to every use location.
+
+The most interesting outputs from this model are the possible and
+actual source, use, and flow matrices as well as the actual and
+inaccessible sinks.
 
 * Coastal Storm Protection ()
 * Flood Water ()
