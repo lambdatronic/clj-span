@@ -393,6 +393,102 @@ uniformly to every use location.
 The most interesting outputs from this model are the possible and
 actual source, use, and flow matrices as well as the actual and
 inaccessible sinks.
+* Surface Water
+** Overview
+
+The surface water SPAN model traces the path taken by runoff downhill
+and downstream according to a digital elevation model (DEM) and
+hydrologic stream network. The source matrix represents the total
+amount of runoff in mm per cell expected to be generated in each
+location over the time period of the simulation (typically one
+year). The sink matrix contains the expected water absorption capacity
+of each cell (e.g. via evapotranspiration and soil infiltration) in mm
+per cell. Finally, the use matrix shows the spatial distribution of
+human demand for surface water also in mm per cell. As runoff service
+carriers move from cell to cell during the simulation, their weight
+(the remaining runoff value) will be reduced by encounters with both
+sinks and users because the usage process (i.e. extracting water from
+rivers and streams) reduces the amount available to downstream users
+in this case.
+
+** Procedure
+
+1. Calculate the number of mm^2 per cell using the cell width and cell
+   height in meters, and multiply this by the input source, sink, and
+   use values as well as the transition threshold to convert them from
+   densities (mm) to volumes (mm^3).
+
+2. Find the nearest river or stream cell to each user using a
+   Euclidean distance metric. In cases of low resolution input data,
+   some users may appear to be co-located with river or stream cells,
+   in which case this will be considered the nearest one to
+   them. Multiple users may share the same nearest river or stream
+   cell. This information is meant to represent the locations from
+   which users withdraw water from rivers or streams.
+
+3. Place a virtual bucket at each sink point in the landscape, whose
+   capacity is the sink volume (in mm^3) at that location. This is
+   called the *sink capacity*.
+
+4. Place two virtual buckets at each withdrawal point detected in step
+   2, whose capacities are equal to the sum of all the use volumes in
+   their nearest use locations (as determined by step 2). One bucket
+   is called the *possible use capacity*, and the other is called the
+   *actual use capacity*. The first will keep track of the amount of
+   surface water available to users at that location if there were no
+   sinks on the landscape, and the second tracks the surface water
+   available in the presence of sinks.
+
+5. Create one runoff service carrier per source cell, and set its
+   initial possible and actual weights to the source volume at that
+   location.
+
+6. Move all of the service carriers one step either downhill (if over
+   land) or downstream (if in a river or stream cell). This involves
+   the steps outline below.
+
+   1. If over land and in a sink location whose sink capacity bucket
+      is not already full of water from previous carriers, reduce the
+      carrier's actual weight by the remaining sink capacity and
+      reduce the remaining sink capacity by the amount of water
+      absorbed. Record the amount absorbed by this sink in the
+      carrier's sink effects list.
+
+      If in a river or stream location that contains a possible or
+      actual use capacity bucket that is not already full, reduce the
+      carrier's possible weight by the remaining possible use
+      capacity, reduce the carrier's actual weight by the remaining
+      actual use capacity, and reduce the remaining possible and
+      actual use capacities by the respective amounts of water that
+      they each absorb. Store a new runoff carrier on this use
+      location with possible and actual weight values equal to the
+      amounts of water absorbed by this location divided by the mm^2
+      per cell value (to translate them back into densities for
+      comparison with the input matrices).
+
+   2. If the runoff carrier's possible weight is greater than the
+      transition threshold volume, move to the neighboring cell with
+      the lowest elevation, excluding the previous cell from which the
+      carrier just came (to avoid short infinite cycles due to locally
+      flat topography). If more than one neighboring cell meets this
+      criteria, select the one for which the angular distance is
+      smallest between the current bearing and that required to reach
+      this neighbor. Because this calculation cannot be performed on
+      the matrix edges, any carrier which reach an edge cell will be
+      considered to have left the bounds of the study area.
+
+7. Repeat step 6 until all service carriers have either gotten trapped
+   in a single cell, flowed off the edge of the matrix bounds, or lost
+   all of its possible weight to users.
+
+8. Distribute the water captured in all the possible and actual use
+   capacity buckets (those placed at stream withdrawal locations) to
+   their nearest users (as determined by step 2) according to their
+   relative use values. That is, use locations with greater use values
+   (i.e. surface water demands) receive correspondingly more of the
+   water captured at the stream withdrawal locations.
+
+** Outputs
 
 * Coastal Storm Protection
 ** Overview
@@ -411,10 +507,6 @@ inaccessible sinks.
 ** Procedure
 ** Outputs
 * Subsistence Fisheries
-** Overview
-** Procedure
-** Outputs
-* Surface Water
 ** Overview
 ** Procedure
 ** Outputs
