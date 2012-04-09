@@ -6,13 +6,14 @@ Date: 03/19/2012
 
 In this document, we describe eight implementations of the Service
 Path Attribution Networks framework, one per ecosystem service
-currently modelled by the ARIES system. Each one is given three
+currently modeled by the ARIES system. Each one is given up to three
 matrices with the same numbers of rows and columns, which represent
-the continuous, spatial distribution of three variables over the same
-geographic extent. All three represent some feature relevant to the
-type of matter, energy, or information -- called the service medium --
-whose movement through space is the purpose of the given SPAN
-implementation.
+the continuous, spatial distribution of three variables -- source,
+sink, and use values, described below -- over the same geographic
+extent. These represent features relevant to the type of ecosystem
+service-specific matter, energy, or information -- called the service
+medium -- whose movement through space is the purpose of the given
+SPAN implementation.
 
 The first matrix shows the distribution of the service medium's
 *source*. That is, each cell in the matrix records the amount of the
@@ -22,7 +23,8 @@ course of the simulation.
 The second matrix contains the distribution of the landscape's
 absorption capacity with respect to the service medium in the same
 units as the source matrix. We call these values the ecosystem service
-*sink*.
+*sink*. Sinks exist for many but not all services, so the sink matrix
+will not exist in some instances.
 
 The third matrix depicts the distribution of human populations or
 assets that are likely to be affected, for better or worse, by
@@ -31,9 +33,10 @@ simple binary presence/absence matrix or with a varying demand value
 per cell in the same units as the source matrix. This matrix is called
 the ecosystem service *use*. In the event that the service medium is
 beneficial to people (e.g. drinking water, pollen for crops, scenic
-views), *use* locations can be seen as potential beneficiaries of an
-ecosystem good or service. If the service medium is detrimental to
-people (e.g. floodwater, wildfire, storm surges), *use* locations will
+views, i.e. "provisioning services"), *use* locations can be seen as
+potential beneficiaries of an ecosystem good or service. If the
+service medium is detrimental to people (e.g. floodwater, wildfire,
+storm surges, i.e. "preventive services"), *use* locations will
 represent populations or assets that are potentially vulnerable to an
 ecosystem-generated threat.
 
@@ -46,7 +49,7 @@ matrix.
 In order to determine each carrier's path through the matrix, each of
 the eight models below may need additional matrices for
 topography-related variables. For example, the water supply, sediment
-transport, and flood prevention models all need matrices containing
+transport, and flood prevention models all require matrices containing
 the spatial distribution of elevation and hydrologic networks. Which
 variables are needed for service carrier routing varies from model to
 model and will be described in each of the sections below as needed.
@@ -75,14 +78,14 @@ that was absorbed by each of them. Finally, this stored carrier is
 given a weight, representing the amount of the service medium that
 affects this location for good or ill.
 
-If the usage process is destructive (e.g. water is taken from streams
-to drink, thereby reducing the amount of downstream water available),
-then the stored carrier's weight will be equal to the remaining *use*
-value in this location. As with *sink* locations, this *use* value
-will be reduced by the weight captured from the service carrier in
-this step. Similarly, the moving service carrier's weight is reduced
-by the stored amount prior to moving on to the next cell in the
-matrix.
+If the usage process is destructive (i.e. typically rival use, such as
+water taken from streams to drink, thereby reducing the amount of
+downstream water available), then the stored carrier's weight will be
+equal to the remaining *use* value in this location. As with *sink*
+locations, this *use* value will be reduced by the weight captured
+from the service carrier in this step. Similarly, the moving service
+carrier's weight is reduced by the stored amount prior to moving on to
+the next cell in the matrix.
 
 If the usage process is non-destructive (e.g. floodwater encounters
 one *use* location, damages its assets, and continues on to cause
@@ -100,29 +103,29 @@ post-simulation analysis functions. Each of these functions produces a
 new matrix, containing the spatial distribution of one of the
 following variables:
 
-|-----------+--------------+-----------------------------------------------------|
-| Component | Specifier    | Relation to Service Medium                          |
-|-----------+--------------+-----------------------------------------------------|
-| Source    | Theoretical  | Expected production at origin                       |
-| Source    | Actual       | Amount produced which reaches a use location        |
-| Source    | Possible     | Same as Actual Source but excludes sink effects     |
-| Source    | Inaccessible | Difference between Theoretical and Possible Source  |
-| Source    | Blocked      | Difference between Possible and Actual Source       |
-|-----------+--------------+-----------------------------------------------------|
-| Sink      | Theoretical  | Expected absorption capacity at origin              |
-| Sink      | Actual       | Amount absorbed along simulated flow paths          |
-| Sink      | Inaccessible | Difference between Theoretical and Actual Sink      |
-|-----------+--------------+-----------------------------------------------------|
-| Use       | Theoretical  | Expected demand/vulnerability at origin             |
-| Use       | Actual       | Amount received along simulated flow paths          |
-| Use       | Possible     | Same as Actual Use but excludes sink effects        |
-| Use       | Inaccessible | Difference between Theoretical and Possible Use     |
-| Use       | Blocked      | Difference between Possible and Actual Use          |
-|-----------+--------------+-----------------------------------------------------|
-| Flow      | Actual       | Amount delivered to a use location through this one |
-| Flow      | Possible     | Same as Actual Flow but excludes sink effects       |
-| Flow      | Blocked      | Difference between Possible and Actual Flow         |
-|-----------+--------------+-----------------------------------------------------|
+|-----------+--------------+----------------------------------------------------|
+| Component | Specifier    | Relation to Service Medium                         |
+|-----------+--------------+----------------------------------------------------|
+| Source    | Theoretical  | Expected production at origin                      |
+| Source    | Actual       | Amount produced which reaches a use location       |
+| Source    | Possible     | Same as Actual Source but excludes sink effects    |
+| Source    | Inaccessible | Difference between Theoretical and Possible Source |
+| Source    | Blocked      | Difference between Possible and Actual Source      |
+|-----------+--------------+----------------------------------------------------|
+| Sink      | Theoretical  | Expected absorption capacity at origin             |
+| Sink      | Actual       | Amount absorbed along simulated flow paths         |
+| Sink      | Inaccessible | Difference between Theoretical and Actual Sink     |
+|-----------+--------------+----------------------------------------------------|
+| Use       | Theoretical  | Expected demand/vulnerability at origin            |
+| Use       | Actual       | Amount received along simulated flow paths         |
+| Use       | Possible     | Same as Actual Use but excludes sink effects       |
+| Use       | Inaccessible | Difference between Theoretical and Possible Use    |
+| Use       | Blocked      | Difference between Possible and Actual Use         |
+|-----------+--------------+----------------------------------------------------|
+| Flow      | Actual       | Amount delivered to a use location                 |
+| Flow      | Possible     | Same as Actual Flow but excludes sink effects      |
+| Flow      | Blocked      | Difference between Possible and Actual Flow        |
+|-----------+--------------+----------------------------------------------------|
 
 These values are given as densities in their respective matrices so as
 to be commensurate with the original input *source*, *sink*, and *use*
@@ -132,13 +135,13 @@ In order to run in conditions of data scarcity, all of the SPAN
 implementations below were created to accept input matrices with
 either deterministic values or probability distributions per cell,
 depending on the quality and completeness of the input data set. For
-all ecosystem services but Carbon, the SPAN model uses variance
-propagation to transmit the input uncertainties through to the
-outputs. In the special case of Carbon, in which all *source*
-locations are connected to all *use* locations, the SPAN model uses a
-Monte Carlo simulation approach.
+all ecosystem services but carbon sequestration and storage, the SPAN
+model uses variance propagation to transmit the input uncertainties
+through to the outputs. In the special case of carbon, in which all
+*source* locations are connected to all *use* locations, the SPAN
+model uses a Monte Carlo simulation approach.
 
-* Carbon
+* Carbon Sequestration and Storage
 ** Overview
 
 The carbon SPAN model assesses the amount of carbon sequestration in
@@ -159,23 +162,24 @@ sink location, again based on its relative sink value.
 
 ** Procedure
 
-1. Compute the number of hectares per cell for sources, sinks, and
-   users given cell-width and cell-height in meters. Multiply this
-   value by the densities (tons of CO2 per hectare) in each cell of
-   the source, sink, and use matrices to get tons of CO2 sequestered,
-   released, or emitted per cell.
+1. The model first computes the number of hectares per cell for
+   sources, sinks, and users given cell-width and cell-height in
+   meters. This value multiplied by the densities (tons of CO2 per
+   hectare) in each cell of the source, sink, and use matrices
+   calculates the tons of CO2 sequestered, released, or emitted per
+   cell.
 
-2. Select a number of iterations for the Monte Carlo simulation and
-   draw this many sample worlds (e.g. one sample matrix each for
-   source, sink, and use) by drawing sample values from the
-   probability distributions in each of the matrix cells.
+2. Next, the user selects a number of iterations for the Monte Carlo
+   simulation and draws this many sample worlds (e.g. one sample
+   matrix each for source, sink, and use) by drawing sample values
+   from the probability distributions in each of the matrix cells.
 
-3. For each such sample world:
+3. For each such sample world, the model:
 
-   1. Calculate the total source, sink, and use values by summing
+   1. Calculates the total source, sink, and use values by summing
       across all cells in each matrix.
 
-   2. Determine the total amount each source cell loses to all the
+   2. Determines the total amount each source cell loses to all the
       sinks by multiplying each source value by the total sink divided
       by the total source. If the total sink is greater than the total
       source (i.e. there are more landscape emissions than
@@ -185,51 +189,51 @@ sink location, again based on its relative sink value.
       contributed to users (i.e. used to offset anthropogenic
       emissions). This can be called the *unsunk source* value.
 
-   3. Compute the total amount each sink reduces all the sources by
+   3. Computes the total amount each sink reduces all the sources by
       multiplying each sink value by the total source divided by the
       total sink. If the total source is greater than the total sink,
       then the amount sunk by every sink cell is simply its sink
       value. This is the *actual sink* value.
 
-   4. Compute the total amount each user receives from all the sources
-      by multiplying each use value by the total source divided by the
-      total use. If the total source is greater than the total use,
-      then the amount received by every use cell is simply its use
-      value. This is the *possible use* value.
+   4. Computes the total amount each user receives from all the
+      sources by multiplying each use value by the total source
+      divided by the total use. If the total source is greater than
+      the total use, then the amount received by every use cell is
+      simply its use value. This is the *possible use* value.
 
-   5. Repeat step 4 above but replace the source values with the
+   5. Repeats step 4 above but replaces the source values with the
       unsunk source values from step 2. This computes the *actual use*
       value.
 
-   6. Normalize all source and use values between [0-1] by dividing by
-      their totals.
+   6. Normalizes all source and use values between [0-1] by dividing
+      by their totals.
 
-   7. Pair every source cell with every sink cell, and for each such
-      pair, multiply the normalized source value by the actual sink
+   7. Pairs every source cell with every sink cell, and for each such
+      pair, multiplies the normalized source value by the actual sink
       value. This calculates the amount each source cell loses to each
       sink cell.
 
-   8. Pair every source cell with every use cell, and for each such
-      pair, multiply the normalized source value by the possible use
+   8. Pairs every source cell with every use cell, and for each such
+      pair, multiplies the normalized source value by the possible use
       value. This calculates the possible amount each source cell
       contributes to each use cell.
 
-   9. Pair every source cell with every use cell, and for each such
-      pair, multiply the normalized source value by the actual use
+   9. Pairs every source cell with every use cell, and for each such
+      pair, multiplies the normalized source value by the actual use
       value. This calculates the actual amount each source cell
       contributes to each use cell.
 
    10. For each triplet combination of source, sink, and use cells,
-       multiply the normalized source value by the normalized use value
-       and then by the actual sink value to compute the effect of each
-       sink on each pair of source and use point.
+       multiplies the normalized source value by the normalized use
+       value and then by the actual sink value to compute the effect
+       of each sink on each pair of source and use point.
 
-4. Combine the results of each Monte Carlo iteration from step 3 above
-   by computing a distribution per use cell of the possible and actual
-   service medium amounts received as well as the amounts lost to
-   sinks.
+4. Combines the results of each Monte Carlo iteration from step 3
+   above by computing a distribution per use cell of the possible and
+   actual service medium amounts received as well as the amounts lost
+   to sinks.
 
-5. Finally, divide the possible-weight, actual-weight, and
+5. Finally, divides the possible-weight, actual-weight, and
    sink-effects values by the number of hectares per cell to turn them
    back into densities (tons of CO2 per hectare per year) for
    comparison with the original input layers.
@@ -251,26 +255,26 @@ determined by subtracting the total theoretical use value (summed
 across all cells and multiplied by the number of hectares per cell)
 from this available offset amount.
 
-* Line of Sight
+* Aesthetic Viewsheds
 ** Overview
 
-The line of sight SPAN model finds a line-of-sight path between source
-points (visually valued objects) and use points (housing), checks for
-obstructions and sink features (visual blight), and determines (using
-a digital elevation model) how much of the source element can be seen
-from the use point. The source, sink, and use layers will typically be
-outputs of a Bayesian network model or reclassified input data giving
-relative values (0-100) for sources, sinks, or users of visually
-valued viewsheds. A distance decay function is applied to the results
-to compute the visual utility originating from the source point that
-reaches each user. Sink features that can degrade viewsheds are
-accounted for only if they are present in the foreground of a user's
-view of a source location.
+The aesthetic viewsheds model in ARIES uses a line-of-sight SPAN model
+to quantify view paths between source points (visually valued objects)
+and use points (housing), checks for obstructions and sink features
+(visual blight), and determines (using a digital elevation model) how
+much of the source element can be seen from the use point. The source,
+sink, and use layers will typically be outputs of a Bayesian network
+model or reclassified input data giving relative values (0-100) for
+sources, sinks, or users of visually valued viewsheds. A distance
+decay function is applied to the results to compute the visual utility
+originating from the source point that reaches each user. Sink
+features that can degrade viewsheds are accounted for only if they are
+present in the foreground of a user's view of a source location.
 
 ** Procedure
 
 For each source point-use point pair, given that the points are not in
-the same location (no in situ use occurs), the model:
+the same location (no /in situ/ use occurs), the model:
 
 1. Computes the Euclidean distance in meters between the center of the
    source and use cells.
@@ -390,9 +394,15 @@ undecayed view of every source point, the theoretical use map contains
 the sum of all the input source values (each from 0-100) assigned
 uniformly to every use location.
 
-The most interesting outputs from this model are the possible and
-actual source, use, and flow matrices as well as the actual and
-inaccessible sinks.
+The most interesting outputs from this model are most likely to be the
+possible and actual source, use, and flow matrices as well as the
+actual and inaccessible sinks.
+
+One known limitation of this model is that it assumes that the Earth
+is flat for the purposes of distance decay calculations. An
+improvement to the algorithm that incorporates the effects of the
+Earth's curvature on views at a distance is currently under
+development.
 
 * Surface Water
 ** Overview
