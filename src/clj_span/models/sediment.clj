@@ -49,7 +49,7 @@
 (def ^:dynamic _d_)
 
 (defn assign-sediment-to-floodplain-users!
-  [{:keys [stream-intakes sink-layer sink-AFs cache-layer actual-flow-layer use-id?]}]
+  [{:keys [stream-intakes sink-layer sink-AFs cache-layer possible-flow-layer actual-flow-layer use-id?]}]
   (with-message "Assigning sediment captured at stream intakes to floodplain users..." "done."
     (doseq [[stream-id sink-ids] stream-intakes]
       (let [stream-cache     (get-in cache-layer stream-id)
