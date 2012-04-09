@@ -50,7 +50,7 @@
 
 (defn assign-sediment-to-floodplain-users!
   [{:keys [stream-intakes sink-layer sink-AFs cache-layer actual-flow-layer use-id?]}]
-  (with-message "Assigning sediment captured at stream intakes to floodplain sinks..." "done."
+  (with-message "Assigning sediment captured at stream intakes to floodplain users..." "done."
     (doseq [[stream-id sink-ids] stream-intakes]
       (let [stream-cache     (get-in cache-layer stream-id)
             service-carriers (map #(dissoc % :stream-bound?) (deref stream-cache))
@@ -65,12 +65,14 @@
                    (if (use-id? id) ; this floodplain sink is co-located with a user
                      (let [actual-weight-portion (_*_ actual-weight percent)]
                        (doseq [id route]
-                         (commute (get-in actual-flow-layer id) _+_ actual-weight-portion))
+                         (commute (get-in possible-flow-layer id) _+_ actual-weight-portion)
+                         (commute (get-in actual-flow-layer   id) _+_ actual-weight-portion))
                        (commute (get-in cache-layer id) conj
                                 (assoc carrier
-                                  :route         nil
-                                  :actual-weight actual-weight-portion
-                                  :sink-effects  (mapmap identity #(_*_ % percent) sink-effects))))))
+                                  :route           nil
+                                  :possible-weight actual-weight-portion
+                                  :actual-weight   actual-weight-portion
+                                  :sink-effects    (mapmap identity #(_*_ % percent) sink-effects))))))
                  sink-ids
                  sink-percents))))))))
 
@@ -195,7 +197,6 @@
       (struct-map service-carrier
         :source-id       %
         :route           [%]
-        :possible-weight _0_
         :actual-weight   source-weight
         :sink-effects    {}
         :stream-bound?   (in-stream? %)))
