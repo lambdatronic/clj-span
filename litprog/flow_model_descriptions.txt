@@ -455,8 +455,8 @@ case.
    location.
 
 6. Moves all of the service carriers one step either downhill (if
-   overland) or downstream (if in a river or stream cell). This
-   involves the steps outline below.
+   overland) or downstream (if in a river or stream cell). This is a
+   two-step process:
 
    1. If overland and in a sink location whose sink capacity bucket is
       not already full of water from previous carriers, reduces the
@@ -504,28 +504,28 @@ case.
 
 The surface water model produces theoretical, possible, actual,
 inaccessible, and blocked surface water sources, sinks, uses, and
-flows. All values are in mm of water per time period of the simulation
-(one year in the initial ARIES release).
+flows. All values are in mm of water per cell per time period of the
+simulation (one year in the initial ARIES release).
 
 * Sediment Transport
 ** Overview
 
 The sediment transport SPAN model traces the path taken by eroded soil
-downhill and downstream according to a digital elevation model (DEM)
-and stream network data. The source matrix represents the total amount
-of eroded soil in tons per hectare expected to be lost from each
-location over the time period of the simulation (one year in the
-initial ARIES release). The sink matrix contains the expected soil
-capture capacity of each cell (e.g., via floodplain deposition) in
-tons per hectare. Finally, the use matrix shows the spatial
-distribution of human populations or assets that would either benefit
-from or be harmed by sediment deposition (as presence/absence values).
-As sediment service carriers move from cell to cell during the
-simulation, their weight (the remaining soil amount they carry) will
-be reduced by encounters with sinks (but not users). Users that are
-co-located with sinks in floodplains will be affected by however much
-sediment is captured by their sink. All other users will receive no
-service according to this model.
+downhill, downstream, and out into floodplains according to a digital
+elevation model (DEM) and stream network data. The source matrix
+represents the total amount of eroded soil in tons per hectare
+expected to be lost from each location over the time period of the
+simulation (one year in the initial ARIES release). The sink matrix
+contains the expected soil capture capacity of each cell (e.g., via
+floodplain deposition) in tons per hectare. Finally, the use matrix
+shows the spatial distribution of human populations or assets that
+would either benefit from or be harmed by sediment deposition (as
+presence/absence values). As carriers of sediment move from cell to
+cell during the simulation, their weight (the remaining soil amount
+they carry) will be reduced by encounters with sinks (but not users).
+Users that are co-located with sinks in floodplains will be affected
+by however much sediment is captured by their sink. All other users
+will receive no service according to this model.
 
 ** Procedure
 
@@ -627,135 +627,134 @@ inaccessible sediment sources, sinks, uses, and flows. All values are
 in tons of sediment per hectare per time period of the simulation (one
 year in the initial ARIES release).
 
-* Flood Water
+* Flood Mitigation
 ** Overview
 
-The sediment transport SPAN model traces the path taken by eroded soil
-downhill and downstream according to a digital elevation model (DEM)
-and hydrologic stream network. The source matrix represents the total
-amount of eroded soil in tons per hectare expected to be lost from
-each location over the time period of the simulation (typically one
-year). The sink matrix contains the expected soil capture capacity of
-each cell (e.g., via floodplain deposition) in tons per
-hectare. Finally, the use matrix shows the spatial distribution of
-human populations or assets that would either benefit from or be
-harmed by sediment deposition (as presence/absence values). As
-sediment service carriers move from cell to cell during the
-simulation, their weight (the remaining soil amount they carry) will
-be reduced by encounters with sinks (but not users). Users which are
-co-located with sinks in floodplains will be affected by however much
-sediment is captured by their sink. All other users will receive no
-service according to this model.
+The flood mitigation SPAN model traces the path taken by runoff
+downhill, downstream, and out into floodplains according to a digital
+elevation model (DEM) and stream network data. The source matrix
+represents the total amount of runoff in mm per cell expected to be
+generated in each location over the time period of the simulation (one
+year in the initial ARIES release). The sink matrix contains the
+expected water absorption capacity of each cell (e.g., via
+evapotranspiration and soil infiltration) in mm per cell. Finally, the
+use matrix shows the spatial distribution of human populations or
+assets that would be harmed by floodwater (as presence/absence
+values). As carriers of floodwater move from cell to cell during the
+simulation, their weight (the remaining runoff value) will be reduced
+by encounters with sinks (but not users). Users in the path of
+floodwater flows within floodplains will be affected by however much
+floodwater reaches them. No other users will be harmed in this model.
 
 ** Procedure
 
-1. Calculate the number of hectares per cell using the cell width and
-   cell height in meters, and multiply this by the input source, sink,
-   and use values to convert them from densities (tons/ha) to volumes
-   (tons).
+1. The model first calculates the number of mm^2 per cell using the
+   cell width and cell height in meters and multiplies this by the
+   input source, sink, and use values to convert them from densities
+   (mm) to volumes (mm^3).
 
-2. Find the nearest river or stream cell to each sink in a floodplain
-   using a Euclidean distance metric. In cases of low resolution input
-   data, some sinks may appear to be co-located with river or stream
-   cells, in which case this will be considered the nearest one to
-   them. Multiple sinks may share the same nearest river or stream
-   cell. If there is a levee between a floodplain sink and its nearest
-   river or stream cell, this sink will be considered nullified by the
-   levee's water channeling effect. This information is meant to
-   identify the river or stream locations from which sediment emerges
-   into floodplains for deposition during flooding events.
+2. Finds the nearest river or stream cell to each sink and user in a
+   floodplain using a Euclidean distance metric. In cases of low
+   resolution input data, some sinks or users may appear to be
+   co-located with river or stream cells, in which case this will be
+   considered the nearest one to them. Multiple sinks and users may
+   share the same nearest river or stream cell. If there is a levee
+   between a floodplain sink or user and its nearest river or stream
+   cell, the sink will be considered nullified and the user will be
+   considered fully protected by the levee's water-channeling effect.
+   This information is meant to identify the river or stream locations
+   from which floodwater emerges into floodplains during flooding
+   events, when it can harm users.
 
-3. Calculate the relative position of each non-levee-blocked
-   floodplain sink along a line between its nearest river or stream
-   point and the floodplain boundary. This position value is a real
-   number between 0 and 1, where 0 indicates the floodplain boundary
-   and 1 indicates the river or stream point. These values are called
-   the *floodplain activation factors* and indicate each sink's
-   relative vulnerability to sediment deposition within the
-   floodplain.
+3. Calculates the relative position of each non-levee-blocked
+   floodplain sink and user along a line between its nearest river or
+   stream point and the floodplain boundary. This position value is a
+   real number between 0 and 1, where 0 indicates the distant
+   floodplain boundary and 1 indicates the river or stream point.
+   These values are called the *floodplain activation factors* and
+   indicate each sink's relative likelihood of capturing floodwater
+   and each user's relative likelihood of being inundated.
 
-4. Place a virtual bucket at each sink point not in a floodplain,
-   whose capacity is the sink volume (in tons of sediment) at that
-   location. This is called the *highland sink capacity*.
+4. Places a virtual bucket at each sink point not in a floodplain,
+   whose capacity is the sink volume (in mm^3 of water) at that
+   location. This is called the *overland sink capacity*.
 
-5. Place a virtual bucket at each sediment deposition point detected
+5. Places a virtual bucket at each floodwater emergence point detected
    in step 2, whose capacities are equal to the sum of all the
    non-levee-blocked floodplain sink volumes in their nearest sink
    locations (as determined by step 2) times their respective
    floodplain activation factors (step 3). This is called the
    *floodplain sink capacity*.
 
-6. Create one sediment service carrier per source cell, and set its
-   initial actual weight to the source volume at that location. Its
-   possible weight may be disregarded as there is no sediment
-   deposition service provided by a landscape without sinks.
+6. Creates one floodwater service carrier per source cell and sets its
+   initial possible and actual weights to the source volume at that
+   location.
 
-7. Move all of the service carriers one step either downhill (if
-   overland) or downstream (if in a river or stream cell). This
-   involves the steps outline below.
+7. Moves all of the service carriers one step either downhill (if
+   overland) or downstream (if in a river or stream cell). This is a
+   two-step process:
 
-   1. If overland and in a non-floodplain sink location whose highland
-      sink capacity bucket is not already full of sediment from
-      previous carriers, reduce the carrier's actual weight by the
-      remaining highland sink capacity and reduce the remaining
-      highland sink capacity by the amount of sediment absorbed.
-      Record the amount absorbed by this sink in the carrier's sink
-      effects list.
+   1. If overland and in a non-floodplain sink location whose overland
+      sink capacity bucket is not already full of runoff from previous
+      carriers, reduces the carrier's actual weight by the remaining
+      overland sink capacity and reduces the remaining overland sink
+      capacity by the amount of runoff absorbed. Records the amount
+      absorbed by this sink in the carrier's sink effects list.
 
       If in a river or stream location that contains a floodplain sink
-      capacity bucket that is not already full, reduce the carrier's
+      capacity bucket that is not already full, reduces the carrier's
       actual weight by the remaining floodplain sink capacity and
-      reduce the remaining floodplain sink capacity by the amount of
-      sediment absorbed. Record the amount absorbed by this sink in
-      the carrier's sink effects list. Store a new sediment carrier on
-      this location with possible and actual weight values equal to
-      the amount of sediment absorbed by this location divided by the
-      hectares per cell value (to translate them back into densities
-      for comparison with the input matrices).
+      reduces the remaining floodplain sink capacity by the amount of
+      floodwater absorbed. Records the amount absorbed by this sink in
+      the carrier's sink effects list.
 
-   2. Move to the neighboring cell with the lowest elevation,
+      If in a river or stream location that is the nearest such point
+      to one or more users (as determined by step 2), stores a new
+      floodwater carrier on this location with possible and actual
+      weight values equal to the amount of floodwater reaching this
+      location (before local floodplain sink effects are applied)
+      divided by the mm^2 per cell value (to translate them back into
+      densities for comparison with the input matrices).
+
+   2. Moves to the neighboring cell with the lowest elevation,
       excluding the previous cell from which the carrier just came (to
       avoid short infinite cycles due to locally flat topography). If
-      more than one neighboring cell meets this criteria, select the
+      more than one neighboring cell meets this criteria, selects the
       one for which the angular distance is smallest between the
-      current bearing and that required to reach this
-      neighbor. Because this calculation cannot be performed on the
-      matrix edges, any carrier which reaches an edge cell will be
-      considered to have left the bounds of the study area.
+      current bearing and that required to reach this neighbor.
+      Because this calculation cannot be performed on the matrix
+      edges, any carrier which reaches an edge cell will be considered
+      to have left the bounds of the study area.
 
-8. Repeat step 7 until all service carriers have either gotten trapped
-   in a single cell, flowed off the edge of the matrix bounds, or lost
-   all of their actual weight to sinks.
+8. Repeats step 7 until all service carriers have either gotten
+   trapped in a single cell or flowed off the edge of the matrix
+   bounds.
 
-9. Distribute the sediment captured in all the floodplain sink
-   capacity buckets (those placed at stream deposition locations) to
-   their nearest floodplain sinks (as determined by step 2) according
-   to their relative sink values (after multiplying by their
-   floodplain activation factors). That is, floodplain sink locations
-   with greater sink values (i.e., soil capture capacities) weighted
-   by their floodplain activation factors receive correspondingly more
-   of the sediment captured at the stream deposition locations.
-
-10. If any of these floodplain sinks are co-located with a user, then
-    service is considered to have been transmitted to that
-    user. Otherwise, no service flow occurs at that location.
+9. Distributes the floodwater from the carriers stored in step 7.1
+   (those placed at river or stream locations nearest to users) to
+   their nearest floodplain users (as determined by step 2) according
+   to their floodplain activation factors (from step 3). That is,
+   floodplain use locations with greater floodplain activation factors
+   (i.e., nearer to the river or stream within the floodplain) are
+   inundated by correspondingly more of the floodwater passing through
+   these locations.
 
 ** Outputs
 
-The sediment transport model produces theoretical, actual, and
-inaccessible sediment sources, sinks, uses, and flows. All values are
-in tons of sediment per hectare per time period of the simulation
-(often one year).
+The flood mitigation model produces theoretical, possible, actual,
+inaccessible, and blocked floodwater sources, sinks, uses, and flows.
+All values are in mm of water per cell per time period of the
+simulation (one year in the initial ARIES release).
 
+* Subsistence Fisheries
+** Overview
+** Procedure
+** Outputs
 * Coastal Storm Protection
 ** Overview
 ** Procedure
 ** Outputs
 * Proximity
-** Overview
-** Procedure
-** Outputs
-* Subsistence Fisheries
 ** Overview
 ** Procedure
 ** Outputs
