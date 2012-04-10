@@ -166,10 +166,10 @@
    sediment according to the remaining sink capacity at this location.
    If it encounters a use location, a service-carrier is stored in the
    user's carrier-cache."
-  [{:keys [floodplain-sink-caps highland-sink-caps] :as params} {:keys [route stream-bound?] :as sediment-carrier}]
+  [{:keys [floodplain-sink-caps overland-sink-caps] :as params} {:keys [route stream-bound?] :as sediment-carrier}]
   (try
     (let [current-id (peek route)
-          sink-caps  (if stream-bound? floodplain-sink-caps highland-sink-caps)]
+          sink-caps  (if stream-bound? floodplain-sink-caps overland-sink-caps)]
       (->> sediment-carrier
            (handle-sink-effects! current-id sink-caps params)
            (take-next-step current-id params)))
@@ -224,13 +224,13 @@
   (select-keys params [:stream-intakes :sink-layer :sink-AFs :cache-layer :actual-flow-layer :use-id?]))
 
 (defn make-buckets
-  "Stores maps from {ids -> tons-ref} for highland-sink-caps and floodplain-sink-caps in params."
+  "Stores maps from {ids -> tons-ref} for overland-sink-caps and floodplain-sink-caps in params."
   [{:keys [sink-layer sink-points sink-AFs stream-intakes in-floodplain? ha-per-cell] :as params}]
   (let [in-stream-points     (keys stream-intakes)
         total-sink-by-intake (for [id in-stream-points :let [floodplain-sink-ids (stream-intakes id)]]
                                (reduce _+_ (map #(*_ (sink-AFs %) (get-in sink-layer %)) floodplain-sink-ids)))]
     (assoc params
-      :highland-sink-caps   (seq2map (remove in-floodplain? sink-points) (fn [id] [id (ref (*_ ha-per-cell (get-in sink-layer id)))]))
+      :overland-sink-caps   (seq2map (remove in-floodplain? sink-points) (fn [id] [id (ref (*_ ha-per-cell (get-in sink-layer id)))]))
       :floodplain-sink-caps (into {} (map (fn [stream-id total-sink] [stream-id (ref (*_ ha-per-cell total-sink))])
                                           in-stream-points
                                           total-sink-by-intake)))))
@@ -245,14 +245,14 @@
     (first (remove in-floodplain? (find-line-between inside-id outside-id)))))
 
 ;; FIXME: Should we be considering the elevation of our data-point?
-(defn compute-flood-activation-factors
+(defn compute-floodplain-activation-factors
   "Stores a map under (params :sink-AFs) of {floodplain-sink-ids -> AF}, where AF
    is a number between 0.0 and 1.0, representing the sink-id's
    relative position between the stream edge (1.0) and the floodplain
    boundary (0.0)."
   [{:keys [in-floodplain? stream-intakes] :as params}]
   (assoc params
-    :sink-AFs (with-message "Computing flood activation factors...\n" "\nAll done."
+    :sink-AFs (with-message "Computing floodplain activation factors...\n" "\nAll done."
                 (into {}
                       (with-progress-bar-cool
                         :keep
@@ -319,7 +319,7 @@
         compute-ha-per-cell
         create-feature-tests
         link-streams-to-sinks
-        compute-flood-activation-factors
+        compute-floodplain-activation-factors
         make-buckets
         propagate-sediment!
         assign-sediment-to-floodplain-users!)))

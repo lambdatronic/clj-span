@@ -118,10 +118,10 @@
 
 (defn handle-sink-effects!
   [current-id
-   {:keys [floodplain-sink-caps highland-sink-caps]}
+   {:keys [floodplain-sink-caps overland-sink-caps]}
    {:keys [actual-weight sink-effects stream-bound?] :as floodwater-carrier}]
   (if (not= actual-weight _0_)
-    (if-let [sink-cap-ref ((if stream-bound? floodplain-sink-caps highland-sink-caps) current-id)]
+    (if-let [sink-cap-ref ((if stream-bound? floodplain-sink-caps overland-sink-caps) current-id)]
       (let [[new-actual-weight actual-sink] (calculate-sink! actual-weight sink-cap-ref)]
         (assoc floodwater-carrier
           :actual-weight new-actual-weight
@@ -216,13 +216,13 @@
   (select-keys params [:use-stream-intakes :use-AFs :cache-layer]))
 
 (defn make-buckets
-  "Stores maps from {ids -> mm3-ref} for highland-sink-caps and floodplain-sink-caps in params."
+  "Stores maps from {ids -> mm3-ref} for overland-sink-caps and floodplain-sink-caps in params."
   [{:keys [sink-layer sink-points sink-AFs sink-stream-intakes in-floodplain? mm2-per-cell] :as params}]
   (let [in-stream-points     (keys sink-stream-intakes)
         total-sink-by-intake (for [id in-stream-points :let [floodplain-sink-ids (sink-stream-intakes id)]]
                                (reduce _+_ (map #(*_ (sink-AFs %) (get-in sink-layer %)) floodplain-sink-ids)))]
     (assoc params
-      :highland-sink-caps   (seq2map (remove in-floodplain? sink-points) (fn [id] [id (ref (*_ mm2-per-cell (get-in sink-layer id)))]))
+      :overland-sink-caps   (seq2map (remove in-floodplain? sink-points) (fn [id] [id (ref (*_ mm2-per-cell (get-in sink-layer id)))]))
       :floodplain-sink-caps (into {} (map (fn [stream-id total-sink] [stream-id (ref (*_ mm2-per-cell total-sink))])
                                           in-stream-points
                                           total-sink-by-intake)))))
@@ -237,9 +237,9 @@
     (first (remove in-floodplain? (find-line-between inside-id outside-id)))))
 
 ;; FIXME: Should we be considering the elevation of our data-point?
-(defn compute-flood-activation-factors
+(defn compute-floodplain-activation-factors
   [in-floodplain? stream-intakes stream-intakes-label]
-  (with-message (str "Computing flood activation factors for " stream-intakes-label "...\n") "\nAll done."
+  (with-message (str "Computing floodplain activation factors for " stream-intakes-label "...\n") "\nAll done."
     (into {}
           (with-progress-bar-cool
             :keep
@@ -255,7 +255,7 @@
                 [sink-id (- 1.0 (/ (euclidean-distance stream-id sink-id)
                                    (euclidean-distance stream-id (get-boundary-id stream-id sink-id in-floodplain?))))]))))))
 
-(defn compute-sink-and-use-flood-activation-factors
+(defn compute-sink-and-use-floodplain-activation-factors
   "Stores maps under (params :sink-AFs) and (params :use-AFs) of
    {floodplain-sink-ids -> AF} and {floodplain-use-ids -> AF}
    respectively, where AF is a number between 0.0 and 1.0,
@@ -263,8 +263,8 @@
    stream edge (1.0) and the floodplain boundary (0.0)."
   [{:keys [in-floodplain? sink-stream-intakes use-stream-intakes] :as params}]
   (assoc params
-    :sink-AFs (compute-flood-activation-factors in-floodplain? sink-stream-intakes "sinks")
-    :use-AFs  (compute-flood-activation-factors in-floodplain? use-stream-intakes  "users")))
+    :sink-AFs (compute-floodplain-activation-factors in-floodplain? sink-stream-intakes "sinks")
+    :use-AFs  (compute-floodplain-activation-factors in-floodplain? use-stream-intakes  "users")))
 
 (defn find-nearest-stream-points
   [in-stream? levee? rows cols floodplain-points floodplain-points-label]
@@ -322,7 +322,7 @@
         compute-mm2-per-cell
         create-feature-tests
         link-streams-to-sinks-and-users
-        compute-sink-and-use-flood-activation-factors
+        compute-sink-and-use-floodplain-activation-factors
         make-buckets
         propagate-floodwater!
         assign-floodwater-to-floodplain-users!)))
