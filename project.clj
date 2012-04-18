@@ -14,4 +14,5 @@ Johnson et al.)
   :dependencies [[org.clojure/clojure "1.0.0"]]
   :checksum-deps false
   ;; :warn-on-reflection true
+  ;; :omit-source true
   :main clj-span.commandline)
