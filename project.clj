@@ -15,6 +15,8 @@ Johnson et al.)
                      [incanter/incanter-core      "1.2.4"]
                      [incanter/incanter-charts    "1.2.4"]]
   :dev-dependencies [[clj-ns-browser "1.1.0"]] ; to use: (use 'clj-ns-browser.sdoc) (sdoc)
+  :license          {:name "GNU General Public License v3"
+                     :url "http://www.gnu.org/licenses/gpl.html"}
   :checksum-deps    false
   ;; :warn-on-reflection true
   ;; :omit-source true
