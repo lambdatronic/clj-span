@@ -11,7 +11,9 @@ Attribution Networks (SPANs): Spatially Quantifying the Flow of
 Ecosystem Services from Landscapes to People' (Springer LNCS 2010 -
 Johnson et al.)
 ----------------------------------------------------------------------"
-  :dependencies [[org.clojure/clojure "1.0.0"]]
+  :dependencies  [[org.clojure/clojure "1.0.0"]]
+  :license       {:name "GNU General Public License v3"
+                  :url "http://www.gnu.org/licenses/gpl.html"}
   :checksum-deps false
   ;; :warn-on-reflection true
   ;; :omit-source true
