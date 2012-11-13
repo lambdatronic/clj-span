@@ -1,7 +1,11 @@
-resources/pics
-autodoc
 pom.xml
-clj-span*jar
-lib
-classes
-.lein-deps-sum
+*jar
+/classes/
+/.lein-deps-sum
+/.lein-failures
+/.lein-env
+/checkouts
+/.env
+/target
+/resources/pics
+/autodoc

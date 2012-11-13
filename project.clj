@@ -1,4 +1,4 @@
-(defproject clj-span "1.0.0-SNAPSHOT"
+(defproject clj-span/clj-span "1.0.0-SNAPSHOT"
   :description
 "clj-span - SPAN models for Ecosystem Service Assessment
 Copyright 2009-2012 Gary W. Johnson (gjohnson@green-compass.org)
@@ -11,13 +11,10 @@ Attribution Networks (SPANs): Spatially Quantifying the Flow of
 Ecosystem Services from Landscapes to People' (Springer LNCS 2010 -
 Johnson et al.)
 ----------------------------------------------------------------------"
-  :dependencies     [[org.clojure/clojure "1.3.0"]
-                     [incanter/incanter-core      "1.2.4"]
-                     [incanter/incanter-charts    "1.2.4"]]
-  :dev-dependencies [[clj-ns-browser "1.1.0"]] ; to use: (use 'clj-ns-browser.sdoc) (sdoc)
-  :license          {:name "GNU General Public License v3"
-                     :url "http://www.gnu.org/licenses/gpl.html"}
-  :checksum-deps    false
+  :license {:name "GNU General Public License v3",
+            :url "http://www.gnu.org/licenses/gpl.html"}
+  :dependencies [[org.clojure/clojure "1.4.0"]]
+  :min-lein-version "2.0.0"
   ;; :warn-on-reflection true
   ;; :omit-source true
   :main clj-span.commandline)

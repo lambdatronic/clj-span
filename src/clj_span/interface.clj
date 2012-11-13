@@ -23,8 +23,8 @@
 
 (ns clj-span.interface
   (:use [clojure.java.io     :as io]
-        [clj-misc.utils      :only (& p mapmap)]
-        [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)]
+        [clj-misc.utils      :only (& p mapmap mapmap-java arrayify)]
+        [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map map-matrix print-matrix get-rows get-cols in-bounds?)]
         [clj-span.gui        :only (draw-layer write-layer-to-file)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
@@ -206,4 +206,16 @@
                  :varprop  vp/_0_
                  :randvars rv/_0_)]
        (& (p matrix2coord-map _0_) closure)))
+   results-menu))
+
+(defmethod provide-results :java-hashmap
+  [_ value-type _ _ _ _ results-menu]
+  (println "Returning the results map via the java-span-bridge API.")
+  (mapmap-java
+   (& name label-to-keyword)
+   (fn [closure]
+     (case value-type
+       :numbers  (arrayify (closure))
+       :varprop  (arrayify (map-matrix (p mapmap-java name double) (closure)))
+       :randvars (arrayify (map-matrix (p mapmap-java double double) (closure)))))
    results-menu))
