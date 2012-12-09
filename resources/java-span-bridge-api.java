@@ -144,7 +144,7 @@ String benefitType = ...;
 //
 // randvars: as discrete distributions of numeric state -> probability
 //
-// varprop: as pairs of mean and standard deviation
+// varprop: as pairs of mean and variance
 //
 // numbers: as deterministic double values
 String valueType = ...;
@@ -217,8 +217,8 @@ HashMap<String,Object> resultMap = clj-span.core.java-span-bridge(spanParams);
 //           probability distribution in each cell of the matrix.
 //
 // varprop: A 2D HashMap<String,Double> array with fields "mean" and
-//          "var" containing the mean and standard deviation values in
-//          each cell of the matrix.
+//          "var" containing the mean and variance values in each cell
+//          of the matrix.
 //
 // numbers: A 2D Double array containing the deterministic values in
 //          each cell of the matrix.
