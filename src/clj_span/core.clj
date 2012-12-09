@@ -278,7 +278,7 @@
                       "CoastalStormMovement"
                       "SubsistenceFishAccessibility"}
                     flow-model)
-         (contains? #{:cli-menu :closure-map} result-type)
+         (contains? #{:cli-menu :closure-map :java-hashmap} result-type)
          (contains? #{true false nil} animation?)]}
   params)
 
@@ -303,9 +303,9 @@
        generate-results-map
        (provide-results result-type value-type source-layer sink-layer use-layer flow-layers)))
 
-(defn NaNs-to-zero
-  [doubles]
-  (map #(if (Double/isNaN %) 0.0 %) doubles))
+(defn NaN-to-zero
+  [double]
+  (if (Double/isNaN double) 0.0 double))
 
 (defn unpack-layer
   [value-type layer]
@@ -327,7 +327,7 @@
                         :randvars #(rv/make-randvar :discrete 1 [%])
                         :varprop  #(vp/fuzzy-number % 0.0)
                         :numbers  identity)]
-        (map-matrix (& unpack-fn NaNs-to-zero) layer)))))
+        (map-matrix (& unpack-fn NaN-to-zero) layer)))))
 
 (defn unpack-layer-map
   [value-type layer-map]

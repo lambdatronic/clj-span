@@ -106,7 +106,14 @@
                   converted from mixed-case strings to lowercase
                   keywords and matrices (vals) are transformed into
                   maps of {[i j] -> RV}, excluding all locations
-                  whose values equal _0_."
+                  whose values equal _0_.
+
+   :java-hashmap = Transforms the results-menu into the new Java
+                   generic form. That is, labels (keys) in the map are
+                   converted from mixed-case strings to lowercase
+                   strings and matrices (vals) are transformed into
+                   Java 2D arrays with cell values determined by
+                   value-type."
   (fn [result-type value-type source-layer sink-layer use-layer flow-layers results-menu] result-type))
 
 (defn get-max-scale
