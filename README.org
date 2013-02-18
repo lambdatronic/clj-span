@@ -9,14 +9,14 @@ simulation models (line-of-sight, proximity, carbon, flood-water,
 surface-water, sediment, coastal-storm-protection, and
 subsistence-fisheries) and visualize their results as map outputs.
 
-Copyright Gary W. Johnson (gjohnson@green-compass.org) 2009-2012
+Copyright Gary W. Johnson (gjohnson@green-compass.org) 2009-2013
 
 * Usage
 
 To run clj-span, you will need:
 
 1) Sun's JDK 1.6+
-2) clj-span-standalone.jar (contains clojure-1.3)
+2) clj-span-standalone.jar (contains clojure-1.5)
 
 Then simply place clj-span-standalone.jar on your classpath and fire
 up your JVM as follows:

@@ -1,10 +1,10 @@
-/*********************************************************
- ** How to use clj-span.core/java-span-bridge from Java **
- ** Author: Gary W. Johnson (lambdatronic@gmail.com)    **
- ** Date: 2012-11-13                                    **
- *********************************************************/
+/*************************************************************
+ ** How to use clj-span.java-span-bridge/run-span from Java **
+ ** Author: Gary W. Johnson (lambdatronic@gmail.com)        **
+ ** Last Updated: 2013-02-18                                **
+ *************************************************************/
 
-import clj-span.core;
+import clj-span.java-span-bridge;
 import java.util.HashMap;
 
 // Create the source, sink, and use layers as 2D arrays. All layers
@@ -187,8 +187,8 @@ spanParams.put("value-type", valueType);
 spanParams.put("flow-model", flowModel);
 spanParams.put("animation?", animation);
 
-// Call clj-span.core's static java-span-bridge method with these parameters.
-HashMap<String,Object> resultMap = clj-span.core.java-span-bridge(spanParams);
+// Call clj-span.java-span.bridge's static run-span method with these parameters.
+HashMap<String,Object> resultMap = clj-span.java-span-bridge.run-span(spanParams);
 
 // The keys in the result map are as follows:
 //
