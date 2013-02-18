@@ -13,7 +13,7 @@ Johnson et al.)
 ----------------------------------------------------------------------"
   :license {:name "GNU General Public License v3",
             :url "http://www.gnu.org/licenses/gpl.html"}
-  :dependencies [[org.clojure/clojure "1.4.0"]]
+  :dependencies [[org.clojure/clojure "1.5.0-RC16"]]
   :min-lein-version "2.0.0"
   ;; :warn-on-reflection true
   ;; :omit-source true
