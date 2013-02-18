@@ -7,43 +7,55 @@
 import clj-span.java-span-bridge;
 import java.util.HashMap;
 
-// Create the source, sink, and use layers as 2D arrays. All layers
-// must have the same number of rows and columns. Only sinkLayer may
-// be null.
+// Create the source, sink, and use layers as 1D double arrays. All
+// layers must have the same number of cells. Only sinkLayer may be
+// null. These 1D arrays will be converted by the SPAN input
+// preprocessor into 2D matrices using the following projection:
+//
+//   x = offset % cols
+//   y = rows - floor(offset/cols) - 1;
+//
+// Obviously, in order for this to work correctly, you must pass in
+// the rows and cols values shared by all the layers as integers.
+
+int rows = ...;
+int cols = ...;
 
 // If you are passing in a deterministic layer, simply represent it as
-// a 2D double array like so:
-double[][] sourceLayer = ...;
-double[][] sinkLayer = ...;
-double[][] useLayer = ...;
+// a 1D double array like so:
+double[] sourceLayer = ...;
+double[] sinkLayer = ...;
+double[] useLayer = ...;
 
 // If you are passing in a probabilistic layer, represent it as a
 // HashMap<String,Object> with keys "bounds" and "probs". The "bounds"
 // value should be a double array containing the breakpoints which
 // divide the state space into discrete ranges. The "probs" value
-// should be a 3D double array containing the probability densities
-// associated with these ranges in each cell in the layer. That is,
-// with indeces i,j,k into this array, i is the row value, j is the
-// column value, and k is the state range. The sum of the probability
-// densities for all k at each location i,j should equal 1. Note that
-// the length of the "bounds" array should be one larger than that of
-// the 3rd level of the "probs" array.
+// should be a 2D double array containing the probability densities
+// associated with these ranges in each cell in the layer.
+//
+// That is, with indeces i,j into this array, i is the offset
+// (converted to x,y using the formula above) and j is the state
+// range. The sum of the probability densities for all j at each
+// offset i should equal 1. Note that the length of the "bounds" array
+// should be one greater than that of the 2nd level of the "probs"
+// array.
 HashMap<String,Object> probLayer = new HashMap<String,Object>();
 double[] bounds = ...;
-double[][][] probs = ...;
+double[][] probs = ...;
 probLayer.put("bounds", bounds);
 probLayer.put("probs", probs);
 
-// Create the routing layers as 2D double arrays. All layers must have
-// the same number of rows and columns (which must also match those of
-// the source, sink, and use layers). All values in these arrays must
-// be greater than or equal to 0.
-double[][] altitudeLayer = ...;
-double[][] streamsLayer = ...;
+// Create the routing layers as 1D double arrays (provided they are
+// deterministic, of course). All layers must have the same number of
+// cells as the source, sink, and use layers. All values in these
+// arrays must be greater than or equal to 0.
+double[] altitudeLayer = ...;
+double[] streamsLayer = ...;
 
 // Pack the routing layers into a HashMap by concept name. If no
 // routing layers are needed, simply create an empty HashMap.
-HashMap<String,double[][]> = new HashMap<String,double[][]>();
+HashMap<String,double[]> = new HashMap<String,double[]>();
 flowLayers.put("Altitude", altitudeLayer);
 flowLayers.put("River", streamsLayer);
 
@@ -171,6 +183,8 @@ spanParams.put("source-layer", sourceLayer);
 spanParams.put("sink-layer", sinkLayer);
 spanParams.put("use-layer", useLayer);
 spanParams.put("flow-layers", flowLayers);
+spanParams.put("rows", rows);
+spanParams.put("cols", cols);
 spanParams.put("source-threshold", sourceThreshold);
 spanParams.put("sink-threshold", sinkThreshold);
 spanParams.put("use-thresthold", useThreshold);

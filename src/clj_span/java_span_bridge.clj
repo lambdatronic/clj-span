@@ -24,7 +24,7 @@
 (ns clj-span.java-span-bridge
   (:gen-class)
   (:use [clj-misc.utils      :only (p & with-message mapmap)]
-        [clj-misc.matrix-ops :only (map-matrix)])
+        [clj-misc.matrix-ops :only (make-matrix)])
   (:require [clj-span.core :as core]
             (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
@@ -32,12 +32,20 @@
   [double]
   (if (Double/isNaN double) 0.0 double))
 
+(defn offset-to-xy
+  [rows cols offset]
+  [(mod offset cols) (- rows (quot offset cols) 1)])
+
+(defn xy-to-offset
+  [rows cols x y]
+  (+ (* (- rows y 1) cols) x))
+
 (defn unpack-layer
-  [value-type layer]
+  [value-type rows cols layer]
   (if (instance? java.util.HashMap layer)
     (with-message "Unpacking Bayesian datasource..." "done."
       (let [bounds                (get layer "bounds") ; double[]
-            probs-layer           (get layer "probs")  ; double[][][]
+            probs-layer           (get layer "probs")  ; double[][]
             unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
             unbounded-from-above? (== Double/POSITIVE_INFINITY (last  bounds))
             unpack-fn             (case value-type
@@ -46,28 +54,39 @@
                                     :numbers  #(if % (nb/create-from-ranges bounds %) nb/_0_))]
         (if (or unbounded-from-below? unbounded-from-above?)
           (throw (Exception. "All undiscretized bounds must be closed above and below."))
-          (map-matrix unpack-fn probs-layer))))
+          (make-matrix rows cols
+                       (fn [[y x]]
+                         (->> (xy-to-offset rows cols x y)
+                              (aget probs-layer)
+                              unpack-fn))))))
     (with-message "Unpacking deterministic datasource..." "done."
       (let [unpack-fn (case value-type
                         :randvars #(rv/make-randvar :discrete 1 [%])
                         :varprop  #(vp/fuzzy-number % 0.0)
                         :numbers  identity)]
-        (map-matrix (& unpack-fn NaN-to-zero) layer)))))
+        (make-matrix rows cols
+                     (fn [[y x]]
+                       (->> (xy-to-offset rows cols x y)
+                            (aget layer)
+                            NaN-to-zero
+                            unpack-fn)))))))
 
 (defn unpack-layer-map
-  [value-type layer-map]
-  (mapmap identity (p unpack-layer value-type) layer-map))
+  [value-type rows cols layer-map]
+  (mapmap identity (p unpack-layer value-type rows cols) layer-map))
 
 (defn run-span
-  [{:strs [source-layer sink-layer use-layer flow-layers
+  [{:strs [source-layer sink-layer use-layer flow-layers rows cols
            source-threshold sink-threshold use-threshold trans-threshold
            cell-width cell-height rv-max-states downscaling-factor
            source-type sink-type use-type benefit-type
            value-type flow-model animation?]}]
-  (core/run-span {:source-layer       (unpack-layer (keyword value-type) source-layer)
-                  :sink-layer         (unpack-layer (keyword value-type) sink-layer)
-                  :use-layer          (unpack-layer (keyword value-type) use-layer)
-                  :flow-layers        (unpack-layer-map (keyword value-type) flow-layers)
+  (core/run-span {:source-layer       (unpack-layer (keyword value-type) rows cols source-layer)
+                  :sink-layer         (unpack-layer (keyword value-type) rows cols sink-layer)
+                  :use-layer          (unpack-layer (keyword value-type) rows cols use-layer)
+                  :flow-layers        (unpack-layer-map (keyword value-type) rows cols flow-layers)
+                  :rows               rows
+                  :cols               cols
                   :source-threshold   source-threshold
                   :sink-threshold     sink-threshold
                   :use-threshold      use-threshold
