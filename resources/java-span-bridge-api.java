@@ -177,6 +177,28 @@ String flowModel = ...;
 // not very pretty, but sometimes it's informative.
 boolean animation = ...;
 
+// Finally, decide which result layers you want to compute. This
+// should be a String[] containing 0 or more of the following options.
+//
+//   "theoretical-source"
+//   "inaccessible-source"
+//   "possible-source"
+//   "blocked-source"
+//   "actual-source"
+//   "theoretical-sink"
+//   "inaccessible-sink"
+//   "actual-sink"
+//   "theoretical-use"
+//   "inaccessible-use"
+//   "possible-use"
+//   "blocked-use"
+//   "actual-use"
+//   "possible-flow"
+//   "blocked-flow"
+//   "actual-flow"
+
+String[] resultLayers = ...;
+
 // Pack all of the SPAN parameters into a HashMap.
 HashMap<String,Object> spanParams = new HashMap<String,Object>;
 spanParams.put("source-layer", sourceLayer);
@@ -200,39 +222,27 @@ spanParams.put("benefit-type", benefitType);
 spanParams.put("value-type", valueType);
 spanParams.put("flow-model", flowModel);
 spanParams.put("animation?", animation);
+spanParams.put("result-layers", resultLayers);
 
 // Call clj-span.java-span.bridge's static run-span method with these parameters.
 HashMap<String,Object> resultMap = clj-span.java-span-bridge.run-span(spanParams);
 
-// The keys in the result map are as follows:
+// The keys in the result map will be those strings included in
+// resultLayers.
 //
-//   "theoretical-source"
-//   "inaccessible-source"
-//   "possible-source"
-//   "blocked-source"
-//   "actual-source"
-//   "theoretical-sink"
-//   "inaccessible-sink"
-//   "actual-sink"
-//   "theoretical-use"
-//   "inaccessible-use"
-//   "possible-use"
-//   "blocked-use"
-//   "actual-use"
-//   "possible-flow"
-//   "blocked-flow"
-//   "actual-flow"
-//
-// The values in the result-map will depend on whether value-type was
+// The values in the result map will depend on whether value-type was
 // set to "randvars", "varprop", or "numbers" as described below:
 //
-// randvars: A 2D HashMap<Double,Double> array with keys representing
+// randvars: A 1D HashMap<Double,Double> array with keys representing
 //           discrete numeric states and values representing the
 //           probability distribution in each cell of the matrix.
 //
-// varprop: A 2D HashMap<String,Double> array with fields "mean" and
+// varprop: A 1D HashMap<String,Double> array with fields "mean" and
 //          "var" containing the mean and variance values in each cell
 //          of the matrix.
 //
-// numbers: A 2D Double array containing the deterministic values in
+// numbers: A 1D Double array containing the deterministic values in
 //          each cell of the matrix.
+//
+// All offsets into these arrays share the same x,y projection as that
+// used by the input layers.

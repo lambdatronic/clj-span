@@ -107,9 +107,8 @@
       "Finished generating result maps."
       (apply array-map
              (mapcat (fn [[label f]]
-                       (with-message (str "Producing " label "...") "done"
-                         (let [layer (f params)]
-                           [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler layer)])))
+                       (with-message (str "Adding " label " to computable outputs...") "done"
+                         [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler (f params))]))
                      (array-map
                       "Source - Theoretical"  theoretical-source
                       "Source - Inaccessible" inaccessible-source

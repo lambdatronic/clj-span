@@ -23,8 +23,8 @@
 
 (ns clj-span.interface
   (:use [clojure.java.io     :as io]
-        [clj-misc.utils      :only (& p mapmap mapmap-java arrayify)]
-        [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map map-matrix print-matrix get-rows get-cols in-bounds?)]
+        [clj-misc.utils      :only (& p mapmap)]
+        [clj-misc.matrix-ops :only (matrix2seq matrix2coord-map print-matrix get-rows get-cols in-bounds?)]
         [clj-span.gui        :only (draw-layer write-layer-to-file)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
 
@@ -111,9 +111,9 @@
    :java-hashmap = Transforms the results-menu into the new Java
                    generic form. That is, labels (keys) in the map are
                    converted from mixed-case strings to lowercase
-                   strings and matrices (vals) are transformed into
-                   Java 2D arrays with cell values determined by
-                   value-type."
+                   strings and vals are left as unevaluated closures.
+                   These will be further postprocessed by
+                   clj-span.java-span-bridge/postprocess-results."
   (fn [result-type value-type source-layer sink-layer use-layer flow-layers results-menu] result-type))
 
 (defn get-max-scale
@@ -216,13 +216,6 @@
    results-menu))
 
 (defmethod provide-results :java-hashmap
-  [_ value-type _ _ _ _ results-menu]
+  [_ _ _ _ _ _ results-menu]
   (println "Returning the results map via the java-span-bridge API.")
-  (mapmap-java
-   (& name label-to-keyword)
-   (fn [closure]
-     (case value-type
-       :numbers  (arrayify (closure))
-       :varprop  (arrayify (map-matrix (p mapmap-java name double) (closure)))
-       :randvars (arrayify (map-matrix (p mapmap-java double double) (closure)))))
-   results-menu))
+  (mapmap (& name label-to-keyword) identity results-menu))

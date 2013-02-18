@@ -23,7 +23,7 @@
 
 (ns clj-span.java-span-bridge
   (:gen-class)
-  (:use [clj-misc.utils      :only (p & with-message mapmap)]
+  (:use [clj-misc.utils      :only (p & with-message mapmap mapmap-java)]
         [clj-misc.matrix-ops :only (make-matrix)])
   (:require [clj-span.core :as core]
             (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
@@ -32,74 +32,94 @@
   [double]
   (if (Double/isNaN double) 0.0 double))
 
-(defn offset-to-xy
+(defn offset-to-yx
   [rows cols offset]
-  [(mod offset cols) (- rows (quot offset cols) 1)])
+  [(- rows (quot offset cols) 1) (mod offset cols)])
 
-(defn xy-to-offset
-  [rows cols x y]
+(defn yx-to-offset
+  [rows cols y x]
   (+ (* (- rows y 1) cols) x))
 
 (defn unpack-layer
   [value-type rows cols layer]
-  (if (instance? java.util.HashMap layer)
-    (with-message "Unpacking Bayesian datasource..." "done."
-      (let [bounds                (get layer "bounds") ; double[]
-            probs-layer           (get layer "probs")  ; double[][]
-            unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
-            unbounded-from-above? (== Double/POSITIVE_INFINITY (last  bounds))
-            unpack-fn             (case value-type
-                                    :randvars #(if % (rv/create-from-ranges bounds %) rv/_0_)
-                                    :varprop  #(if % (vp/create-from-ranges bounds %) vp/_0_)
-                                    :numbers  #(if % (nb/create-from-ranges bounds %) nb/_0_))]
-        (if (or unbounded-from-below? unbounded-from-above?)
-          (throw (Exception. "All undiscretized bounds must be closed above and below."))
+  (when layer
+    (if (instance? java.util.HashMap layer)
+      (with-message "Unpacking Bayesian datasource..." "done."
+        (let [bounds                (get layer "bounds") ; double[]
+              probs-layer           (get layer "probs")  ; double[][]
+              unbounded-from-below? (== Double/NEGATIVE_INFINITY (first bounds))
+              unbounded-from-above? (== Double/POSITIVE_INFINITY (last  bounds))
+              unpack-fn             (case value-type
+                                      :randvars #(if % (rv/create-from-ranges bounds %) rv/_0_)
+                                      :varprop  #(if % (vp/create-from-ranges bounds %) vp/_0_)
+                                      :numbers  #(if % (nb/create-from-ranges bounds %) nb/_0_))]
+          (if (or unbounded-from-below? unbounded-from-above?)
+            (throw (Exception. "All undiscretized bounds must be closed above and below."))
+            (make-matrix rows cols
+                         (fn [[y x]]
+                           (->> (yx-to-offset rows cols y x)
+                                (aget probs-layer)
+                                unpack-fn))))))
+      (with-message "Unpacking deterministic datasource..." "done."
+        (let [unpack-fn (case value-type
+                          :randvars #(rv/make-randvar :discrete 1 [%])
+                          :varprop  #(vp/fuzzy-number % 0.0)
+                          :numbers  identity)]
           (make-matrix rows cols
                        (fn [[y x]]
-                         (->> (xy-to-offset rows cols x y)
-                              (aget probs-layer)
-                              unpack-fn))))))
-    (with-message "Unpacking deterministic datasource..." "done."
-      (let [unpack-fn (case value-type
-                        :randvars #(rv/make-randvar :discrete 1 [%])
-                        :varprop  #(vp/fuzzy-number % 0.0)
-                        :numbers  identity)]
-        (make-matrix rows cols
-                     (fn [[y x]]
-                       (->> (xy-to-offset rows cols x y)
-                            (aget layer)
-                            NaN-to-zero
-                            unpack-fn)))))))
+                         (->> (yx-to-offset rows cols y x)
+                              (aget layer)
+                              NaN-to-zero
+                              unpack-fn))))))))
 
 (defn unpack-layer-map
   [value-type rows cols layer-map]
   (mapmap identity (p unpack-layer value-type rows cols) layer-map))
+
+(defn funky-matrix2seq
+  [rows cols matrix]
+  (map #(get-in matrix (offset-to-yx rows cols %))
+       (range (* rows cols))))
+
+(defn pack-layer
+  [value-type rows cols closure]
+  (let [result-seq (funky-matrix2seq rows cols (closure))]
+    (case value-type
+      "numbers"  (into-array result-seq)
+      "varprop"  (into-array (map (p mapmap-java name double) result-seq))
+      "randvars" (into-array (map (p mapmap-java double double) result-seq)))))
+
+(defn postprocess-results
+  [value-type rows cols result-layers result-map]
+  (mapmap-java
+   (fn [label] (println (str "Computing " label "...")) label)
+   (p pack-layer value-type rows cols)
+   (select-keys result-map result-layers)))
 
 (defn run-span
   [{:strs [source-layer sink-layer use-layer flow-layers rows cols
            source-threshold sink-threshold use-threshold trans-threshold
            cell-width cell-height rv-max-states downscaling-factor
            source-type sink-type use-type benefit-type
-           value-type flow-model animation?]}]
-  (core/run-span {:source-layer       (unpack-layer (keyword value-type) rows cols source-layer)
-                  :sink-layer         (unpack-layer (keyword value-type) rows cols sink-layer)
-                  :use-layer          (unpack-layer (keyword value-type) rows cols use-layer)
-                  :flow-layers        (unpack-layer-map (keyword value-type) rows cols flow-layers)
-                  :rows               rows
-                  :cols               cols
-                  :source-threshold   source-threshold
-                  :sink-threshold     sink-threshold
-                  :use-threshold      use-threshold
-                  :trans-threshold    trans-threshold
-                  :cell-width         cell-width
-                  :cell-height        cell-height
-                  :rv-max-states      rv-max-states
-                  :downscaling-factor downscaling-factor
-                  :source-type        (keyword source-type)
-                  :sink-type          (keyword sink-type)
-                  :use-type           (keyword use-type)
-                  :benefit-type       (keyword benefit-type)
-                  :value-type         (keyword value-type)
-                  :flow-model         flow-model
-                  :animation?         animation?
-                  :result-type        :java-hashmap}))
+           value-type flow-model animation? result-layers]}]
+  (postprocess-results value-type rows cols result-layers
+                       (core/run-span {:source-layer       (unpack-layer (keyword value-type) rows cols source-layer)
+                                       :sink-layer         (unpack-layer (keyword value-type) rows cols sink-layer)
+                                       :use-layer          (unpack-layer (keyword value-type) rows cols use-layer)
+                                       :flow-layers        (unpack-layer-map (keyword value-type) rows cols flow-layers)
+                                       :source-threshold   source-threshold
+                                       :sink-threshold     sink-threshold
+                                       :use-threshold      use-threshold
+                                       :trans-threshold    trans-threshold
+                                       :cell-width         cell-width
+                                       :cell-height        cell-height
+                                       :rv-max-states      rv-max-states
+                                       :downscaling-factor downscaling-factor
+                                       :source-type        (keyword source-type)
+                                       :sink-type          (keyword sink-type)
+                                       :use-type           (keyword use-type)
+                                       :benefit-type       (keyword benefit-type)
+                                       :value-type         (keyword value-type)
+                                       :flow-model         flow-model
+                                       :animation?         animation?
+                                       :result-type        :java-hashmap})))
