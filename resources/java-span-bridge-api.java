@@ -4,7 +4,7 @@
  ** Last Updated: 2013-02-18                                **
  *************************************************************/
 
-import clj-span.java-span-bridge;
+import clj_span.java_span_bridge;
 import java.util.HashMap;
 
 // Create the source, sink, and use layers as 1D double arrays. All

@@ -17,4 +17,5 @@ Johnson et al.)
   :min-lein-version "2.0.0"
   ;; :warn-on-reflection true
   ;; :omit-source true
+  :aot [clj-span.commandline clj-span.java-span-bridge]
   :main clj-span.commandline)
