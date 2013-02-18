@@ -34,7 +34,8 @@
 
 (ns clj-span.models.line-of-sight
   (:use [clj-misc.utils      :only (euclidean-distance p def- between? with-progress-bar-cool with-message)]
-        [clj-misc.matrix-ops :only (find-line-between get-line-fn)]))
+        [clj-misc.matrix-ops :only (find-line-between get-line-fn)])
+  (:require [clojure.core.reducers :as r]))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier with-typed-math-syms))
 
@@ -129,6 +130,9 @@
           view-distance   (euclidean-distance use-loc-in-m source-loc-in-m)
           distance-decay  (source-decay view-distance)]
       (if (pos? distance-decay) ;; are we in range?
+        ;; FIXME: Inefficient, lazy seq calculations that hold all the
+        ;;        heads. Try reducers and threading instead. Also try
+        ;;        transients or reductions on the final reduce.
         (let [sight-line      (rest (find-line-between use-point source-point))
               use-elev        (get-in elev-layer use-point)
               elevs           (map (p get-in elev-layer) sight-line)
@@ -149,6 +153,8 @@
                                                        (last sight-slopes)
                                                        (last runs)))]
           (when (_> possible-weight trans-threshold)
+            ;; FIXME: Consing up memory for the sink-effects map.
+            ;;        Store this in a tripartite graph instead.
             (let [sink-effects  (into {}
                                       (map #(let [sink-value (get-in sink-layer %1)]
                                               (if (not= sink-value _0_)
@@ -172,6 +178,9 @@
                  (commute (get-in possible-flow-layer id) _+_ possible-weight)
                  (if (not= _0_ actual-weight)
                    (commute (get-in actual-flow-layer id) _+_ actual-weight)))
+               ;; FIXME: Conjing the new carrier onto the cache layer.
+               ;;        Eliminate this cache-layer thing and replace
+               ;;        it with a tripartite graph.
                (commute (get-in cache-layer use-point) conj carrier)))))))))
 
 (defmethod distribute-flow! "LineOfSight"
@@ -187,6 +196,7 @@
           (with-progress-bar-cool
             :drop
             num-view-lines
+            ;; FIXME: Try r/fold here instead for greater efficiency.
             (pmap (fn [[source-point use-point]]
                     (raycast!
                      source-layer
