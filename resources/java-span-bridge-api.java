@@ -1,5 +1,5 @@
 /*************************************************************
- ** How to use clj-span.java-span-bridge/run-span from Java **
+ ** How to use clj_span.java_span_bridge/runSpan from Java **
  ** Author: Gary W. Johnson (lambdatronic@gmail.com)        **
  ** Last Updated: 2013-02-18                                **
  *************************************************************/
@@ -55,7 +55,7 @@ double[] streamsLayer = ...;
 
 // Pack the routing layers into a HashMap by concept name. If no
 // routing layers are needed, simply create an empty HashMap.
-HashMap<String,double[]> = new HashMap<String,double[]>();
+HashMap<String,double[]> flowLayers = new HashMap<String,double[]>();
 flowLayers.put("Altitude", altitudeLayer);
 flowLayers.put("River", streamsLayer);
 
@@ -200,7 +200,7 @@ boolean animation = ...;
 String[] resultLayers = ...;
 
 // Pack all of the SPAN parameters into a HashMap.
-HashMap<String,Object> spanParams = new HashMap<String,Object>;
+HashMap<String,Object> spanParams = new HashMap<String,Object>();
 spanParams.put("source-layer", sourceLayer);
 spanParams.put("sink-layer", sinkLayer);
 spanParams.put("use-layer", useLayer);
@@ -224,8 +224,8 @@ spanParams.put("flow-model", flowModel);
 spanParams.put("animation?", animation);
 spanParams.put("result-layers", resultLayers);
 
-// Call clj-span.java-span.bridge's static run-span method with these parameters.
-HashMap<String,Object> resultMap = clj-span.java-span-bridge.run-span(spanParams);
+// Call clj_span.java_span.bridge's static runSpan method with these parameters.
+HashMap<String,Object> resultMap = clj_span.java_span_bridge.runSpan(spanParams);
 
 // The keys in the result map will be those strings included in
 // resultLayers.

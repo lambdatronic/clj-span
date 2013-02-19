@@ -22,11 +22,13 @@
 ;;; external Java programs.
 
 (ns clj-span.java-span-bridge
-  (:gen-class)
   (:use [clj-misc.utils      :only (p & with-message mapmap mapmap-java)]
         [clj-misc.matrix-ops :only (make-matrix)])
   (:require [clj-span.core :as core]
-            (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
+            (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
+  (:gen-class
+   :main false
+   :methods [^{:static true} [runSpan [java.util.HashMap] java.util.HashMap]]))
 
 (defn NaN-to-zero
   [double]
@@ -96,7 +98,7 @@
    (p pack-layer value-type rows cols)
    (select-keys result-map result-layers)))
 
-(defn run-span
+(defn -runSpan
   [{:strs [source-layer sink-layer use-layer flow-layers rows cols
            source-threshold sink-threshold use-threshold trans-threshold
            cell-width cell-height rv-max-states downscaling-factor

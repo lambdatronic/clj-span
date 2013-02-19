@@ -9,3 +9,4 @@ pom.xml
 /target
 /resources/pics
 /autodoc
+/api_test
