@@ -228,8 +228,8 @@
     :as params}]
   (println "Preprocessing the input data layers.")
   (let [[rows cols] ((juxt get-rows get-cols) source-layer)
-        scaled-rows (quot rows downscaling-factor)
-        scaled-cols (quot cols downscaling-factor)
+        scaled-rows (int (quot rows downscaling-factor))
+        scaled-cols (int (quot cols downscaling-factor))
         r-and-z     (p resample-and-zero value-type scaled-rows scaled-cols)]
     (assoc params
       :orig-rows    rows
