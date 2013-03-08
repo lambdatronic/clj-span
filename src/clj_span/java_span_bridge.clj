@@ -94,7 +94,7 @@
 (defn postprocess-results
   [value-type rows cols result-layers result-map]
   (mapmap-java
-   (fn [label] (println (str "Computing " label "...")) label)
+   (fn [label] (println (str "\nComputing " label "...")) label)
    (p pack-layer value-type rows cols)
    (select-keys result-map result-layers)))
 
