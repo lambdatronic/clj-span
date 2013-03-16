@@ -13,8 +13,11 @@ Johnson et al.)
 ----------------------------------------------------------------------"
   :license {:name "GNU General Public License v3",
             :url "http://www.gnu.org/licenses/gpl.html"}
-  :dependencies [[org.clojure/clojure "1.5.0"]]
+  :dependencies [[org.clojure/clojure "1.5.1"]
+                 [meridian/clj-jts "0.0.1"]
+                 [integratedmodelling/thinklab-api "1.0.0"]]
   :min-lein-version "2.0.0"
   :warn-on-reflection true
   :aot [clj-span.commandline clj-span.java-span-bridge]
-  :main clj-span.commandline)
+  :main clj-span.commandline
+  :repositories [["thinklab" "http://integratedmodelling.org/sw/lib"]])
