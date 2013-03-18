@@ -14,16 +14,16 @@
 (use-fixtures :once register-math-syms)
 
 (def source-layer
-  [[0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
-   [0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]])
+  [[0.0 100.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0 100.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]
+   [0.0   0.0 0.0 0.0 0.0 0.0 0.0   0.0 0.0 0.0]])
 
 (def sink-layer
   [[0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]
@@ -104,6 +104,91 @@
   (is (= (find-line-between (first use-points) (second source-points))
          '([8 5] [7 5] [7 6] [6 6] [5 6] [4 6] [4 7] [3 7]))))
 
+(deftest sight-line-splitting-1
+  (let [source-point (first source-points)
+        use-point    (first use-points)
+        sight-line   (rest (find-line-between use-point source-point))]
+    (is (= (split-sight-line elev-layer use-point sight-line)
+           '[([7 5] [7 4])
+             ([6 4] [5 4] [5 3] [4 3] [3 3] [3 2] [2 2] [1 2] [1 1] [0 1])]))))
+
+(deftest sight-line-splitting-2
+  (let [source-point (second source-points)
+        use-point    (first use-points)
+        sight-line   (rest (find-line-between use-point source-point))]
+    (is (= (split-sight-line elev-layer use-point sight-line)
+           '[([7 5])
+             ([7 6] [6 6] [5 6] [4 6] [4 7] [3 7])]))))
+
+(deftest sight-line-pruning-1
+  (let [source-point (first source-points)
+        use-point    (first use-points)
+        sight-line   (rest (find-line-between use-point source-point))
+        use-elev     (get-in elev-layer use-point)
+        use-loc-in-m (to-meters use-point)
+        [initial-view-space sight-line-remainder] (split-sight-line elev-layer use-point sight-line)
+        initial-view-slope                        (_- (_d (_-_ (get-in elev-layer (first sight-line)) use-elev)
+                                                          (euclidean-distance-2 use-loc-in-m (to-meters (first sight-line))))
+                                                      0.01) ;; epsilon to include the first step
+        first-segment                             (prune-hidden-points nil ;; disregard the increasing elevation constraint
+                                                                       initial-view-slope
+                                                                       elev-layer
+                                                                       use-elev
+                                                                       use-loc-in-m
+                                                                       to-meters
+                                                                       initial-view-space)
+        second-segment                            (prune-hidden-points (get-in elev-layer (or (last initial-view-space) use-point))
+                                                                       (:max-slope first-segment)
+                                                                       elev-layer
+                                                                       use-elev
+                                                                       use-loc-in-m
+                                                                       to-meters
+                                                                       sight-line-remainder)]
+    (is (= first-segment  {:max-elev nil
+                           :max-slope -0.04242640687119285
+                           :filtered-line [[[7 5] 3.0 100.0 -0.06999999999999999]
+                                           [[7 4] 3.0 141.4213562373095 -0.06]]}))
+    (is (= second-segment {:max-elev 29.0
+                           :max-slope 0.02480694691784169
+                           :filtered-line [[[6 4] 4.0 223.60679774997897 -0.04242640687119285]
+                                           [[5 4] 5.0 316.22776601683796 -0.022360679774997897]
+                                           [[4 3] 8.0 447.21359549995793 -0.012649110640673516]
+                                           [[3 3] 17.0 538.5164807134504 -0.00223606797749979]
+                                           [[2 2] 22.0 670.820393249937 0.014855627054164149]
+                                           [[1 2] 27.0 761.5773105863908 0.019379255804998177]
+                                           [[1 1] 29.0 806.2257748298549 0.02363515791475006]]}))))
+
+(deftest sight-line-pruning-2
+  (let [source-point (second source-points)
+        use-point    (first use-points)
+        sight-line   (rest (find-line-between use-point source-point))
+        use-elev     (get-in elev-layer use-point)
+        use-loc-in-m (to-meters use-point)
+        [initial-view-space sight-line-remainder] (split-sight-line elev-layer use-point sight-line)
+        initial-view-slope                        (_- (_d (_-_ (get-in elev-layer (first sight-line)) use-elev)
+                                                          (euclidean-distance-2 use-loc-in-m (to-meters (first sight-line))))
+                                                      0.01) ;; epsilon to include the first step
+        first-segment                             (prune-hidden-points nil ;; disregard the increasing elevation constraint
+                                                                       initial-view-slope
+                                                                       elev-layer
+                                                                       use-elev
+                                                                       use-loc-in-m
+                                                                       to-meters
+                                                                       initial-view-space)
+        second-segment                            (prune-hidden-points (get-in elev-layer (or (last initial-view-space) use-point))
+                                                                       (:max-slope first-segment)
+                                                                       elev-layer
+                                                                       use-elev
+                                                                       use-loc-in-m
+                                                                       to-meters
+                                                                       sight-line-remainder)]
+    (is (= first-segment  {:max-elev nil
+                           :max-slope -0.06
+                           :filtered-line [[[7 5] 3.0 100.0 -0.06999999999999999]]}))
+    (is (= second-segment {:max-elev 8.0
+                           :max-slope -0.007071067811865475
+                           :filtered-line [[[7 6] 8.0 141.4213562373095 -0.06]]}))))
+
 (deftest slope-filtering-1
   (let [source-point (first source-points)
         use-point    (first use-points)
@@ -130,21 +215,5 @@
     (is (= (filter-sight-line elev-layer sight-line use-point use-elev use-loc-in-m to-meters)
            [[[7 5] 3.0 100.0 -0.06999999999999999]
             [[7 6] 8.0 141.4213562373095 -0.06]]))))
-
-(deftest sight-line-splitting-1
-  (let [source-point (first source-points)
-        use-point    (first use-points)
-        sight-line   (rest (find-line-between use-point source-point))]
-    (is (= (split-sight-line elev-layer use-point sight-line)
-           '[([7 5] [7 4])
-             ([6 4] [5 4] [5 3] [4 3] [3 3] [3 2] [2 2] [1 2] [1 1] [0 1])]))))
-
-(deftest sight-line-splitting-2
-  (let [source-point (second source-points)
-        use-point    (first use-points)
-        sight-line   (rest (find-line-between use-point source-point))]
-    (is (= (split-sight-line elev-layer use-point sight-line)
-           '[([7 5])
-             ([7 6] [6 6] [5 6] [4 6] [4 7] [3 7])]))))
 
 ;; (run-tests)
