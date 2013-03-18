@@ -329,16 +329,16 @@
 
 (defn between? [low high val] (and (>= val low) (<= val high)))
 
-(defn manhattan-distance-2
-  "Returns the manhattan distance between two 2-dimensional points."
-  [[i1 j1] [i2 j2]]
-  (+ (Math/abs (- i1 i2)) (Math/abs (- j1 j2))))
-
 (defn manhattan-distance
   "Returns the manhattan distance between two n-dimensional points."
   [pointA pointB]
   (constraints-1.0 {:pre [pointA pointB (== (count pointA) (count pointB))]})
   (reduce + (map (fn [a b] (Math/abs (- a b))) pointA pointB)))
+
+(defn manhattan-distance-2
+  "Returns the manhattan distance between two 2-dimensional points."
+  [[i1 j1] [i2 j2]]
+  (+ (Math/abs (- i1 i2)) (Math/abs (- j1 j2))))
 
 (defn square-distance
   [pointA pointB]
@@ -349,6 +349,11 @@
   "Returns the euclidean distance between two n-dimensional points."
   [pointA pointB]
   (Math/sqrt (square-distance pointA pointB)))
+
+(defn euclidean-distance-2
+  "Returns the euclidean distance between two n-dimensional points."
+  [[i1 j1] [i2 j2]]
+  (Math/sqrt (+ (Math/pow (- i1 i2) 2) (Math/pow (- j1 j2) 2))))
 
 (defn metric-distance
   [cell-width cell-height [i1 j1] [i2 j2]]
