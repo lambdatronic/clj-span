@@ -167,8 +167,4 @@
             (doseq [[name _ _] param-tests] (println (find params name)))
             (newline)
             ;; Run the SPAN simulation.
-            (run-span (assoc (strings-to-better-types params) :result-type :cli-menu))
-            ;; Exit cleanly.
-            (shutdown-agents)
-            (flush)
-            (System/exit 0)))))))
+            (run-span (assoc (strings-to-better-types params) :result-type :cli-menu))))))))

@@ -292,11 +292,14 @@
            sink-layer use-layer flow-layers]
     :as params}]
   (set-global-vars! params)
-  (->> params
-       verify-params-or-throw
-       preprocess-data-layers
-       create-simulation-inputs
-       run-simulation
-       deref-result-layers
-       generate-results-map
-       (provide-results result-type value-type source-layer sink-layer use-layer flow-layers)))
+  (let [simulation-results (->> params
+                                verify-params-or-throw
+                                preprocess-data-layers
+                                create-simulation-inputs
+                                run-simulation
+                                deref-result-layers
+                                generate-results-map
+                                (provide-results result-type value-type source-layer sink-layer use-layer flow-layers))]
+    ;; Exit cleanly.
+    (shutdown-agents)
+    (flush)))
