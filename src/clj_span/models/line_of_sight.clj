@@ -128,6 +128,28 @@
     (transient {})
     filtered-sight-line)))
 
+(defn prune-hidden-points
+  [starting-elev starting-slope elev-layer use-elev use-loc-in-m to-meters sight-line-segment]
+  (persistent!
+   (reduce
+    (fn [{:keys [max-elev max-slope filtered-line] :as acc} point]
+      (let [curr-elev (get-in elev-layer point)]
+        (if (or (nil? max-elev)
+                (_>_ curr-elev max-elev))
+          (let [distance   (euclidean-distance-2 use-loc-in-m (to-meters point))
+                curr-slope (_d (_-_ curr-elev use-elev) distance)]
+            (if (_>_ curr-slope max-slope)
+              (assoc! acc
+                      :max-elev      (if (nil? max-elev) max-elev curr-elev)
+                      :max-slope     curr-slope
+                      :filtered-line (conj filtered-line [point curr-elev distance max-slope]))
+              acc))
+          acc)))
+    (transient {:max-elev      starting-elev
+                :max-slope     starting-slope
+                :filtered-line []})
+    sight-line-segment)))
+
 (defn split-sight-line
   [elev-layer use-point sight-line]
   (let [[initial-view-space sight-line-remainder] (split-with (fn [[pointA pointB]]
@@ -136,7 +158,6 @@
     [(map second initial-view-space)
      (map second sight-line-remainder)]))
 
-;; FIXME: Ioannis wants to reduce over the partition rather than the independent line sections.
 (defn filter-sight-line
   "Returns a sequence of 4-tuples of [point elevation distance slope] for all points which can be seen along the sight-line."
   [elev-layer sight-line use-point use-elev use-loc-in-m to-meters]
@@ -144,40 +165,21 @@
         initial-view-slope                        (_- (_d (_-_ (get-in elev-layer (first sight-line)) use-elev)
                                                           (euclidean-distance-2 use-loc-in-m (to-meters (first sight-line))))
                                                       0.01) ;; epsilon to include the first step
-        {:keys [max-slope filtered-line]}         (persistent!
-                                                   (reduce (fn [{:keys [max-slope filtered-line] :as acc} point]
-                                                             (let [curr-elev  (get-in elev-layer point)
-                                                                   distance   (euclidean-distance-2 use-loc-in-m (to-meters point))
-                                                                   curr-slope (_d (_-_ curr-elev use-elev) distance)]
-                                                               (if (_>_ curr-slope max-slope)
-                                                                 (assoc! acc
-                                                                         :max-slope     curr-slope
-                                                                         :filtered-line (conj filtered-line
-                                                                                              [point curr-elev distance max-slope]))
-                                                                 acc)))
-                                                           (transient {:max-slope initial-view-slope :filtered-line []})
-                                                           initial-view-space))]
-    (concat
-     filtered-line
-     (:filtered-line
-      (persistent!
-       (reduce
-        (fn [{:keys [max-elev max-slope filtered-line] :as acc} point]
-          (let [curr-elev (get-in elev-layer point)]
-            (if (_>_ curr-elev max-elev)
-              (let [distance   (euclidean-distance-2 use-loc-in-m (to-meters point))
-                    curr-slope (_d (_-_ curr-elev use-elev) distance)]
-                (if (_>_ curr-slope max-slope)
-                  (assoc! acc
-                          :max-elev      curr-elev
-                          :max-slope     curr-slope
-                          :filtered-line (conj filtered-line [point curr-elev distance max-slope]))
-                  acc))
-              acc)))
-        (transient {:max-elev      (get-in elev-layer (or (last initial-view-space) use-point))
-                    :max-slope     max-slope
-                    :filtered-line []})
-        sight-line-remainder))))))
+        first-segment                             (prune-hidden-points nil ;; disregard the increasing elevation constraint
+                                                                       initial-view-slope
+                                                                       elev-layer
+                                                                       use-elev
+                                                                       use-loc-in-m
+                                                                       to-meters
+                                                                       initial-view-space)
+        second-segment                            (prune-hidden-points (get-in elev-layer (or (last initial-view-space) use-point))
+                                                                       (:max-slope first-segment)
+                                                                       elev-layer
+                                                                       use-elev
+                                                                       use-loc-in-m
+                                                                       to-meters
+                                                                       sight-line-remainder)]
+    (concat (:filtered-line first-segment) (:filtered-line second-segment))))
 
 (defn raycast!
   "Finds a line of sight path between source and use points, checks
@@ -255,5 +257,5 @@
            (r/map (p raycast! (assoc params
                                 :elev-layer  (flow-layers "Altitude")
                                 :water-layer (flow-layers "WaterBodies")
-                                :to-meters   to-meters))
+                                :to-meters   (memoize to-meters)))
                   (select-in-range-views use-points source-points to-meters))))))))
