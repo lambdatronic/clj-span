@@ -74,4 +74,4 @@
 ;; namespaces can be specified as quoted arguments.
 (run-tests)
 
-;; If you've compiled your tests, you can run them with "ant test".
+;; You can also run your tests from the command line with "lein test".

@@ -56,25 +56,25 @@
 (def ^:dynamic _>)
 
 ;; in meters
-(def- half-mile    805.0)
-(def- mile        1610.0)
-(def- _4-miles    6440.0)
-(def- _5-miles    8050.0)
-(def- _15-miles  24150.0)
-(def- _20-miles  32200.0)
-(def- _40-miles  64400.0)
-(def- _60-miles  96600.0)
+(def half-mile    805.0)
+(def mile        1610.0)
+(def _4-miles    6440.0)
+(def _5-miles    8050.0)
+(def _15-miles  24150.0)
+(def _20-miles  32200.0)
+(def _40-miles  64400.0)
+(def _60-miles  96600.0)
 
-(def- source-ramp-up        (get-line-fn {:slope (/  1.0  mile)      :intercept 0.0}))
-(def- slow-source-decay     (get-line-fn {:slope (/ -0.25 _4-miles)  :intercept 1.0625}))
-(def- fast-source-decay     (get-line-fn {:slope (/ -0.5  _15-miles) :intercept 0.9166667}))
-(def- moderate-source-decay (get-line-fn {:slope (/ -0.25 _40-miles) :intercept 0.375}))
+(def source-ramp-up        (get-line-fn {:slope (/  1.0  mile)      :intercept 0.0}))
+(def slow-source-decay     (get-line-fn {:slope (/ -0.25 _4-miles)  :intercept 1.0625}))
+(def fast-source-decay     (get-line-fn {:slope (/ -0.5  _15-miles) :intercept 0.9166667}))
+(def moderate-source-decay (get-line-fn {:slope (/ -0.25 _40-miles) :intercept 0.375}))
 
-(def- slow-sink-decay (get-line-fn {:slope (/ -0.25 half-mile) :intercept 1.0}))
-(def- fast-sink-decay (get-line-fn {:slope (/ -0.75 half-mile) :intercept 1.5}))
+(def slow-sink-decay (get-line-fn {:slope (/ -0.25 half-mile) :intercept 1.0}))
+(def fast-sink-decay (get-line-fn {:slope (/ -0.75 half-mile) :intercept 1.5}))
 
 ;; source decay = ramp up in 1 mile, slow decay to 5 miles, fast decay to 20 miles, moderate decay to 60 miles, then gone
-(defn- source-decay
+(defn source-decay
   [distance]
   (cond (> distance _60-miles)
         0.0
@@ -92,7 +92,7 @@
         (moderate-source-decay distance)))
 
 ;; sink decay = slow decay to 1/2 mile, fast decay to 1 mile, gone after 1 mile
-(defn- sink-decay
+(defn sink-decay
   [distance]
   (cond (> distance mile)
         0.0
@@ -103,7 +103,7 @@
         :otherwise
         (fast-sink-decay distance)))
 
-(defn- compute-view-impact
+(defn compute-view-impact
   [scenic-value scenic-elev use-elev slope distance water-present?]
   (let [projected-elev (rv-fn '(fn [e r] (max 0.0 (+ e r))) use-elev (_* slope distance))]
     (if (and water-present? (_<_ slope _0_))
@@ -113,7 +113,7 @@
                                             scenic-elev))]
         (_*_ scenic-value visible-fraction)))))
 
-(defn- compute-sink-effects
+(defn compute-sink-effects
   [sink-layer filtered-sight-line use-elev]
   (persistent!
    (reduce
@@ -128,31 +128,37 @@
     (transient {})
     filtered-sight-line)))
 
+(defn split-sight-line
+  [elev-layer use-point sight-line]
+  (let [[initial-view-space sight-line-remainder] (split-with (fn [[pointA pointB]]
+                                                                (not (_>_ (get-in elev-layer pointB) (get-in elev-layer pointA))))
+                                                              (partition 2 1 (cons use-point sight-line)))]
+    [(map second initial-view-space)
+     (map second sight-line-remainder)]))
+
 ;; FIXME: Ioannis wants to reduce over the partition rather than the independent line sections.
-(defn- filter-sight-line
+(defn filter-sight-line
   "Returns a sequence of 4-tuples of [point elevation distance slope] for all points which can be seen along the sight-line."
   [elev-layer sight-line use-point use-elev use-loc-in-m to-meters]
-  (let [[initial-view-space sight-line-remainder] (split-with #(not (_>_ (get-in elev-layer %2) (get-in elev-layer %1)))
-                                                              (partition 2 1 (cons use-point sight-line)))
-        initial-view-space   (map second initial-view-space)
-        sight-line-remainder (map second sight-line-remainder)
-        max-slope-thus-far   (_- (_d (_-_ (get-in elev-layer (first sight-line)) use-elev)
-                                     (euclidean-distance-2 use-loc-in-m (to-meters (first sight-line))))
-                                 0.01)] ;; epsilon to include the first step
+  (let [[initial-view-space sight-line-remainder] (split-sight-line elev-layer use-point sight-line)
+        initial-view-slope                        (_- (_d (_-_ (get-in elev-layer (first sight-line)) use-elev)
+                                                          (euclidean-distance-2 use-loc-in-m (to-meters (first sight-line))))
+                                                      0.01) ;; epsilon to include the first step
+        {:keys [max-slope filtered-line]}         (persistent!
+                                                   (reduce (fn [{:keys [max-slope filtered-line] :as acc} point]
+                                                             (let [curr-elev  (get-in elev-layer point)
+                                                                   distance   (euclidean-distance-2 use-loc-in-m (to-meters point))
+                                                                   curr-slope (_d (_-_ curr-elev use-elev) distance)]
+                                                               (if (_>_ curr-slope max-slope)
+                                                                 (assoc! acc
+                                                                         :max-slope     curr-slope
+                                                                         :filtered-line (conj filtered-line
+                                                                                              [point curr-elev distance max-slope]))
+                                                                 acc)))
+                                                           (transient {:max-slope initial-view-slope :filtered-line []})
+                                                           initial-view-space))]
     (concat
-     (:filtered-line
-      (persistent!
-       (reduce (fn [{:keys [max-slope filtered-line] :as acc} point]
-                 (let [curr-elev  (get-in elev-layer point)
-                       distance   (euclidean-distance-2 use-loc-in-m (to-meters point))
-                       curr-slope (_d (_-_ curr-elev use-elev) distance)]
-                   (if (_>_ curr-slope max-slope)
-                     (assoc! acc
-                             :max-slope     curr-slope
-                             :filtered-line (conj filtered-line [point curr-elev distance max-slope]))
-                     acc)))
-               (transient {:max-slope max-slope-thus-far :filtered-line []})
-               initial-view-space)))
+     filtered-line
      (:filtered-line
       (persistent!
        (reduce
@@ -168,10 +174,12 @@
                           :filtered-line (conj filtered-line [point curr-elev distance max-slope]))
                   acc))
               acc)))
-        (transient {:max-elev (get-in elev-layer (last initial-view-space)) :max-slope max-slope-thus-far :filtered-line []})
+        (transient {:max-elev      (get-in elev-layer (or (last initial-view-space) use-point))
+                    :max-slope     max-slope
+                    :filtered-line []})
         sight-line-remainder))))))
 
-(defn- raycast!
+(defn raycast!
   "Finds a line of sight path between source and use points, checks
    for obstructions, and determines (using elevation info) how much of
    the source element can be seen from the use point.  A distance
@@ -223,29 +231,29 @@
          ;;        it with a tripartite graph.
          (commute (get-in cache-layer use-point) conj carrier))))))
 
-(defn- run-raycast-simulation!
-  [{:keys [source-points use-points to-meters] :as params}]
-  (r/foldcat
-   (r/map (p raycast! params)
-          (vec
-           (remove nil?
-                   (for [use-point use-points source-point source-points]
-                     (when (not= source-point use-point) ;; no in-situ use
-                       (let [use-loc-in-m    (to-meters use-point)
-                             source-loc-in-m (to-meters source-point)
-                             distance-decay  (source-decay
-                                              (euclidean-distance-2 use-loc-in-m source-loc-in-m))]
-                         (if (pos? distance-decay) ;; we are in potential sight range
-                           [source-point use-point source-loc-in-m use-loc-in-m distance-decay])))))))))
+(defn select-in-range-views
+  [use-points source-points to-meters]
+  (filterv identity
+           (for [use-point use-points source-point source-points]
+             (when (not= source-point use-point) ;; no in-situ use
+               (let [use-loc-in-m    (to-meters use-point)
+                     source-loc-in-m (to-meters source-point)
+                     distance-decay  (source-decay
+                                      (euclidean-distance-2 use-loc-in-m source-loc-in-m))]
+                 (if (pos? distance-decay) ;; we are in potential sight range
+                   [source-point use-point source-loc-in-m use-loc-in-m distance-decay]))))))
 
 (defmethod distribute-flow! "LineOfSight"
   [{:keys [flow-layers source-points use-points cell-width cell-height value-type]
     :as params}]
-  (let [num-view-lines (* (count source-points) (count use-points))]
+  (let [num-view-lines (* (count source-points) (count use-points))
+        to-meters      (fn [[i j]] [(* i cell-height) (* j cell-width)])]
     (with-message (str "Scanning " num-view-lines " view lines...\n") "\nAll done."
       (with-progress-bar-cool :drop num-view-lines
         (with-typed-math-syms value-type [_0_ _+_ _-_ _*_ _d_ _* *_ _d _- -_ _>_ _<_ _max_ rv-fn _>]
-          (run-raycast-simulation! (assoc params
-                                     :elev-layer  (flow-layers "Altitude")
-                                     :water-layer (flow-layers "WaterBodies")
-                                     :to-meters   (fn [[i j]] [(* i cell-height) (* j cell-width)]))))))))
+          (r/foldcat
+           (r/map (p raycast! (assoc params
+                                :elev-layer  (flow-layers "Altitude")
+                                :water-layer (flow-layers "WaterBodies")
+                                :to-meters   to-meters))
+                  (select-in-range-views use-points source-points to-meters))))))))
