@@ -179,9 +179,9 @@
   [{:keys [flow-model source-points use-points animation?
            value-type possible-flow-layer actual-flow-layer monitor]
     :as params}]
-  (with-interrupt-checking ^IMonitor monitor
-    (monitor-info monitor (str "Running SPAN " flow-model " flow model"))
-    (with-error-monitor ^IMonitor monitor
+  (monitor-info monitor (str "Running SPAN " flow-model " flow model"))
+  (with-error-monitor ^IMonitor monitor
+    (with-interrupt-checking ^IMonitor monitor
       (with-message
         (str "\nRunning " flow-model " flow model...\n")
         #(str "Simulation complete.\nUsers affected: " (count-affected-users %))

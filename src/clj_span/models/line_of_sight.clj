@@ -34,8 +34,10 @@
 
 (ns clj-span.models.line-of-sight
   (:use [clj-misc.utils      :only (euclidean-distance-2 p def- between? with-progress-bar-cool with-message)]
-        [clj-misc.matrix-ops :only (find-line-between get-line-fn)])
-  (:require [clojure.core.reducers :as r]))
+        [clj-misc.matrix-ops :only (find-line-between get-line-fn)]
+        [clj-span.thinklab-monitor :only (monitor-info with-interrupt-checking)])
+  (:require [clojure.core.reducers :as r])
+  (:import (org.integratedmodelling.thinklab.api.listeners IMonitor)))
 
 (refer 'clj-span.core :only '(distribute-flow! service-carrier with-typed-math-syms))
 
@@ -147,47 +149,48 @@
    decay function is applied to the results to compute the visual
    utility originating from the source point."
   [{:keys [source-layer sink-layer elev-layer water-layer cache-layer
-           possible-flow-layer actual-flow-layer to-meters trans-threshold]}
+           possible-flow-layer actual-flow-layer to-meters trans-threshold monitor]}
    [source-point use-point source-loc-in-m use-loc-in-m distance-decay]]
-  (let [use-elev            (get-in elev-layer use-point)
-        filtered-sight-line (filter-sight-line (find-line-between use-point source-point)
-                                               elev-layer
-                                               use-elev
-                                               use-loc-in-m
-                                               to-meters)
-        [final-point final-elev final-distance final-slope] (last filtered-sight-line)]
-    (if (= final-point source-point) ;; source point is visible from use point
-      (let [possible-weight (*_ distance-decay
-                                (compute-view-impact (get-in source-layer source-point)
-                                                     final-elev
-                                                     use-elev
-                                                     final-slope
-                                                     final-distance
-                                                     (and water-layer (not= _0_ (get-in water-layer source-point)))))]
-        (when (_> possible-weight trans-threshold)
-          ;; FIXME: Consing up memory for the sink-effects map.
-          ;;        Store this in a tripartite graph instead.
-          (let [sink-effects  (let [sink-effects (compute-sink-effects sink-layer filtered-sight-line use-elev)
-                                    sink-value (get-in sink-layer use-point)]
-                                (if (not= _0_ sink-value)
-                                  (assoc sink-effects use-point sink-value)
-                                  sink-effects))
-                actual-weight (rv-fn '(fn [p s] (max 0.0 (- p s))) possible-weight (reduce _+_ _0_ (vals sink-effects)))
-                carrier       (struct-map service-carrier
-                                :source-id       source-point
-                                ;; :route           (bitpack-route (reverse (cons use-point (map first filtered-sight-line))))
-                                :possible-weight possible-weight
-                                :actual-weight   actual-weight
-                                :sink-effects    sink-effects)]
-            (dosync
-             (doseq [id (cons use-point (map first filtered-sight-line))]
-               (commute (get-in possible-flow-layer id) _+_ possible-weight)
-               (if (not= _0_ actual-weight)
-                 (commute (get-in actual-flow-layer id) _+_ actual-weight)))
-             ;; FIXME: Conjing the new carrier onto the cache layer.
-             ;;        Eliminate this cache-layer thing and replace
-             ;;        it with a tripartite graph.
-             (commute (get-in cache-layer use-point) conj carrier))))))))
+  (with-interrupt-checking ^IMonitor monitor
+    (let [use-elev            (get-in elev-layer use-point)
+          filtered-sight-line (filter-sight-line (find-line-between use-point source-point)
+                                                 elev-layer
+                                                 use-elev
+                                                 use-loc-in-m
+                                                 to-meters)
+          [final-point final-elev final-distance final-slope] (last filtered-sight-line)]
+      (if (= final-point source-point) ;; source point is visible from use point
+        (let [possible-weight (*_ distance-decay
+                                  (compute-view-impact (get-in source-layer source-point)
+                                                       final-elev
+                                                       use-elev
+                                                       final-slope
+                                                       final-distance
+                                                       (and water-layer (not= _0_ (get-in water-layer source-point)))))]
+          (when (_> possible-weight trans-threshold)
+            ;; FIXME: Consing up memory for the sink-effects map.
+            ;;        Store this in a tripartite graph instead.
+            (let [sink-effects  (let [sink-effects (compute-sink-effects sink-layer filtered-sight-line use-elev)
+                                      sink-value (get-in sink-layer use-point)]
+                                  (if (not= _0_ sink-value)
+                                    (assoc sink-effects use-point sink-value)
+                                    sink-effects))
+                  actual-weight (rv-fn '(fn [p s] (max 0.0 (- p s))) possible-weight (reduce _+_ _0_ (vals sink-effects)))
+                  carrier       (struct-map service-carrier
+                                  :source-id       source-point
+                                  ;; :route           (bitpack-route (reverse (cons use-point (map first filtered-sight-line))))
+                                  :possible-weight possible-weight
+                                  :actual-weight   actual-weight
+                                  :sink-effects    sink-effects)]
+              (dosync
+               (doseq [id (cons use-point (map first filtered-sight-line))]
+                 (commute (get-in possible-flow-layer id) _+_ possible-weight)
+                 (if (not= _0_ actual-weight)
+                   (commute (get-in actual-flow-layer id) _+_ actual-weight)))
+               ;; FIXME: Conjing the new carrier onto the cache layer.
+               ;;        Eliminate this cache-layer thing and replace
+               ;;        it with a tripartite graph.
+               (commute (get-in cache-layer use-point) conj carrier)))))))))
 
 (defn select-in-range-views
   [use-points source-points to-meters]
@@ -202,16 +205,17 @@
                    [source-point use-point source-loc-in-m use-loc-in-m distance-decay]))))))
 
 (defmethod distribute-flow! "LineOfSight"
-  [{:keys [flow-layers source-points use-points cell-width cell-height value-type]
+  [{:keys [flow-layers source-points use-points cell-width cell-height value-type monitor]
     :as params}]
   (let [num-view-lines (* (count source-points) (count use-points))
         to-meters      (fn [[i j]] [(* i cell-height) (* j cell-width)])]
-    (with-message (str "Scanning " num-view-lines " view lines...\n") "\nAll done."
-      (with-progress-bar-cool :drop num-view-lines
-        (with-typed-math-syms value-type [_0_ _+_ _-_ _*_ _d_ _* *_ _d _- -_ _>_ _<_ _max_ rv-fn _>]
-          (r/foldcat
-           (r/map (p raycast! (assoc params
-                                :elev-layer  (flow-layers "Altitude")
-                                :water-layer (flow-layers "WaterBodies")
-                                :to-meters   (memoize to-meters)))
-                  (select-in-range-views use-points source-points to-meters))))))))
+    (monitor-info monitor (str "Scanning " num-view-lines " possible view lines"))
+    (with-message (str "Scanning " num-view-lines " possible view lines...\n") "\nAll done."
+      (with-typed-math-syms value-type [_0_ _+_ _-_ _*_ _d_ _* *_ _d _- -_ _>_ _<_ _max_ rv-fn _>]
+        (r/foldcat
+         (r/map (p raycast! (assoc params
+                              :elev-layer  (flow-layers "Altitude")
+                              :water-layer (flow-layers "WaterBodies")
+                              :to-meters   (memoize to-meters)))
+                (select-in-range-views use-points source-points to-meters)))
+        (monitor-info monitor (str "LineOfSight simulation completed successfully"))))))
