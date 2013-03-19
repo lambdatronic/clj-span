@@ -399,18 +399,7 @@
 (defn rv-sum
   "Returns the sum of a sequence of FuzzyNumbers using _+_."
   [Xs]
-  (cond (empty? Xs)
-        _0_
-
-        (== (count Xs) 1)
-        (first Xs)
-
-        (<= (count Xs) 20)
-        (reduce _+_ Xs)
-
-        :otherwise
-        (recur (pmap rv-sum
-                     (partition-all 20 Xs)))))
+  (reduce _+_ Xs))
 
 (defn rv-extensive-sampler
   "Returns the extensive weighted sum of a coverage (i.e. a sequence
