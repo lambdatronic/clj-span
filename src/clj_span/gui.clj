@@ -179,12 +179,13 @@
         point-layer (make-matrix (inc max-y) (inc max-x) #(get point-vals % _0_))]
     (draw-layer "Points" point-layer scale value-type)))
 
-(def ^:dynamic *animation-sleep-ms* 100)
+(def ^:dynamic *animation-sleep-ms* 500)
+
+(def animation-running? (atom false))
 
 (defn run-animation [[mean-panel stdev-panel]]
-  (send-off *agent* run-animation)
-  (Thread/sleep *animation-sleep-ms*)
-  [(doto mean-panel  (.repaint))
-   (doto stdev-panel (.repaint))])
-
-(defn end-animation [[mean-panel stdev-panel]] [mean-panel stdev-panel])
+  (when @animation-running?
+    (send-off *agent* run-animation)
+    (Thread/sleep *animation-sleep-ms*)
+    [(doto mean-panel  (.repaint))
+     (doto stdev-panel (.repaint))]))

@@ -33,7 +33,7 @@
                                           is-matrix?
                                           filter-matrix-for-coords)]
         [clj-span.interface        :only [provide-results]]
-        [clj-span.gui              :only [draw-ref-layer run-animation end-animation]]
+        [clj-span.gui              :only [draw-ref-layer run-animation animation-running?]]
         [clj-span.analyzer         :only [theoretical-source
                                           inaccessible-source
                                           possible-source
@@ -50,7 +50,7 @@
                                           possible-flow
                                           blocked-flow
                                           actual-flow]]
-        [clj-span.thinklab-monitor :only (monitor-info with-error-monitor)])
+        [clj-span.thinklab-monitor :only (monitor-info with-error-monitor with-interrupt-checking)])
   (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (org.integratedmodelling.thinklab.api.listeners IMonitor)))
 
@@ -163,11 +163,12 @@
                                                         ~actual-flow-layer
                                                         animation-pixel-size#
                                                         ~value-type))]
+     (reset! animation-running? true)
      (send-off possible-flow-animator# run-animation)
      (send-off actual-flow-animator#   run-animation)
      (let [result# ~@body]
-       (send-off possible-flow-animator# end-animation)
-       (send-off actual-flow-animator#   end-animation)
+       (reset! animation-running? false)
+       (shutdown-agents)
        result#)))
 
 (defn count-affected-users
@@ -178,18 +179,19 @@
   [{:keys [flow-model source-points use-points animation?
            value-type possible-flow-layer actual-flow-layer monitor]
     :as params}]
-  (monitor-info monitor (str "Running SPAN " flow-model " flow model"))
-  (with-error-monitor ^IMonitor monitor
-    (with-message
-      (str "\nRunning " flow-model " flow model...\n")
-      #(str "Simulation complete.\nUsers affected: " (count-affected-users %))
-      (if (and (seq source-points)
-               (seq use-points))
-        (if animation?
-          (with-animation value-type possible-flow-layer actual-flow-layer (distribute-flow! params))
-          (distribute-flow! params))
-        (println "Either source or use is zero everywhere. Therefore, there can be no service flow."))
-      params)))
+  (with-interrupt-checking ^IMonitor monitor
+    (monitor-info monitor (str "Running SPAN " flow-model " flow model"))
+    (with-error-monitor ^IMonitor monitor
+      (with-message
+        (str "\nRunning " flow-model " flow model...\n")
+        #(str "Simulation complete.\nUsers affected: " (count-affected-users %))
+        (if (and (seq source-points)
+                 (seq use-points))
+          (if animation?
+            (with-animation value-type possible-flow-layer actual-flow-layer (distribute-flow! params))
+            (distribute-flow! params))
+          (println "Either source or use is zero everywhere. Therefore, there can be no service flow."))
+        params))))
 
 (defn create-simulation-inputs
   [{:keys [source-layer sink-layer use-layer rows cols value-type monitor]
@@ -323,7 +325,4 @@
                                     deref-result-layers
                                     generate-results-map
                                     (provide-results result-type value-type source-layer sink-layer use-layer flow-layers))]
-    ;; Exit cleanly.
-    (shutdown-agents)
-    (flush)
     simulation-results))
