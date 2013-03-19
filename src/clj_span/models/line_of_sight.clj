@@ -56,53 +56,11 @@
 (def ^:dynamic _>)
 
 ;; in meters
-(def half-mile    805.0)
-(def mile        1610.0)
-(def _4-miles    6440.0)
-(def _5-miles    8050.0)
-(def _15-miles  24150.0)
-(def _20-miles  32200.0)
-(def _40-miles  64400.0)
-(def _60-miles  96600.0)
+(def max-source-view-distance 50000.0) ;; 50km
+(def max-sink-view-distance    2000.0) ;; 2km
 
-(def no-source-decay       1.0)
-;;(def source-ramp-up        (get-line-fn {:slope (/  1.0  mile)      :intercept 0.0}))
-(def slow-source-decay     (get-line-fn {:slope (/ -0.25 _4-miles)  :intercept 1.0625}))
-(def fast-source-decay     (get-line-fn {:slope (/ -0.5  _15-miles) :intercept 0.9166667}))
-(def moderate-source-decay (get-line-fn {:slope (/ -0.25 _40-miles) :intercept 0.375}))
-
-(def slow-sink-decay (get-line-fn {:slope (/ -0.25 half-mile) :intercept 1.0}))
-(def fast-sink-decay (get-line-fn {:slope (/ -0.75 half-mile) :intercept 1.5}))
-
-;; source decay = ramp up in 1 mile, slow decay to 5 miles, fast decay to 20 miles, moderate decay to 60 miles, then gone
-(defn source-decay
-  [distance]
-  (cond (> distance _60-miles)
-        0.0
-
-        (< distance mile)
-        no-source-decay
-
-        (between? mile _5-miles distance)
-        (slow-source-decay distance)
-
-        (between? _5-miles _20-miles distance)
-        (fast-source-decay distance)
-
-        :otherwise
-        (moderate-source-decay distance)))
-
-;; sink decay = slow decay to 1/2 mile, fast decay to 1 mile, gone after 1 mile
-(defn sink-decay
-  [distance]
-  (cond (> distance mile)
-        0.0
-
-        (< distance half-mile)
-        (slow-sink-decay distance)
-
-        :otherwise
-        (fast-sink-decay distance)))
+(defn source-decay [^double distance] (- 1.0 (Math/pow (/ distance max-source-view-distance) 2)))
+(defn sink-decay   [^double distance] (- 1.0 (Math/pow (/ distance max-sink-view-distance)   2)))
 
 (defn compute-view-impact
   [scenic-value scenic-elev use-elev slope distance water-present?]

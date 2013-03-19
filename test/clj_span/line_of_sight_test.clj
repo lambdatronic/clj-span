@@ -98,8 +98,7 @@
   (binding [cell-height 15000.0
             cell-width  15000.0]
     (is (= (map #(take 2 %) (select-in-range-views use-points source-points to-meters))
-           '(([3 7] [8 5])
-             ([8 8] [8 5]))))))
+           '(([8 8] [8 5]))))))
 
 (deftest sight-line-1
   (is (= (find-line-between (first use-points) (first source-points))
@@ -294,7 +293,7 @@
                                       final-slope
                                       final-distance
                                       (and water-layer (not= _0_ (get-in water-layer source-point))))))
-           48.01998691831806))))
+           48.0046205225042))))
 
 (deftest view-impact-calculation-2
   (let [source-point        (second source-points)
@@ -340,7 +339,7 @@
                                       final-slope
                                       final-distance
                                       (and water-layer (not= _0_ (get-in water-layer source-point))))))
-           22.959183673469386))))
+           22.95330612244898))))
 
 (deftest view-impact-calculation-4
   (let [source-point        (nth source-points 3)
@@ -363,7 +362,7 @@
                                       final-slope
                                       final-distance
                                       (and water-layer (not= _0_ (get-in water-layer source-point))))))
-           9.999999999999998))))
+           9.999639999999998))))
 
 (deftest sink-effects-calculation-1
   (let [source-point        (first source-points)
@@ -402,8 +401,8 @@
                                                use-loc-in-m
                                                to-meters)]
     (is (= (compute-sink-effects sink-layer filtered-sight-line use-elev)
-           {[5 5] 6.3478260869565215,
-            [3 5] 1.535855448898927}))))
+           {[5 5] 6.8425
+            [3 5] 1.7045454545454541}))))
 
 (deftest sink-effects-calculation-4
   (let [source-point        (nth source-points 3)
@@ -416,7 +415,7 @@
                                                use-loc-in-m
                                                to-meters)]
     (is (= (compute-sink-effects sink-layer filtered-sight-line use-elev)
-           {[8 6] 8.074534161490687}))))
+           {[8 6] 8.312500000000005}))))
 
 (deftest actual-weight-calculation-1
   (let [source-point        (first source-points)
@@ -448,7 +447,7 @@
                                   (assoc sink-effects use-point sink-value)
                                   sink-effects))
                 actual-weight (rv-fn '(fn [p s] (max 0.0 (- p s))) possible-weight (reduce _+_ _0_ (vals sink-effects)))]
-            (is (= actual-weight 48.01998691831806))))))))
+            (is (= actual-weight 48.0046205225042))))))))
 
 (deftest actual-weight-calculation-2
   (let [source-point        (second source-points)
@@ -512,7 +511,7 @@
                                   (assoc sink-effects use-point sink-value)
                                   sink-effects))
                 actual-weight (rv-fn '(fn [p s] (max 0.0 (- p s))) possible-weight (reduce _+_ _0_ (vals sink-effects)))]
-            (is (= actual-weight 15.075502137613938))))))))
+            (is (= actual-weight 14.406260667903524))))))))
 
 (deftest actual-weight-calculation-4
   (let [source-point        (nth source-points 3)
@@ -544,6 +543,6 @@
                                   (assoc sink-effects use-point sink-value)
                                   sink-effects))
                 actual-weight (rv-fn '(fn [p s] (max 0.0 (- p s))) possible-weight (reduce _+_ _0_ (vals sink-effects)))]
-            (is (= actual-weight 1.9254658385093109))))))))
+            (is (= actual-weight 1.6871399999999923))))))))
 
 ;; (run-tests)
