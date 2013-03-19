@@ -22,35 +22,37 @@
 ;;; of different options specifying the form of its results.
 
 (ns clj-span.core
-  (:use [clj-misc.utils      :only (p & with-message)]
-        [clj-misc.matrix-ops :only (map-matrix
-                                    make-matrix
-                                    resample-matrix
-                                    matrix2seq
-                                    get-rows
-                                    get-cols
-                                    grids-align?
-                                    is-matrix?
-                                    filter-matrix-for-coords)]
-        [clj-span.interface  :only [provide-results]]
-        [clj-span.gui        :only [draw-ref-layer run-animation end-animation]]
-        [clj-span.analyzer   :only [theoretical-source
-                                    inaccessible-source
-                                    possible-source
-                                    blocked-source
-                                    actual-source
-                                    theoretical-sink
-                                    inaccessible-sink
-                                    actual-sink
-                                    theoretical-use
-                                    inaccessible-use
-                                    possible-use
-                                    blocked-use
-                                    actual-use
-                                    possible-flow
-                                    blocked-flow
-                                    actual-flow]])
-  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv])))
+  (:use [clj-misc.utils            :only (p & with-message)]
+        [clj-misc.matrix-ops       :only (map-matrix
+                                          make-matrix
+                                          resample-matrix
+                                          matrix2seq
+                                          get-rows
+                                          get-cols
+                                          grids-align?
+                                          is-matrix?
+                                          filter-matrix-for-coords)]
+        [clj-span.interface        :only [provide-results]]
+        [clj-span.gui              :only [draw-ref-layer run-animation end-animation]]
+        [clj-span.analyzer         :only [theoretical-source
+                                          inaccessible-source
+                                          possible-source
+                                          blocked-source
+                                          actual-source
+                                          theoretical-sink
+                                          inaccessible-sink
+                                          actual-sink
+                                          theoretical-use
+                                          inaccessible-use
+                                          possible-use
+                                          blocked-use
+                                          actual-use
+                                          possible-flow
+                                          blocked-flow
+                                          actual-flow]]
+        [clj-span.thinklab-monitor :only (monitor-info with-error-monitor)])
+  (:require (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
+  (:import (org.integratedmodelling.thinklab.api.listeners IMonitor)))
 
 (defmacro with-typed-math-syms-single-thread [value-type symbols & body]
   (let [prob-ns (gensym)]
@@ -106,44 +108,48 @@
 
 (defn generate-results-map
   "Return the simulation results as a map of layer names to closures."
-  [{:keys [value-type orig-rows orig-cols]
+  [{:keys [value-type orig-rows orig-cols monitor]
     :as params}]
-  (let [rv-intensive-sampler (case value-type
-                               :numbers  nb/rv-intensive-sampler
-                               :varprop  vp/rv-intensive-sampler
-                               :randvars rv/rv-intensive-sampler)]
-    (with-message
-      "Generating result maps...\n"
-      "Finished generating result maps."
-      (apply array-map
-             (mapcat (fn [[label f]]
-                       (with-message (str "Adding " label " to computable outputs...") "done"
-                         [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler (f params))]))
-                     (array-map
-                      "Source - Theoretical"  theoretical-source
-                      "Source - Inaccessible" inaccessible-source
-                      "Source - Possible"     possible-source
-                      "Source - Blocked"      blocked-source
-                      "Source - Actual"       actual-source
-                      "Sink   - Theoretical"  theoretical-sink
-                      "Sink   - Inaccessible" inaccessible-sink
-                      "Sink   - Actual"       actual-sink
-                      "Use    - Theoretical"  theoretical-use
-                      "Use    - Inaccessible" inaccessible-use
-                      "Use    - Possible"     possible-use
-                      "Use    - Blocked"      blocked-use
-                      "Use    - Actual"       actual-use
-                      "Flow   - Possible"     possible-flow
-                      "Flow   - Blocked"      blocked-flow
-                      "Flow   - Actual"       actual-flow))))))
+  (monitor-info monitor "Registering SPAN simulation output analyzers")
+  (with-error-monitor ^IMonitor monitor
+    (let [rv-intensive-sampler (case value-type
+                                 :numbers  nb/rv-intensive-sampler
+                                 :varprop  vp/rv-intensive-sampler
+                                 :randvars rv/rv-intensive-sampler)]
+      (with-message
+        "Generating result maps...\n"
+        "Finished generating result maps."
+        (apply array-map
+               (mapcat (fn [[label f]]
+                         (with-message (str "Adding " label " to computable outputs...") "done"
+                           [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler (f params))]))
+                       (array-map
+                        "Source - Theoretical"  theoretical-source
+                        "Source - Inaccessible" inaccessible-source
+                        "Source - Possible"     possible-source
+                        "Source - Blocked"      blocked-source
+                        "Source - Actual"       actual-source
+                        "Sink   - Theoretical"  theoretical-sink
+                        "Sink   - Inaccessible" inaccessible-sink
+                        "Sink   - Actual"       actual-sink
+                        "Use    - Theoretical"  theoretical-use
+                        "Use    - Inaccessible" inaccessible-use
+                        "Use    - Possible"     possible-use
+                        "Use    - Blocked"      blocked-use
+                        "Use    - Actual"       actual-use
+                        "Flow   - Possible"     possible-flow
+                        "Flow   - Blocked"      blocked-flow
+                        "Flow   - Actual"       actual-flow)))))))
 
 (defn deref-result-layers
-  [{:keys [cache-layer possible-flow-layer actual-flow-layer]
+  [{:keys [cache-layer possible-flow-layer actual-flow-layer monitor]
     :as params}]
-  (assoc params
-    :cache-layer         (map-matrix (& seq deref) cache-layer)
-    :possible-flow-layer (map-matrix deref possible-flow-layer)
-    :actual-flow-layer   (map-matrix deref actual-flow-layer)))
+  (monitor-info monitor "Extracting SPAN simulation outputs")
+  (with-error-monitor ^IMonitor monitor
+    (assoc params
+      :cache-layer         (map-matrix (& seq deref) cache-layer)
+      :possible-flow-layer (map-matrix deref possible-flow-layer)
+      :actual-flow-layer   (map-matrix deref actual-flow-layer))))
 
 (defmacro with-animation
   [value-type possible-flow-layer actual-flow-layer & body]
@@ -170,38 +176,42 @@
 
 (defn run-simulation
   [{:keys [flow-model source-points use-points animation?
-           value-type possible-flow-layer actual-flow-layer]
+           value-type possible-flow-layer actual-flow-layer monitor]
     :as params}]
-  (with-message
-    (str "\nRunning " flow-model " flow model...\n")
-    #(str "Simulation complete.\nUsers affected: " (count-affected-users %))
-    (if (and (seq source-points)
-             (seq use-points))
-      (if animation?
-        (with-animation value-type possible-flow-layer actual-flow-layer (distribute-flow! params))
-        (distribute-flow! params))
-      (println "Either source or use is zero everywhere. Therefore, there can be no service flow."))
-    params))
+  (monitor-info monitor (str "Running SPAN " flow-model " flow model"))
+  (with-error-monitor ^IMonitor monitor
+    (with-message
+      (str "\nRunning " flow-model " flow model...\n")
+      #(str "Simulation complete.\nUsers affected: " (count-affected-users %))
+      (if (and (seq source-points)
+               (seq use-points))
+        (if animation?
+          (with-animation value-type possible-flow-layer actual-flow-layer (distribute-flow! params))
+          (distribute-flow! params))
+        (println "Either source or use is zero everywhere. Therefore, there can be no service flow."))
+      params)))
 
 (defn create-simulation-inputs
-  [{:keys [source-layer sink-layer use-layer rows cols value-type]
+  [{:keys [source-layer sink-layer use-layer rows cols value-type monitor]
     :as params}]
-  (with-message
-    "\nCreating simulation inputs...\n"
-    #(str "Source points: " (count (:source-points %)) "\n"
-          "Sink points:   " (count (:sink-points   %)) "\n"
-          "Use points:    " (count (:use-points    %)))
-    (let [_0_ (case value-type
-                :numbers  nb/_0_
-                :varprop  vp/_0_
-                :randvars rv/_0_)]
-      (assoc params
-        :source-points       (filter-matrix-for-coords (p not= _0_) source-layer)
-        :sink-points         (filter-matrix-for-coords (p not= _0_) sink-layer)
-        :use-points          (filter-matrix-for-coords (p not= _0_) use-layer)
-        :cache-layer         (make-matrix rows cols (fn [_] (ref ())))
-        :possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
-        :actual-flow-layer   (make-matrix rows cols (fn [_] (ref _0_)))))))
+  (monitor-info monitor "Creating SPAN simulation inputs")
+  (with-error-monitor ^IMonitor monitor
+    (with-message
+      "\nCreating simulation inputs...\n"
+      #(str "Source points: " (count (:source-points %)) "\n"
+            "Sink points:   " (count (:sink-points   %)) "\n"
+            "Use points:    " (count (:use-points    %)))
+      (let [_0_ (case value-type
+                  :numbers  nb/_0_
+                  :varprop  vp/_0_
+                  :randvars rv/_0_)]
+        (assoc params
+          :source-points       (filter-matrix-for-coords (p not= _0_) source-layer)
+          :sink-points         (filter-matrix-for-coords (p not= _0_) sink-layer)
+          :use-points          (filter-matrix-for-coords (p not= _0_) use-layer)
+          :cache-layer         (make-matrix rows cols (fn [_] (ref ())))
+          :possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
+          :actual-flow-layer   (make-matrix rows cols (fn [_] (ref _0_))))))))
 
 (defn zero-layer-below-threshold
   "Takes a two dimensional array of RVs and replaces all values which
@@ -234,24 +244,26 @@
   "Preprocess data layers (downsampling and zeroing below their thresholds)."
   [{:keys [source-layer sink-layer use-layer flow-layers
            source-threshold sink-threshold use-threshold
-           cell-width cell-height downscaling-factor value-type]
+           cell-width cell-height downscaling-factor value-type monitor]
     :as params}]
+  (monitor-info monitor "Preprocessing SPAN input layers")
   (println "Preprocessing the input data layers.")
-  (let [[rows cols] ((juxt get-rows get-cols) source-layer)
-        scaled-rows (int (quot rows downscaling-factor))
-        scaled-cols (int (quot cols downscaling-factor))
-        r-and-z     (p resample-and-zero value-type scaled-rows scaled-cols)]
-    (assoc params
-      :orig-rows    rows
-      :orig-cols    cols
-      :rows         scaled-rows
-      :cols         scaled-cols
-      :cell-width   (* cell-width  (/ scaled-cols cols))
-      :cell-height  (* cell-height (/ scaled-rows rows))
-      :source-layer (r-and-z source-layer source-threshold)
-      :sink-layer   (r-and-z sink-layer   sink-threshold)
-      :use-layer    (r-and-z use-layer    use-threshold)
-      :flow-layers  (into {} (for [[name layer] flow-layers] [name (r-and-z layer nil)])))))
+  (with-error-monitor ^IMonitor monitor
+    (let [[rows cols] ((juxt get-rows get-cols) source-layer)
+          scaled-rows (int (quot rows downscaling-factor))
+          scaled-cols (int (quot cols downscaling-factor))
+          r-and-z     (p resample-and-zero value-type scaled-rows scaled-cols)]
+      (assoc params
+        :orig-rows    rows
+        :orig-cols    cols
+        :rows         scaled-rows
+        :cols         scaled-cols
+        :cell-width   (* cell-width  (/ scaled-cols cols))
+        :cell-height  (* cell-height (/ scaled-rows rows))
+        :source-layer (r-and-z source-layer source-threshold)
+        :sink-layer   (r-and-z sink-layer   sink-threshold)
+        :use-layer    (r-and-z use-layer    use-threshold)
+        :flow-layers  (into {} (for [[name layer] flow-layers] [name (r-and-z layer nil)]))))))
 
 (def double>0?         #(and (float?   %) (pos? %)))
 (def nil-or-double>=0? #(or  (nil?     %) (and (float? %) (>= % 0))))
@@ -264,31 +276,32 @@
            source-threshold sink-threshold use-threshold trans-threshold
            cell-width cell-height rv-max-states downscaling-factor
            source-type sink-type use-type benefit-type
-           value-type flow-model animation? result-type]
+           value-type flow-model animation? result-type monitor]
     :as params}]
-  {:pre [(every? is-matrix? [source-layer use-layer])
-         (every? nil-or-matrix? (cons sink-layer (vals flow-layers)))
-         (apply grids-align? (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers))))
-         (every? nil-or-double>=0? [source-threshold sink-threshold use-threshold])
-         (every? double>0? [trans-threshold cell-width cell-height])
-         (integer>=1? rv-max-states)
-         (number>=1? downscaling-factor)
-         (every? #{:finite :infinite} [source-type use-type])
-         (contains? #{:finite :infinite nil} sink-type)
-         (contains? #{:rival :non-rival} benefit-type)
-         (contains? #{:randvars :varprop :numbers} value-type)
-         (contains? #{"LineOfSight"
-                      "Proximity"
-                      "CO2Removed"
-                      "FloodWaterMovement"
-                      "SurfaceWaterMovement"
-                      "SedimentTransport"
-                      "CoastalStormMovement"
-                      "SubsistenceFishAccessibility"}
-                    flow-model)
-         (contains? #{:cli-menu :closure-map :java-hashmap} result-type)
-         (contains? #{true false nil} animation?)]}
-  params)
+  (with-error-monitor ^IMonitor monitor
+    (assert (every? is-matrix? [source-layer use-layer]))
+    (assert (every? nil-or-matrix? (cons sink-layer (vals flow-layers))))
+    (assert (apply grids-align? (remove nil? (list* source-layer sink-layer use-layer (vals flow-layers)))))
+    (assert (every? nil-or-double>=0? [source-threshold sink-threshold use-threshold]))
+    (assert (every? double>0? [trans-threshold cell-width cell-height]))
+    (assert (integer>=1? rv-max-states))
+    (assert (number>=1? downscaling-factor))
+    (assert (every? #{:finite :infinite} [source-type use-type]))
+    (assert (contains? #{:finite :infinite nil} sink-type))
+    (assert (contains? #{:rival :non-rival} benefit-type))
+    (assert (contains? #{:randvars :varprop :numbers} value-type))
+    (assert (contains? #{"LineOfSight"
+                         "Proximity"
+                         "CO2Removed"
+                         "FloodWaterMovement"
+                         "SurfaceWaterMovement"
+                         "SedimentTransport"
+                         "CoastalStormMovement"
+                         "SubsistenceFishAccessibility"}
+                       flow-model))
+    (assert (contains? #{:cli-menu :closure-map :java-hashmap} result-type))
+    (assert (contains? #{true false nil} animation?))
+    params))
 
 (defn set-global-vars!
   [{:keys [value-type rv-max-states]}]
@@ -302,14 +315,15 @@
            sink-layer use-layer flow-layers]
     :as params}]
   (set-global-vars! params)
-  (let [simulation-results (->> params
-                                verify-params-or-throw
-                                preprocess-data-layers
-                                create-simulation-inputs
-                                run-simulation
-                                deref-result-layers
-                                generate-results-map
-                                (provide-results result-type value-type source-layer sink-layer use-layer flow-layers))]
+  (let [simulation-results (some->> params
+                                    verify-params-or-throw
+                                    preprocess-data-layers
+                                    create-simulation-inputs
+                                    run-simulation
+                                    deref-result-layers
+                                    generate-results-map
+                                    (provide-results result-type value-type source-layer sink-layer use-layer flow-layers))]
     ;; Exit cleanly.
     (shutdown-agents)
-    (flush)))
+    (flush)
+    simulation-results))

@@ -35,7 +35,7 @@
 
 (defn reset-rv-max-states!
   [new-val]
-  (constraints-1.0 {:pre [(and (pos? new-val) (integer? new-val))]})
+  {:pre [(and (pos? new-val) (integer? new-val))]}
   (alter-var-root #'*rv-max-states* (constantly new-val)))
 
 (def cont-type {:type ::continuous-distribution})

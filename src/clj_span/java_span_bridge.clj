@@ -22,10 +22,12 @@
 ;;; external Java programs.
 
 (ns clj-span.java-span-bridge
-  (:use [clj-misc.utils      :only (p & with-message mapmap mapmap-java)]
-        [clj-misc.matrix-ops :only (make-matrix)])
+  (:use [clj-misc.utils            :only (p & with-message mapmap mapmap-java)]
+        [clj-misc.matrix-ops       :only (make-matrix)]
+        [clj-span.thinklab-monitor :only (monitor-info with-error-monitor)])
   (:require [clj-span.core :as core]
             (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
+  (:import (org.integratedmodelling.thinklab.api.listeners IMonitor))
   (:gen-class
    :main false
    :methods [^{:static true} [runSpan [java.util.HashMap] java.util.HashMap]]))
@@ -92,36 +94,49 @@
       "randvars" (into-array (map (p mapmap-java double double) result-seq)))))
 
 (defn postprocess-results
-  [value-type rows cols result-layers result-map]
-  (mapmap-java
-   (fn [label] (println (str "\nComputing " label "...")) label)
-   (p pack-layer value-type rows cols)
-   (select-keys result-map result-layers)))
+  [value-type rows cols result-layers monitor result-map]
+  (when result-map ;; if result-map is nil, then core/run-span threw a
+                   ;; thinklab-monitor error somewhere
+    (monitor-info monitor "Computing SPAN result layers")
+    (with-error-monitor ^IMonitor monitor
+      (mapmap-java
+       (fn [label] (println (str "\nComputing " label "...")) label)
+       (p pack-layer value-type rows cols)
+       (select-keys result-map result-layers)))))
 
 (defn -runSpan
   [{:strs [source-layer sink-layer use-layer flow-layers rows cols
            source-threshold sink-threshold use-threshold trans-threshold
            cell-width cell-height rv-max-states downscaling-factor
            source-type sink-type use-type benefit-type
-           value-type flow-model animation? result-layers]}]
-  (postprocess-results value-type rows cols result-layers
-                       (core/run-span {:source-layer       (unpack-layer (keyword value-type) rows cols source-layer)
-                                       :sink-layer         (unpack-layer (keyword value-type) rows cols sink-layer)
-                                       :use-layer          (unpack-layer (keyword value-type) rows cols use-layer)
-                                       :flow-layers        (unpack-layer-map (keyword value-type) rows cols flow-layers)
-                                       :source-threshold   source-threshold
-                                       :sink-threshold     sink-threshold
-                                       :use-threshold      use-threshold
-                                       :trans-threshold    trans-threshold
-                                       :cell-width         cell-width
-                                       :cell-height        cell-height
-                                       :rv-max-states      rv-max-states
-                                       :downscaling-factor downscaling-factor
-                                       :source-type        (keyword source-type)
-                                       :sink-type          (keyword sink-type)
-                                       :use-type           (keyword use-type)
-                                       :benefit-type       (keyword benefit-type)
-                                       :value-type         (keyword value-type)
-                                       :flow-model         flow-model
-                                       :animation?         animation?
-                                       :result-type        :java-hashmap})))
+           value-type flow-model animation? result-layers monitor]}]
+  (monitor-info monitor "Extracting SPAN input layers")
+  (if-let [[source-layer sink-layer use-layer flow-layers]
+           (with-error-monitor ^IMonitor monitor
+             [(unpack-layer (keyword value-type) rows cols source-layer)
+              (unpack-layer (keyword value-type) rows cols sink-layer)
+              (unpack-layer (keyword value-type) rows cols use-layer)
+              (unpack-layer-map (keyword value-type) rows cols flow-layers)])]
+    (postprocess-results value-type rows cols result-layers monitor
+                         (with-error-monitor ^IMonitor monitor
+                           (core/run-span {:source-layer       source-layer
+                                           :sink-layer         sink-layer
+                                           :use-layer          use-layer
+                                           :flow-layers        flow-layers
+                                           :source-threshold   source-threshold
+                                           :sink-threshold     sink-threshold
+                                           :use-threshold      use-threshold
+                                           :trans-threshold    trans-threshold
+                                           :cell-width         cell-width
+                                           :cell-height        cell-height
+                                           :rv-max-states      rv-max-states
+                                           :downscaling-factor downscaling-factor
+                                           :source-type        (keyword source-type)
+                                           :sink-type          (keyword sink-type)
+                                           :use-type           (keyword use-type)
+                                           :benefit-type       (keyword benefit-type)
+                                           :value-type         (keyword value-type)
+                                           :flow-model         flow-model
+                                           :animation?         animation?
+                                           :result-type        :java-hashmap
+                                           :thinklab-monitor   monitor})))))
