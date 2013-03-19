@@ -94,7 +94,7 @@ public class APITest {
 
         String flowModel = "LineOfSight";
 
-        boolean animation = true;
+        boolean animation = false;
 
         String[] resultLayers = {"theoretical-source","actual-sink","possible-use","blocked-flow"};
 

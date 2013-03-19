@@ -38,16 +38,16 @@
   "Creates a rows x cols vector of vectors whose states are generated
    by calling val-fn on the [i j] coordinate pair."
   [rows cols val-fn]
-  ;; Empirically, I've seen that for less than 100000 cells, map is
-  ;; more efficient than pmap and vice versa, unless the matrix has
-  ;; many more rows than cols.
-  (vec ((if (and (>= (* rows cols) 100000)
-                 (>  (* cols 10)   rows))
-          pmap
-          map)
-        (fn [i] (vec (map (fn [j] (val-fn [i j]))
-                          (range cols))))
-        (range rows))))
+  (persistent!
+   (reduce (fn [rows i]
+             (conj! rows
+                    (persistent!
+                     (reduce (fn [cols j]
+                               (conj! cols (val-fn [i j])))
+                             (transient [])
+                             (range cols)))))
+           (transient [])
+           (range rows))))
 
 (defn filter-matrix-for-coords
   [pred? matrix]
