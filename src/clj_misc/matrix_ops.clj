@@ -511,11 +511,11 @@
                                                                   [(f1 x) (f2 x) (f3 x) (f4 x)])))))]
                (for [y (range low-y (inc (or high-y low-y)))] [y x]))))))
 
-(defn find-nearest
+(defn find-nearest-nifty
   [test? rows cols id]
   (some first (map (p filter test?) (take-while seq (iterate (p find-bounding-box rows cols) (list id))))))
 
-(defn find-nearest-boring
+(defn find-nearest
   [test? rows cols id]
   (if (test? id)
     id

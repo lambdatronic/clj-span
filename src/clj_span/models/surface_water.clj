@@ -237,30 +237,19 @@
 ;;       (create-initial-service-carriers params))))
 ;;   (select-keys params [:stream-intakes :cache-layer :use-layer]))
 
-(defn build-upstream-flow-network
-  [{:keys [stream-intakes] :as params}]
-  (let [stream-network (ref {})] ;; map of {uphill-point -> downhill-point}
-    (map (fn [intake-point]
-           )
-       (keys stream-intakes))))
+;; (defn build-upstream-flow-network
+;;   [{:keys [stream-intakes downstream-flow-network] :as params}]
+;;   (let [stream-network (ref {})] ;; map of {uphill-point -> downhill-point}
+;;     (doseq [intake-point (keys stream-intakes)]
+;;       (persistent!
+;;        (reduce (fn [acc id] (assoc! acc id (filterv #(= id (downstream-flow-network %)) (get-neighbors rows cols id))))
+;;                (transient {})
+;;                (keys stream-intakes)))))
 
-(defn find-lowest
-  [elev-layer ids]
-  (reduce (fn [lowest-id id]
-            (if (_<_ (get-in elev-layer id)
-                     (get-in elev-layer lowest-id))
-              id
-              lowest-id))
-          ids))
-
-(defn lowest-neighbors-overland
-  [id in-stream? elev-layer rows cols]
-  (if-not (on-bounds? rows cols id)
-    (let [neighbors (get-neighbors rows cols id)]
-      (if-let [water-neighbors (seq (filterv in-stream? neighbors))]
-        (find-lowest elev-layer water-neighbors)
-        (find-lowest elev-layer (cons id neighbors))))))
-
+;; FIXME: stub
+(defn determine-stream-direction
+  [in-stream? stream-dirs water-neighbors id]
+  {id id})
 ;; (defn lowest-neighbors-in-stream-channels
 ;;   [id in-stream? elev-layer rows cols]
 ;;   (let [stream-points-by-elev (sorted-set-by (fn [id1 id2] (_>_ (get-in elev-layer id1)
@@ -269,10 +258,6 @@
 ;;     (let [id (first stream-points-by-elev)]
 
 ;; FIXME: stub
-(defn determine-stream-direction
-  [in-stream? stream-dirs water-neighbors id]
-  {id id})
-
 (defn lowest-neighbors-in-stream-channels
   [in-stream? elev-layer rows cols]
   (loop [stream-points (transient in-stream?)
@@ -302,6 +287,23 @@
               (let [new-stream-dirs (determine-stream-direction in-stream? stream-dirs water-neighbors id)]
                 (recur (reduce disj! stream-points (keys new-stream-dirs))
                        (reduce assoc! stream-dirs new-stream-dirs))))))))
+
+(defn find-lowest
+  [elev-layer ids]
+  (reduce (fn [lowest-id id]
+            (if (_<_ (get-in elev-layer id)
+                     (get-in elev-layer lowest-id))
+              id
+              lowest-id))
+          ids))
+
+(defn lowest-neighbors-overland
+  [id in-stream? elev-layer rows cols]
+  (if-not (on-bounds? rows cols id)
+    (let [neighbors (get-neighbors rows cols id)]
+      (if-let [water-neighbors (seq (filterv in-stream? neighbors))]
+        (find-lowest elev-layer water-neighbors)
+        (find-lowest elev-layer (cons id neighbors))))))
 
 (defn build-downstream-flow-network
   [{:keys [in-stream? elev-layer rows cols] :as params}]
@@ -351,16 +353,13 @@
     :in-stream? (set (filter-matrix-for-coords #(not= _0_ %) (flow-layers "River")))))
 
 (defmethod distribute-flow! "SurfaceWaterMovement"
-  [{:keys [source-layer sink-layer use-layer flow-layers
-           cache-layer possible-flow-layer actual-flow-layer
-           source-points sink-points use-points
-           cell-width cell-height rows cols
-           value-type trans-threshold]
-    :as params}]
+  [{:keys [flow-layers value-type] :as params}]
   (with-typed-math-syms value-type [_0_ _+_ *_ _d rv-fn _min_ _<_ _> _*_ _d_]
     (-> (assoc params :elev-layer (flow-layers "Altitude"))
         create-in-stream-test
         link-streams-to-users
-        make-buckets)))
+        make-buckets
+        build-downstream-flow-network)))
+        ;; build-upstream-flow-network)))
         ;; propagate-runoff!
         ;; assign-water-to-users!)))
