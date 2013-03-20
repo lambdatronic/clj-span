@@ -327,8 +327,8 @@
     (make-matrix rows cols
                  (fn [id]
                    (if (in-stream? id)
-                     id
                      ;; (in-stream-dirs id)
+                     (lowest-neighbors-overland id in-stream? elev-layer rows cols)
                      (lowest-neighbors-overland id in-stream? elev-layer rows cols))))))
 
 (defn make-buckets
