@@ -17,10 +17,10 @@
 ;;;
 ;;;-------------------------------------------------------------------
 ;;;
-;;; This namespace defines the surface-water model.
+;;; This namespace defines the surface-water-stupid model.
 ;;;
 
-(ns clj-span.models.surface-water
+(ns clj-span.models.surface-water-stupid
   (:use [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
                                     memoize-by-first-arg angular-distance p
                                     with-progress-bar-cool)]
