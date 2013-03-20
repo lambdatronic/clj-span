@@ -209,7 +209,7 @@
     :as params}]
   (let [num-view-lines (* (count source-points) (count use-points))
         to-meters      (fn [[i j]] [(* i cell-height) (* j cell-width)])]
-    (monitor-info monitor (str "Scanning " num-view-lines " possible view lines"))
+    (monitor-info monitor (str "scanning " num-view-lines " possible view lines"))
     (with-message (str "Scanning " num-view-lines " possible view lines...\n") "\nAll done."
       (with-typed-math-syms value-type [_0_ _+_ _-_ _*_ _d_ _* *_ _d _- -_ _>_ _<_ _max_ rv-fn _>]
         (r/foldcat
@@ -218,4 +218,4 @@
                               :water-layer (flow-layers "WaterBodies")
                               :to-meters   (memoize to-meters)))
                 (select-in-range-views use-points source-points to-meters)))
-        (monitor-info monitor (str "LineOfSight simulation completed successfully"))))))
+        (monitor-info monitor (str "completed LineOfSight simulation successfully"))))))

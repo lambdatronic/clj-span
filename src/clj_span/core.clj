@@ -110,7 +110,7 @@
   "Return the simulation results as a map of layer names to closures."
   [{:keys [value-type orig-rows orig-cols monitor]
     :as params}]
-  (monitor-info monitor "Registering SPAN simulation output analyzers")
+  (monitor-info monitor "registering SPAN simulation output analyzers")
   (with-error-monitor ^IMonitor monitor
     (let [rv-intensive-sampler (case value-type
                                  :numbers  nb/rv-intensive-sampler
@@ -144,7 +144,7 @@
 (defn deref-result-layers
   [{:keys [cache-layer possible-flow-layer actual-flow-layer monitor]
     :as params}]
-  (monitor-info monitor "Extracting SPAN simulation outputs")
+  (monitor-info monitor "extracting SPAN simulation outputs")
   (with-error-monitor ^IMonitor monitor
     (assoc params
       :cache-layer         (map-matrix (& seq deref) cache-layer)
@@ -179,7 +179,7 @@
   [{:keys [flow-model source-points use-points animation?
            value-type possible-flow-layer actual-flow-layer monitor]
     :as params}]
-  (monitor-info monitor (str "Running SPAN " flow-model " flow model"))
+  (monitor-info monitor (str "running SPAN " flow-model " flow model"))
   (with-error-monitor ^IMonitor monitor
     (with-interrupt-checking ^IMonitor monitor
       (with-message
@@ -196,7 +196,7 @@
 (defn create-simulation-inputs
   [{:keys [source-layer sink-layer use-layer rows cols value-type monitor]
     :as params}]
-  (monitor-info monitor "Creating SPAN simulation inputs")
+  (monitor-info monitor "creating SPAN simulation inputs")
   (with-error-monitor ^IMonitor monitor
     (with-message
       "\nCreating simulation inputs...\n"
@@ -248,7 +248,7 @@
            source-threshold sink-threshold use-threshold
            cell-width cell-height downscaling-factor value-type monitor]
     :as params}]
-  (monitor-info monitor "Preprocessing SPAN input layers")
+  (monitor-info monitor "preprocessing SPAN input layers")
   (println "Preprocessing the input data layers.")
   (with-error-monitor ^IMonitor monitor
     (let [[rows cols] ((juxt get-rows get-cols) source-layer)

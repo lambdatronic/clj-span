@@ -97,7 +97,7 @@
   [value-type rows cols result-layers monitor result-map]
   (when result-map ;; if result-map is nil, then core/run-span threw a
                    ;; thinklab-monitor error somewhere
-    (monitor-info monitor "Computing SPAN result layers")
+    (monitor-info monitor "computing SPAN result layers")
     (with-error-monitor ^IMonitor monitor
       (mapmap-java
        (fn [label] (println (str "\nComputing " label "...")) label)
@@ -110,7 +110,7 @@
            cell-width cell-height rv-max-states downscaling-factor
            source-type sink-type use-type benefit-type
            value-type flow-model animation? result-layers monitor]}]
-  (monitor-info monitor "Extracting SPAN input layers")
+  (monitor-info monitor "extracting SPAN input layers")
   (if-let [[source-layer sink-layer use-layer flow-layers]
            (with-error-monitor ^IMonitor monitor
              [(unpack-layer (keyword value-type) rows cols source-layer)
@@ -139,4 +139,4 @@
                                            :flow-model         flow-model
                                            :animation?         animation?
                                            :result-type        :java-hashmap
-                                           :thinklab-monitor   monitor})))))
+                                           :monitor            monitor})))))
