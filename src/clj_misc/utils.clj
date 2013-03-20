@@ -253,6 +253,25 @@
         (recur (concat (remove closed-set (successors this-node)) (rest open-list))
                (conj closed-set this-node))))))
 
+(defn depth-first-graph-traversal
+  "Traverses a graph in depth-first order, returning a set of the node
+   values encountered. If an optional closed-set is passed as a third
+   argument, this will be used to exclude parts of the graph from
+   being traversed."
+  ([root successors] (depth-first-graph-traversal root successors #{}))
+  ([root successors closed-set]
+     (if (contains? closed-set root)
+       closed-set
+       (loop [open-list  [root]
+              closed-set (transient closed-set)]
+         (if (empty? open-list)
+           (persistent! closed-set)
+           (let [this-node (first open-list)]
+             (recur (if-let [children (seq (successors this-node))]
+                      (concat (remove closed-set children) (rest open-list))
+                      (rest open-list))
+                    (conj! closed-set this-node))))))))
+
 (defn depth-limited-graph-search
   ([root successors goal? depth-limit]
      (depth-limited-graph-search successors goal? depth-limit [root] #{} 0))

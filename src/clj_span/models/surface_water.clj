@@ -23,7 +23,7 @@
 (ns clj-span.models.surface-water
   (:use [clj-misc.utils      :only (seq2map mapmap iterate-while-seq with-message
                                     memoize-by-first-arg angular-distance p
-                                    with-progress-bar-cool)]
+                                    with-progress-bar-cool depth-first-graph-traversal)]
         [clj-misc.matrix-ops :only (get-neighbors on-bounds? subtract-ids find-nearest filter-matrix-for-coords make-matrix)])
   (:require [clojure.core.reducers :as r]))
 
@@ -237,14 +237,28 @@
 ;;       (create-initial-service-carriers params))))
 ;;   (select-keys params [:stream-intakes :cache-layer :use-layer]))
 
-;; (defn build-upstream-flow-network
-;;   [{:keys [stream-intakes downstream-flow-network] :as params}]
-;;   (let [stream-network (ref {})] ;; map of {uphill-point -> downhill-point}
-;;     (doseq [intake-point (keys stream-intakes)]
-;;       (persistent!
-;;        (reduce (fn [acc id] (assoc! acc id (filterv #(= id (downstream-flow-network %)) (get-neighbors rows cols id))))
-;;                (transient {})
-;;                (keys stream-intakes)))))
+(defn find-most-downstream-intake
+  [stream-intakes stream-network]
+  (filter (fn [intake] (let [downstream-child (stream-network intake)]
+                         (nil? (stream-network downstream-child))))
+          (keys stream-intakes)))
+
+(defn order-upstream-nodes
+  [{:keys [stream-intakes stream-network] :as params}]
+  (let [most-downstream-intake (find-most-downstream-intake stream-intakes stream-network)]
+    most-downstream-intake))
+
+(defn filter-upstream-nodes
+  [{:keys [stream-intakes stream-network rows cols] :as params}]
+  (assoc params
+    :stream-network
+    (let [upstream-parents (fn [id] (filterv #(= id (stream-network %))
+                                             (get-neighbors rows cols id)))
+          upstream-nodes   (reduce (fn [upstream-node-list intake-point]
+                                     (depth-first-graph-traversal intake-point upstream-parents upstream-node-list))
+                                   #{}
+                                   (keys stream-intakes))]
+      (select-keys stream-network upstream-nodes))))
 
 ;; FIXME: stub
 (defn determine-stream-direction
@@ -305,16 +319,17 @@
         (find-lowest elev-layer water-neighbors)
         (find-lowest elev-layer (cons id neighbors))))))
 
-(defn build-downstream-flow-network
+(defn build-stream-network
   [{:keys [in-stream? elev-layer rows cols] :as params}]
-  (let [in-stream-dirs (lowest-neighbors-in-stream-channels in-stream? elev-layer rows cols)]
-    (assoc params
-      :downstream-flow-network
-      (make-matrix rows cols
-                   (fn [id]
-                     (if (in-stream? id)
-                       (in-stream-dirs id)
-                       (lowest-neighbors-overland id in-stream? elev-layer rows cols)))))))
+  ;; (let [in-stream-dirs (lowest-neighbors-in-stream-channels in-stream? elev-layer rows cols)]
+  (assoc params
+    :stream-network
+    (make-matrix rows cols
+                 (fn [id]
+                   (if (in-stream? id)
+                     id
+                     ;; (in-stream-dirs id)
+                     (lowest-neighbors-overland id in-stream? elev-layer rows cols))))))
 
 (defn make-buckets
   "Stores maps from {ids -> mm3-ref} for sink-caps, possible-use-caps, and actual-use-caps in params."
@@ -359,7 +374,7 @@
         create-in-stream-test
         link-streams-to-users
         make-buckets
-        build-downstream-flow-network)))
-        ;; build-upstream-flow-network)))
+        build-stream-network
+        filter-upstream-nodes)))
         ;; propagate-runoff!
         ;; assign-water-to-users!)))
