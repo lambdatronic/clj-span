@@ -321,9 +321,10 @@
                                      (conj groups curr-group)))
                             (conj groups curr-group)))
         first-group     (first adjacent-groups)
-        last-group      (peek adjacent-groups)]
+        last-group      (peek adjacent-groups)]    
     (if (adjacent? (peek last-group) (first first-group))
-      (pop adjacent-groups (assoc adjacent-groups 0 (concat last-group first-group))))))
+      (pop (assoc adjacent-groups 0 (concat last-group first-group)))
+      adjacent-groups)))
 
 (defn print-matrix
   ([matrix]
