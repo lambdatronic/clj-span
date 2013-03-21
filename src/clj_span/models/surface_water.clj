@@ -240,24 +240,28 @@
 ;;       (create-initial-service-carriers params))))
 ;;   (select-keys params [:stream-intakes :cache-layer :use-layer]))
 
+(defn upstream-parents
+  [rows cols stream-network id]
+  (filterv #(= id (get-in stream-network %))
+           (get-neighbors rows cols id)))
+
 (defn find-most-downstream-intakes
-  [stream-intakes stream-network]
-  (filter (fn [intake] (let [downstream-child (get-in stream-network intake)]
-                         (nil? (get-in stream-network downstream-child))))
+  [stream-intakes service-network]
+  (filter (fn [intake] (let [downstream-child (get-in service-network intake)]
+                         (nil? (get-in service-network downstream-child))))
           (keys stream-intakes)))
 
 ;; FIXME: stub
-(defn order-upstream-nodes
-  [{:keys [stream-intakes stream-network] :as params}]
-  (let [most-downstream-intake (find-most-downstream-intakes stream-intakes stream-network)]
-    most-downstream-intake))
+;; (defn order-upstream-nodes
+;;   [{:keys [stream-intakes service-network] :as params}]
+;;   (let [most-downstream-intakes (find-most-downstream-intakes stream-intakes service-network)]
+;;     (depth-first-graph-ordering intake-point upstream-parents  most-downstream-intakes)))
 
 (defn filter-upstream-nodes
   [{:keys [stream-intakes stream-network rows cols] :as params}]
   (assoc params
-    :stream-network
-    (let [upstream-parents (fn [id] (filterv #(= id (get-in stream-network %))
-                                             (get-neighbors rows cols id)))
+    :service-network
+    (let [upstream-parents (partial upstream-parents rows cols stream-network)
           upstream-nodes   (reduce (fn [upstream-node-list intake-point]
                                      (depth-first-graph-traversal intake-point upstream-parents upstream-node-list))
                                    #{}
@@ -298,9 +302,10 @@
   [water-neighbors]
   (let [neighbor-groups (group-by-adjacency water-neighbors)]
     (case (count neighbor-groups)
+      0 :lake
       1 :edge
       2 :link
-      :juncture)))
+      :junction)))
 
 (defn find-next-in-stream-step
   [rows cols elev-layer in-stream? [id unexplored-points]]
@@ -312,34 +317,27 @@
             [next-step (disj unexplored-points next-step)]))))))
 
 (defn find-bounded-stream-segment
-  [id water-neighbors unexplored-points explore-stream]
+  [id unexplored-points explore-stream]
   (let [left-results  (take-while (& not nil?) (rest (iterate explore-stream [id (disj unexplored-points id)])))
         right-results (take-while (& not nil?) (rest (iterate explore-stream [id (second (last left-results))])))]
     (concat (mapv first (reverse left-results)) [id] (mapv first right-results))))
 
 (defn determine-river-flow-directions
   [in-stream? elev-layer rows cols]
-  (let [explore-stream (p find-next-in-stream-step rows cols elev-layer in-stream?)]
-    (loop [unexplored-points in-stream?
-           stream-dirs       (transient {})]
-      (if (empty? unexplored-points)
+  (let [explore-stream (p find-next-in-stream-step rows cols elev-layer in-stream?)
+        stream-links   (set (filter #(= :link
+                                        (stream-segment-type
+                                         (filter in-stream? (get-neighbors-clockwise rows cols %))))
+                                    in-stream?))]
+    (loop [unexplored-links stream-links
+           stream-dirs      (transient {})]
+      (if (empty? unexplored-links)
         (persistent! stream-dirs)
-        (let [id (first unexplored-points)]
-          (if-let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
-            ;; you are somewhere in a river, so find your bounded stream segment and its outflow dirs
-            (if (= (stream-segment-type water-neighbors) :link)
-              (let [stream-segment (find-bounded-stream-segment id water-neighbors unexplored-points explore-stream)]
-                (recur (reduce disj unexplored-points stream-segment)
-                       (reduce conj! stream-dirs (select-stream-path-dirs elev-layer stream-segment))))
-              (if (not-any? #(= :link (stream-segment-type %))
-                            (map #(filter in-stream? (get-neighbors-clockwise rows cols %))
-                                 unexplored-points))
-                (persistent! stream-dirs)
-                (recur (concat (rest unexplored-points) [(first unexplored-points)])
-                       stream-dirs)))
-            ;; you are an isolated water body, no outflow
-            (recur (disj unexplored-points id)
-                   (assoc! stream-dirs id id))))))))
+        (let [id                  (first unexplored-links)
+              stream-segment      (find-bounded-stream-segment id in-stream? explore-stream)
+              stream-segment-dirs (select-stream-path-dirs elev-layer stream-segment)]
+          (recur (reduce disj unexplored-links (keys stream-segment-dirs))
+                 (reduce conj! stream-dirs stream-segment-dirs)))))))
 
 (defn build-stream-network
   [{:keys [in-stream? elev-layer rows cols] :as params}]

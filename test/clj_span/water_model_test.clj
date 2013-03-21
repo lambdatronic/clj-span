@@ -144,51 +144,54 @@
           [nil [11 2] [11 2] [9 2] [9 3] [11 4] [11 5] [10 8] [9 9] [9 9] nil] 
           [nil nil nil nil nil nil nil nil nil nil nil]])))
 
+(defn get-water-neighbors [id]
+  (seq (filter in-stream? (get-neighbors-clockwise rows cols id))))
+
 (deftest test-find-bounded-stream-segment
   (let [explore-stream (p find-next-in-stream-step rows cols elev-layer in-stream?)]
-    (is (= (find-bounded-stream-segment [8 4] (get-water-neighbors [8 4]) in-stream? explore-stream)
+    (is (= (find-bounded-stream-segment [8 4] in-stream? explore-stream)
            '([11 2] [10 2] [9 2] [9 3] [8 4] [7 4] [6 5] [5 6] [4 7])))
-    (is (= (find-bounded-stream-segment [7 9] (get-water-neighbors [8 4]) in-stream? explore-stream)
+    (is (= (find-bounded-stream-segment [7 9] in-stream? explore-stream)
            '([4 7] [5 8] [6 9] [7 9] [8 9] [9 9] [10 9] [10 8] [11 8])))
-    (is (= (find-bounded-stream-segment [3 7] (get-water-neighbors [8 4]) in-stream? explore-stream)
+    (is (= (find-bounded-stream-segment [3 7] in-stream? explore-stream)
            '([4 7] [3 7] [3 8] [2 9] [1 9])))))
 
 (deftest test-select-stream-path-dirs
   (let [explore-stream (p find-next-in-stream-step rows cols elev-layer in-stream?)]
     (is (= (select-stream-path-dirs elev-layer
-                                    (find-bounded-stream-segment [8 4] (get-water-neighbors [8 4]) in-stream? explore-stream))
+                                    (find-bounded-stream-segment [8 4] in-stream? explore-stream))
            {[4 7] [5 6], [5 6] [6 5], [6 5] [7 4], [7 4] [8 4], [8 4] [9 3], [9 3] [9 2], [9 2] [10 2], [10 2] [11 2]}))
     (is (= (select-stream-path-dirs elev-layer
-                                    (find-bounded-stream-segment [7 9] (get-water-neighbors [8 4]) in-stream? explore-stream))
+                                    (find-bounded-stream-segment [7 9] in-stream? explore-stream))
            {[11 8] [10 8], [10 8] [10 9], [10 9] [9 9], [9 9] [8 9], [8 9] [7 9], [7 9] [6 9], [6 9] [5 8], [5 8] [4 7]}))
     (is (= (select-stream-path-dirs elev-layer
-                                    (find-bounded-stream-segment [3 7] (get-water-neighbors [8 4]) in-stream? explore-stream))
+                                    (find-bounded-stream-segment [3 7] in-stream? explore-stream))
            {[1 9] [2 9], [2 9] [3 8], [3 8] [3 7], [3 7] [4 7]}))))
 
 (deftest test-determine-river-flow-directions
   (is (= (determine-river-flow-directions in-stream? elev-layer rows cols)
          {[6 5] [7 4], [10 9] [9 9], [9 9] [8 9], [5 6] [6 5], [8 9] [7 9],
-          [7 9] [6 9], [4 7] [5 6], [6 9] [5 8], [3 8] [3 7], [2 9] [3 8],
-          [1 9] [2 9], [10 2] [11 2], [9 2] [10 2], [9 3] [9 2], [8 4] [9 3],
-          [7 4] [8 4], [11 8] [10 8], [10 8] [10 9]})))
+          [7 9] [6 9], [4 7] [5 6], [5 8] [4 7], [6 9] [5 8], [3 7] [4 7],
+          [3 8] [3 7], [2 9] [3 8], [1 9] [2 9], [10 2] [11 2], [9 2] [10 2],
+          [9 3] [9 2], [8 4] [9 3], [7 4] [8 4], [11 8] [10 8], [10 8] [10 9]})))
 
 (deftest test-build-stream-network
   (is (= (:stream-network (build-stream-network {:in-stream? in-stream? 
                                                  :elev-layer elev-layer 
                                                  :rows rows 
                                                  :cols cols}))
-         [[nil nil nil nil nil nil nil nil nil nil nil]
-          [nil [2 2] [2 3] [2 4] [2 5] [2 6] [2 7] [1 7] [2 9] [2 9] nil]
-          [nil [3 2] [3 3] [3 4] [3 5] [3 6] [3 7] [3 8] [3 7] [3 8] nil]
-          [nil [4 2] [4 3] [4 4] [4 5] [4 6] [4 7] nil [3 7] [2 9] nil]
-          [nil [5 2] [5 3] [5 3] [5 3] [5 6] [4 7] [5 6] [4 7] [3 8] nil]
-          [nil [6 2] [6 3] [6 3] [6 5] [5 6] [6 5] [4 7] nil [5 8] nil]
-          [nil [7 2] [7 3] [7 4] [7 4] [7 4] [5 6] [5 6] [5 8] [5 8] nil]
-          [nil [8 2] [8 2] [8 4] [8 4] [8 4] [6 5] [6 6] [6 9] [6 9] nil]
-          [nil [9 2] [9 2] [9 2] [9 3] [8 4] [7 6] [7 6] [7 9] [7 9] nil]
-          [nil [10 2] [10 2] [9 2] [8 4] [8 4] [8 5] [10 8] [8 9] [8 9] nil]
+         [[nil  nil    nil   nil   nil    nil    nil    nil   nil     nil  nil]
+          [nil  [2 2]  [2 3] [2 4] [2 5]  [2 6]  [2 7]  [1 7] [2 9]  [2 9] nil]
+          [nil  [3 2]  [3 3] [3 4] [3 5]  [3 6]  [3 7]  [3 8] [3 7]  [3 8] nil]
+          [nil  [4 2]  [4 3] [4 4] [4 5]  [4 6]  [4 7]  [4 7] [3 7]  [2 9] nil]
+          [nil  [5 2]  [5 3] [5 3] [5 3]  [5 6]  [4 7]  [5 6] [4 7]  [3 8] nil]
+          [nil  [6 2]  [6 3] [6 3] [6 5]  [5 6]  [6 5]  [4 7] [4 7]  [5 8] nil]
+          [nil  [7 2]  [7 3] [7 4] [7 4]  [7 4]  [5 6]  [5 6] [5 8]  [5 8] nil]
+          [nil  [8 2]  [8 2] [8 4] [8 4]  [8 4]  [6 5]  [6 6] [6 9]  [6 9] nil]
+          [nil  [9 2]  [9 2] [9 2] [9 3]  [8 4]  [7 6]  [7 6] [7 9]  [7 9] nil]
+          [nil [10 2] [10 2] [9 2] [8 4]  [8 4]  [8 5] [10 8] [8 9]  [8 9] nil]
           [nil [11 2] [11 2] [9 2] [9 3] [11 4] [11 5] [10 8] [10 9] [9 9] nil]
-          [nil nil nil nil nil nil nil nil [10 8] nil nil]])))
+          [nil  nil    nil   nil   nil    nil    nil    nil   [10 8]  nil  nil]])))
 
 (def stream-intakes
   (let [params {:flow-layers {"River" water-layer}
@@ -199,9 +202,6 @@
            create-in-stream-test
            link-streams-to-users)
          :stream-intakes)))
-
-(defn get-water-neighbors [id] 
-  (seq (filter in-stream? (get-neighbors-clockwise rows cols id))))
 
 (deftest test-water-neighbors
   (is (= (get-water-neighbors [9 9]) [[10 9] [8 9] [10 8]]))
@@ -221,17 +221,17 @@
                                           :cols cols})))
 
 (deftest test-filter-upstream-nodes
-  (is (= (:stream-network (filter-upstream-nodes {:stream-intakes  stream-intakes
+  (is (= (:service-network (filter-upstream-nodes {:stream-intakes  stream-intakes
                                                   :stream-network stream-network
                                                   :rows rows 
                                                   :cols cols}))
          [[nil nil nil nil nil nil nil nil nil nil nil]
-          [nil [2 2] [2 3] [2 4] [2 5] nil nil nil nil nil nil]
-          [nil [3 2] [3 3] [3 4] [3 5] [3 6] nil nil nil nil nil]
-          [nil [4 2] [4 3] [4 4] [4 5] [4 6] [4 7] nil nil nil nil]
-          [nil [5 2] [5 3] [5 3] [5 3] [5 6] [4 7] [5 6] [4 7] nil nil]
-          [nil [6 2] [6 3] [6 3] [6 5] [5 6] [6 5] [4 7] nil nil nil]
-          [nil [7 2] [7 3] [7 4] [7 4] [7 4] [5 6] [5 6] nil [5 8] nil]
+          [nil [2 2] [2 3] [2 4] [2 5] [2 6] [2 7] nil [2 9] [2 9] nil]
+          [nil [3 2] [3 3] [3 4] [3 5] [3 6] [3 7] [3 8] [3 7] [3 8] nil]
+          [nil [4 2] [4 3] [4 4] [4 5] [4 6] [4 7] [4 7] [3 7] [2 9] nil]
+          [nil [5 2] [5 3] [5 3] [5 3] [5 6] [4 7] [5 6] [4 7] [3 8] nil]
+          [nil [6 2] [6 3] [6 3] [6 5] [5 6] [6 5] [4 7] [4 7] [5 8] nil]
+          [nil [7 2] [7 3] [7 4] [7 4] [7 4] [5 6] [5 6] [5 8] [5 8] nil]
           [nil [8 2] [8 2] [8 4] [8 4] [8 4] [6 5] [6 6] [6 9] [6 9] nil]
           [nil [9 2] [9 2] [9 2] [9 3] [8 4] [7 6] [7 6] [7 9] [7 9] nil]
           [nil nil [10 2] [9 2] [8 4] [8 4] [8 5] [10 8] [8 9] [8 9] nil]
@@ -239,9 +239,9 @@
           [nil nil nil nil nil nil nil nil [10 8] nil nil]])))
 
 (deftest test-find-most-downstream-intakes
-  (let [stream-network (:stream-network (filter-upstream-nodes {:stream-intakes stream-intakes
+  (let [stream-network (:service-network (filter-upstream-nodes {:stream-intakes stream-intakes
                                                                 :stream-network stream-network
                                                                 :rows rows 
                                                                 :cols cols}))]
     (is (= (find-most-downstream-intakes stream-intakes stream-network)
-           '([9 2] [6 9])))))
+           '([9 2])))))
