@@ -287,8 +287,10 @@
   [rows cols [i j]]
   (filterv (p in-bounds? rows cols)
            (map #(vector (+ i %1) (+ j %2))
-                [-1 -1 -1  0 0  1 1 1]
-                [-1  0  1 -1 1 -1 0 1])))
+                [-1 1  1 -1 1 -1 0  0]
+                [-1 1 -1  1 0  0 1 -1])))
+                ;; [-1 -1 -1  0 0  1 1 1]
+                ;; [-1  0  1 -1 1 -1 0 1])))
 
 (defn print-matrix
   ([matrix]

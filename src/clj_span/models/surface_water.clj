@@ -262,7 +262,6 @@
                                    (keys stream-intakes))]
       (make-matrix rows cols (fn [id] (if (contains? upstream-nodes id)
                                         (get-in stream-network id)))))))
-      ;; (select-keys stream-network upstream-nodes))))
 
 ;; FIXME: stub
 (defn determine-stream-direction
