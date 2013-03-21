@@ -22,8 +22,9 @@
 ;;; vectors of vectors.
 
 (ns clj-misc.matrix-ops
-  (:use [clojure.set    :only (map-invert)]
-        [clj-misc.utils :only (constraints-1.0 def- p & remove-nil-val-entries magnitude between? metric-distance with-message)]))
+  (:use [clojure.set    :only [map-invert]]
+        [clj-misc.utils :only [constraints-1.0 def- p & remove-nil-val-entries magnitude
+                               between? metric-distance with-message manhattan-distance-2]]))
 
 (defn get-rows [matrix] (count matrix))
 (defn get-cols [matrix] (count (first matrix)))
@@ -289,8 +290,40 @@
            (map #(vector (+ i %1) (+ j %2))
                 [-1 1  1 -1 1 -1 0  0]
                 [-1 1 -1  1 0  0 1 -1])))
-                ;; [-1 -1 -1  0 0  1 1 1]
-                ;; [-1  0  1 -1 1 -1 0 1])))
+
+(defn get-neighbors-clockwise
+  "Return a sequence of neighboring points within the map bounds."
+  [rows cols [i j]]
+  (filterv (p in-bounds? rows cols)
+           (map #(vector (+ i %1) (+ j %2))
+                [1 1 0 -1 -1 -1  0  1]
+                [0 1 1  1  0 -1 -1 -1])))
+
+(defn group-by-adjacency
+  [points]
+  (let [adjacent?       #(== (manhattan-distance-2 %1 %2) 1)
+        adjacent-groups (loop [curr-point   (first points)
+                               next-point   (second points)
+                               other-points (nnext points)
+                               curr-group    [curr-point]
+                               groups        []]
+                          (if next-point
+                            (if (adjacent? curr-point next-point)
+                              (recur next-point
+                                     (first other-points)
+                                     (next other-points)
+                                     (conj curr-group next-point)
+                                     groups)
+                              (recur next-point
+                                     (first other-points)
+                                     (next other-points)
+                                     [next-point]
+                                     (conj groups curr-group)))
+                            (conj groups curr-group)))
+        first-group     (first adjacent-groups)
+        last-group      (peek adjacent-groups)]
+    (if (adjacent? (peek last-group) (first first-group))
+      (pop adjacent-groups (assoc adjacent-groups 0 (concat last-group first-group))))))
 
 (defn print-matrix
   ([matrix]
