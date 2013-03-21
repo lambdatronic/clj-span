@@ -323,7 +323,7 @@
         first-group     (first adjacent-groups)
         last-group      (peek adjacent-groups)]
     (if (adjacent? (peek last-group) (first first-group))
-      (pop adjacent-groups (assoc adjacent-groups 0 (concat last-group first-group))))))
+      (pop (assoc adjacent-groups 0 (concat last-group first-group))))))
 
 (defn print-matrix
   ([matrix]

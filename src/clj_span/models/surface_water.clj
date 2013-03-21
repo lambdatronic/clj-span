@@ -22,7 +22,7 @@
 
 (ns clj-span.models.surface-water
   (:use [clj-misc.utils      :only [seq2map mapmap iterate-while-seq with-message
-                                    memoize-by-first-arg angular-distance p
+                                    memoize-by-first-arg angular-distance p &
                                     with-progress-bar-cool depth-first-graph-traversal]]
         [clj-misc.matrix-ops :only [get-neighbors on-bounds? subtract-ids find-nearest
                                     filter-matrix-for-coords make-matrix map-matrix
@@ -265,69 +265,6 @@
       (make-matrix rows cols (fn [id] (if (contains? upstream-nodes id)
                                         (get-in stream-network id)))))))
 
-(defn select-stream-path-dirs
-  [elev-layer stream-points-in-path]
-  (let [[left-path right-path] (split-at (int (/ (count stream-points-in-path) 2)) stream-points-in-path)
-        left-weight            (reduce _+_ (r/map #(get-in elev-layer %) left-path))
-        right-weight           (reduce _+_ (r/map #(get-in elev-layer %) right-path))]
-    (into {} (partition 2 1 (if (_>_ left-weight right-weight)
-                              stream-points-in-path
-                              (reverse stream-points-in-path))))))
-
-;; FIXME: stub
-(defn find-bounded-stream-segment
-  [id water-neighbors stream-points rows cols]
-  (let [neighbor-groups (group-by-adjacency water-neighbors)]
-    neighbor-groups))
-;;     (cond (= (count neighbor-groups) 1)
-;;           ;; you are an edge
-;;           ;; find the path and...
-                  
-
-;;           (let [neighbor     (first water-neighbors)
-;;                 neighbor-dir (stream-dirs neighbor)] ;; already assigned
-;;             (if neighbor-dir
-;;               (if (= neighbor-dir id)
-;;                 (recur (disj! stream-points id) ;; neighbor is upstream and you are a low point, no outflow
-;;                        (assoc! stream-dirs id id))
-;;                 (recur (disj! stream-points id) ;; neighbor is downstream, you flow to it
-;;                        (assoc! stream-dirs id neighbor)))
-;;               ;; need to figure out which way the water is flowing
-;;               (let [new-stream-dirs (determine-stream-direction in-stream? stream-dirs water-neighbors id)]
-;;                 (recur (reduce disj! stream-points (keys new-stream-dirs))
-;;                        (reduce assoc! stream-dirs new-stream-dirs)))))
-
-
-;;           (= (count neighbor-groups) 2)
-;;           ;; you are a link
-;;           ...
-
-;;           :else
-;;           ;; you are a junction
-;;           ...
-;;           ))
-
-;;   :else ;; more than one water neighbor
-;;   (let [new-stream-dirs (determine-stream-direction in-stream? stream-dirs water-neighbors id)]
-;;     (recur (reduce disj! stream-points (keys new-stream-dirs))
-;;            (reduce assoc! stream-dirs new-stream-dirs))))))))
-
-(defn determine-river-flow-directions
-  [in-stream? elev-layer rows cols]
-  (loop [stream-points (transient in-stream?)
-         stream-dirs   (transient {})]
-    (if (empty? stream-points)
-      (persistent! stream-dirs)
-      (let [id (first stream-points)]
-        (if-let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
-          ;; you are somewhere in a river, so find your bounded stream segment and its outflow dirs
-          (let [stream-segment (find-bounded-stream-segment id water-neighbors stream-points rows cols)]
-            (recur (reduce disj! stream-points stream-segment)
-                   (reduce conj! stream-dirs (select-stream-path-dirs elev-layer stream-segment))))
-          ;; you are an isolated water body, no outflow
-          (recur (disj! stream-points id)
-                 (assoc! stream-dirs id id)))))))
-
 (defn find-lowest
   [elev-layer ids]
   (reduce (fn [lowest-id id]
@@ -344,6 +281,59 @@
       (if-let [water-neighbors (seq (filterv in-stream? neighbors))]
         (find-lowest elev-layer water-neighbors)
         (find-lowest elev-layer (cons id neighbors))))))
+
+(defn select-stream-path-dirs
+  [elev-layer stream-points-in-path]
+  (let [[left-path right-path] (split-at (int (/ (count stream-points-in-path) 2)) stream-points-in-path)
+        left-weight            (reduce _+_ (r/map #(get-in elev-layer %) left-path))
+        right-weight           (reduce _+_ (r/map #(get-in elev-layer %) right-path))]
+    (into {} (partition 2 1 (if (_>_ left-weight right-weight)
+                              stream-points-in-path
+                              (reverse stream-points-in-path))))))
+
+(defn stream-segment-type
+  [water-neighbors]
+  (let [neighbor-groups (group-by-adjacency water-neighbors)]
+    (case (count neighbor-groups)
+      1 :edge
+      2 :link
+      :juncture)))
+
+;; FIXME: always take the lowest unvisited in-stream neighbor
+(defn find-next-in-stream-step
+  [rows cols elev-layer in-stream? [id unexplored-points]]
+  (if-not (on-bounds? rows cols id)
+    (if-let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
+      (if (= (stream-segment-type water-neighbors) :link)
+        (let [next-step (find-lowest elev-layer (filter unexplored-points water-neighbors))]
+          [next-step (disj unexplored-points id)])))))
+
+(defn find-bounded-stream-segment
+  [id water-neighbors unexplored-points explore-stream]
+  (let [left-results  (take-while (& not nil?) (rest (iterate explore-stream [id unexplored-points])))
+        right-results (take-while (& not nil?) (rest (iterate explore-stream [id (second (last left-results))])))]
+    (concat (mapv first (reverse left-results)) [id] (mapv first right-results))))
+
+;; FIXME: junctures (and possible some edges) will not be analyzed and might cause an infinite loop
+(defn determine-river-flow-directions
+  [in-stream? elev-layer rows cols]
+  (let [explore-stream (p find-next-in-stream-step rows cols elev-layer in-stream?)]
+    (loop [unexplored-points (transient in-stream?)
+           stream-dirs       (transient {})]
+      (if (empty? unexplored-points)
+        (persistent! stream-dirs)
+        (let [id (first unexplored-points)]
+          (if-let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
+            ;; you are somewhere in a river, so find your bounded stream segment and its outflow dirs
+            (if (= (stream-segment-type water-neighbors) :link)
+              (let [stream-segment (seq (find-bounded-stream-segment id water-neighbors unexplored-points explore-stream))]
+                (recur (reduce disj! unexplored-points stream-segment)
+                       (reduce conj! stream-dirs (select-stream-path-dirs elev-layer stream-segment))))
+              (recur (concat (rest unexplored-points) [(first unexplored-points)])
+                     stream-dirs))
+            ;; you are an isolated water body, no outflow
+            (recur (disj! unexplored-points id)
+                   (assoc! stream-dirs id id))))))))
 
 (defn build-stream-network
   [{:keys [in-stream? elev-layer rows cols] :as params}]
