@@ -287,9 +287,12 @@
   (let [[left-path right-path] (split-at (int (/ (count stream-points-in-path) 2)) stream-points-in-path)
         left-weight            (reduce _+_ (r/map #(get-in elev-layer %) left-path))
         right-weight           (reduce _+_ (r/map #(get-in elev-layer %) right-path))]
-    (into {} (partition 2 1 (if (_>_ left-weight right-weight)
+    (persistent!
+     (reduce (fn [acc [curr next]] (assoc! acc curr next))
+             (transient {})
+             (partition 2 1 (if (_>_ left-weight right-weight)
                               stream-points-in-path
-                              (reverse stream-points-in-path))))))
+                              (reverse stream-points-in-path)))))))
 
 (defn stream-segment-type
   [water-neighbors]
@@ -299,26 +302,25 @@
       2 :link
       :juncture)))
 
-;; FIXME: always take the lowest unvisited in-stream neighbor
 (defn find-next-in-stream-step
   [rows cols elev-layer in-stream? [id unexplored-points]]
   (if-not (on-bounds? rows cols id)
     (if-let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
       (if (= (stream-segment-type water-neighbors) :link)
-        (let [next-step (find-lowest elev-layer (filter unexplored-points water-neighbors))]
-          [next-step (disj unexplored-points id)])))))
+        (if-let [unexplored-neighbors (seq (filter unexplored-points water-neighbors))]
+          (let [next-step (find-lowest elev-layer unexplored-neighbors)]
+            [next-step (disj unexplored-points next-step)]))))))
 
 (defn find-bounded-stream-segment
   [id water-neighbors unexplored-points explore-stream]
-  (let [left-results  (take-while (& not nil?) (rest (iterate explore-stream [id unexplored-points])))
+  (let [left-results  (take-while (& not nil?) (rest (iterate explore-stream [id (disj unexplored-points id)])))
         right-results (take-while (& not nil?) (rest (iterate explore-stream [id (second (last left-results))])))]
     (concat (mapv first (reverse left-results)) [id] (mapv first right-results))))
 
-;; FIXME: junctures (and possible some edges) will not be analyzed and might cause an infinite loop
 (defn determine-river-flow-directions
   [in-stream? elev-layer rows cols]
   (let [explore-stream (p find-next-in-stream-step rows cols elev-layer in-stream?)]
-    (loop [unexplored-points (transient in-stream?)
+    (loop [unexplored-points in-stream?
            stream-dirs       (transient {})]
       (if (empty? unexplored-points)
         (persistent! stream-dirs)
@@ -326,13 +328,17 @@
           (if-let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
             ;; you are somewhere in a river, so find your bounded stream segment and its outflow dirs
             (if (= (stream-segment-type water-neighbors) :link)
-              (let [stream-segment (seq (find-bounded-stream-segment id water-neighbors unexplored-points explore-stream))]
-                (recur (reduce disj! unexplored-points stream-segment)
+              (let [stream-segment (find-bounded-stream-segment id water-neighbors unexplored-points explore-stream)]
+                (recur (reduce disj unexplored-points stream-segment)
                        (reduce conj! stream-dirs (select-stream-path-dirs elev-layer stream-segment))))
-              (recur (concat (rest unexplored-points) [(first unexplored-points)])
-                     stream-dirs))
+              (if (not-any? #(= :link (stream-segment-type %))
+                            (map #(filter in-stream? (get-neighbors-clockwise rows cols %))
+                                 unexplored-points))
+                (persistent! stream-dirs)
+                (recur (concat (rest unexplored-points) [(first unexplored-points)])
+                       stream-dirs)))
             ;; you are an isolated water body, no outflow
-            (recur (disj! unexplored-points id)
+            (recur (disj unexplored-points id)
                    (assoc! stream-dirs id id))))))))
 
 (defn build-stream-network
