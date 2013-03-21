@@ -1,4 +1,4 @@
-;;; Copyright 2010-2013 Gary Johnson
+;;; Copyright 2010-2013 Gary Johnson & Ioannis Athanasiadis
 ;;;
 ;;; This file is part of clj-span.
 ;;;
@@ -67,179 +67,39 @@
 ;;                  use-caches
 ;;                  use-percents))))))))
 
-;; (defn nearest-to-bearing
-;;   [bearing id neighbors]
-;;   (if (seq neighbors)
-;;     (if bearing
-;;       (let [bearing-changes (seq2map neighbors
-;;                                      #(let [bearing-to-neighbor (subtract-ids % id)]
-;;                                         [(angular-distance bearing bearing-to-neighbor)
-;;                                          %]))]
-;;         (bearing-changes (apply min (keys bearing-changes))))
-;;       (first neighbors))))
-;; (def nearest-to-bearing (memoize nearest-to-bearing))
-
-;; ;; FIXME: Somehow this still doesn't terminate correctly for some carriers.
-;; (defn find-next-step
-;;   [current-id in-stream? flow-layers rows cols route]
-;;   (let [prev-id (peek (pop route))
-;;         bearing (if prev-id (subtract-ids current-id prev-id))]
-;;     (->> (lowest-neighbors current-id
-;;                            in-stream?
-;;                            flow-layers
-;;                            rows
-;;                            cols)
-;;          (remove (p = prev-id))
-;;          (nearest-to-bearing bearing current-id))))
-
-;; (defn take-next-step
-;;   [current-id
-;;    {:keys [trans-threshold-volume in-stream? flow-layers rows cols]}
-;;    {:keys [possible-weight route] :as surface-water-carrier}]
-;;   (if (_> possible-weight trans-threshold-volume)
-;;     (if-let [next-id (find-next-step current-id in-stream? flow-layers rows cols route)]
-;;       (assoc surface-water-carrier
-;;         :route         (conj route next-id)
-;;         :stream-bound? (in-stream? next-id)))))
-
-;; (defn calculate-use!
-;;   [current-id use-caps weight]
-;;   (let [use-cap-ref (use-caps current-id)
-;;         use-cap     (deref use-cap-ref)]
-;;     (if (or (= use-cap _0_)
-;;             (= weight  _0_))
-;;       [weight _0_]
-;;       (do (alter use-cap-ref #(rv-fn '(fn [w u] (max (- u w) 0.0)) weight %))
-;;           [(rv-fn '(fn [w u] (max (- w u) 0.0)) weight use-cap)
-;;            (rv-fn '(fn [w u] (min w u))         weight use-cap)]))))
-
-;; (defn local-use!
-;;   [current-id
-;;    {:keys [cache-layer possible-flow-layer actual-flow-layer possible-use-caps actual-use-caps mm2-per-cell]}
-;;    {:keys [route possible-weight actual-weight sink-effects] :as surface-water-carrier}]
-;;   (dosync
-;;    (let [[new-possible-weight possible-use] (calculate-use! current-id possible-use-caps possible-weight)
-;;          [new-actual-weight   actual-use]   (calculate-use! current-id actual-use-caps   actual-weight)]
-;;      (if-not (and (= possible-use _0_)
-;;                   (= actual-use   _0_))
-;;        (let [possible-density (_d possible-use mm2-per-cell)
-;;              actual-density   (_d actual-use   mm2-per-cell)]
-;;          (if (not= possible-density _0_)
-;;            (doseq [id route]
-;;              (commute (get-in possible-flow-layer id) _+_ possible-density)))
-;;          (if (not= actual-density _0_)
-;;            (doseq [id route]
-;;              (commute (get-in actual-flow-layer id) _+_ actual-density)))
-;;          (commute (get-in cache-layer current-id) conj (assoc surface-water-carrier
-;;                                                          :route           nil
-;;                                                          :possible-weight possible-density
-;;                                                          :actual-weight   actual-density
-;;                                                          :sink-effects    (mapmap identity #(_d % mm2-per-cell) sink-effects)))))
-;;      [new-possible-weight new-actual-weight])))
-
-;; (defn handle-use-effects!
-;;   [current-id {:keys [possible-use-caps] :as params} surface-water-carrier]
-;;   (if (possible-use-caps current-id)
-;;     (let [[new-possible-weight new-actual-weight] (local-use! current-id
-;;                                                               params
-;;                                                               surface-water-carrier)]
-;;       (assoc surface-water-carrier
-;;         :possible-weight new-possible-weight
-;;         :actual-weight   new-actual-weight))
-;;     surface-water-carrier))
-
-;; (defn local-sink!
-;;   "Computes the amount sunk by each sink encountered along an
-;;    out-of-stream flow path. Reduces the sink-caps for each sink which
-;;    captures some of the service medium. Returns remaining
-;;    actual-weight and the local sink effects."
-;;   [current-id actual-weight sink-cap-ref]
-;;   (dosync
-;;    (let [sink-cap (deref sink-cap-ref)]
-;;      (if (= sink-cap _0_)
-;;        [actual-weight {}]
-;;        (do
-;;          (alter sink-cap-ref #(rv-fn '(fn [a s] (max (- s a) 0.0)) actual-weight %))
-;;          [(rv-fn '(fn [a s] (max (- a s) 0.0)) actual-weight sink-cap)
-;;           {current-id (rv-fn '(fn [a s] (min a s)) actual-weight sink-cap)}])))))
-
-;; (defn handle-sink-effects!
-;;   [current-id {:keys [sink-caps]} {:keys [actual-weight sink-effects] :as surface-water-carrier}]
-;;   (if (not= actual-weight _0_)
-;;     (if-let [sink-cap-ref (sink-caps current-id)]
-;;       (let [[new-actual-weight new-sink-effects] (local-sink! current-id
-;;                                                               actual-weight
-;;                                                               sink-cap-ref)]
-;;         (assoc surface-water-carrier
-;;           :actual-weight new-actual-weight
-;;           :sink-effects  (merge-with _+_ sink-effects new-sink-effects)))
-;;       surface-water-carrier)
-;;     surface-water-carrier))
-
-;; ;; FIXME: Make sure carriers can hop from stream to stream as necessary.
-;; (defn to-the-ocean!
-;;   "Computes the state of the surface-water-carrier after it takes
-;;    another step downhill. If it encounters a sink location, it drops
-;;    some water according to the remaining sink capacity at this
-;;    location."
-;;   [params {:keys [route stream-bound?] :as surface-water-carrier}]
-;;   (try
-;;     (let [current-id        (peek route)
-;;           local-effects-fn! (if stream-bound? handle-use-effects! handle-sink-effects!)]
-;;       (->> surface-water-carrier
-;;            (local-effects-fn! current-id params)
-;;            (take-next-step current-id params)))
-;;     (catch Exception _ (println "Bad agent go BOOM!"))))
-
-;; (defn report-carrier-counts
-;;   [surface-water-carriers]
-;;   (let [on-land-carriers   (count (remove :stream-bound? surface-water-carriers))
-;;         in-stream-carriers (- (count surface-water-carriers) on-land-carriers)]
-;;     (printf "Carriers: %10d | On Land: %10d | In Stream: %10d%n"
-;;             (+ on-land-carriers in-stream-carriers)
-;;             on-land-carriers
-;;             in-stream-carriers)
-;;     (flush)))
-
-;; (defn move-carriers-one-step-downstream!
-;;   [params surface-water-carriers]
-;;   (report-carrier-counts surface-water-carriers)
-;;   (pmap (p to-the-ocean! params) surface-water-carriers))
-
-;; (defn create-initial-service-carriers
-;;   [{:keys [source-layer source-points mm2-per-cell in-stream?]}]
-;;   (map
-;;    #(let [source-weight (*_ mm2-per-cell (get-in source-layer %))]
-;;       (struct-map service-carrier
-;;         :source-id       %
-;;         :route           [%]
-;;         :possible-weight source-weight
-;;         :actual-weight   source-weight
-;;         :sink-effects    {}
-;;         :stream-bound?   (in-stream? %)))
-;;    source-points))
-
-;; (defn stop-unless-reducing
-;;   [n coll]
-;;   (dorun (take-while (fn [[p c]] (> p c)) (partition 2 1 (map count (take-nth n coll))))))
-
-;; (defn propagate-runoff!
-;;   "Constructs a sequence of surface-water-carrier objects (one per
-;;    source point) and then iteratively propagates them downhill until
-;;    they reach a stream location, get stuck in a low elevation point,
-;;    or fall off the map bounds. Once they reach a stream location, the
-;;    carriers will attempt to continue downhill while staying in a
-;;    stream course. Sinks affect carriers overland. Users affect
-;;    carriers in stream channels. All the carriers are moved together in
-;;    timesteps (more or less)."
-;;   [params]
-;;   (with-message "Moving the surface water carriers downhill and downstream...\n" "Done moving surface water carriers."
-;;     (stop-unless-reducing
-;;      100
-;;      (iterate-while-seq
-;;       (p move-carriers-one-step-downstream! params)
-;;       (create-initial-service-carriers params))))
-;;   (select-keys params [:stream-intakes :cache-layer :use-layer]))
+(defn propagate-runoff!
+  [{:keys [source-layer sink-layer use-layer
+           actual-sink-layer possible-use-layer actual-use-layer
+           possible-flow-layer actual-flow-layer
+           service-network subnetwork-orders] :as params}]
+  (let [_-_ (fn [A B] (rv-fn '(fn [a b] (max (- a b) 0.0)) A B))]
+    (doseq [subnetwork-order subnetwork-orders]
+      (doseq [layer-number (range (apply max (keys subnetwork-order)) -1 -1)]
+        (doseq [node (subnetwork-order layer-number)]
+          (let [theoretical-source       (get-in source-layer node)
+                theoretical-sink         (get-in sink-layer node)
+                theoretical-use          (get-in use-layer node)
+                in-situ-inflow           (_-_ theoretical-source theoretical-sink)
+                possible-upstream-inflow @(get-in possible-flow-layer node)
+                actual-upstream-inflow   @(get-in actual-flow-layer node)
+                possible-inflow          (_+_ in-situ-inflow possible-upstream-inflow) ;; inflow without rival use
+                actual-inflow            (_+_ in-situ-inflow actual-upstream-inflow) ;; inflow with rival use
+                possible-use             (_min_ possible-inflow theoretical-use) ;; user capture without rival use
+                actual-use               (_min_ actual-inflow theoretical-use) ;; user capture with rival use
+                actual-sink              actual-use ;; the same since we're treating user capture as sink for rival competition scenarios
+                possible-outflow         possible-inflow
+                actual-outflow           (_-_ actual-inflow actual-use)]
+            (dosync
+             ;; at this location
+             (ref-set (get-in possible-flow-layer node) possible-outflow)
+             (ref-set (get-in actual-flow-layer   node) actual-outflow)
+             (ref-set (get-in possible-use-layer  node) possible-use)
+             (ref-set (get-in actual-use-layer    node) actual-use)
+             (ref-set (get-in actual-sink-layer   node) actual-sink)
+             ;; at our next downhill/downstream neighbor
+             (commute (get-in possible-flow-layer (get-in service-network node)) _+_ possible-outflow)
+             (commute (get-in actual-flow-layer   (get-in service-network node)) _+_ actual-outflow)))))))
+  params)
 
 (defn upstream-parents
   [rows cols stream-network id]
@@ -254,10 +114,12 @@
 
 (defn order-upstream-nodes
   [{:keys [stream-intakes service-network rows cols] :as params}]
-  (let [upstream-parents (partial upstream-parents rows cols service-network)]
-    (for [intake-point (find-most-downstream-intakes stream-intakes service-network)]
-      (let [subnetwork-ordering (depth-first-graph-ordering intake-point upstream-parents)]
-        (group-by subnetwork-ordering (keys subnetwork-ordering))))))
+  (assoc params
+    :subnetwork-orders
+    (let [upstream-parents (partial upstream-parents rows cols service-network)]
+      (for [intake-point (find-most-downstream-intakes stream-intakes service-network)]
+        (let [subnetwork-order (depth-first-graph-ordering intake-point upstream-parents)]
+          (group-by subnetwork-order (keys subnetwork-order)))))))
 
 (defn filter-upstream-nodes
   [{:keys [stream-intakes stream-network rows cols] :as params}]
@@ -356,9 +218,9 @@
   "Stores maps from {ids -> mm3-ref} for sink-caps, possible-use-caps, and actual-use-caps in params."
   [{:keys [rows cols] :as params}]
   (assoc params
-    :actual-sink  (make-matrix rows cols (fn [_] (ref _0_)))
-    :possible-use (make-matrix rows cols (fn [_] (ref _0_)))
-    :actual-use   (make-matrix rows cols (fn [_] (ref _0_)))))
+    :actual-sink-layer  (make-matrix rows cols (fn [_] (ref _0_)))
+    :possible-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
+    :actual-use-layer   (make-matrix rows cols (fn [_] (ref _0_)))))
 
 (defn find-nearest-stream-points
   [in-stream? rows cols use-points]
@@ -397,6 +259,6 @@
         make-buckets
         build-stream-network
         filter-upstream-nodes
-        order-upstream-nodes)))
-        ;; propagate-runoff!
+        order-upstream-nodes
+        propagate-runoff!)))
         ;; assign-water-to-users!)))

@@ -10,7 +10,7 @@
 (def value-type :numbers)
 
 (defn register-math-syms [t]
-  (with-typed-math-syms value-type [_0_ _+_ _*_ _d_ *_ _d  _<_  _>_ rv-fn _>]
+  (with-typed-math-syms value-type [_0_ _+_ _*_ _d_ *_ _d  _<_  _>_ rv-fn _> _min_]
     (t)))
 
 (use-fixtures :once register-math-syms)
@@ -228,8 +228,8 @@
 
 (deftest test-filter-upstream-nodes
   (is (= service-network
-         [[nil nil nil nil nil nil nil nil nil nil nil]
-          [nil [2 2] [2 3] [2 4] [2 5] [2 6] [2 7] nil [2 9] [2 9] nil]
+         [[nil nil   nil   nil   nil   nil   nil   nil   nil   nil   nil]
+          [nil [2 2] [2 3] [2 4] [2 5] [2 6] [2 7] nil   [2 9] [2 9] nil]
           [nil [3 2] [3 3] [3 4] [3 5] [3 6] [3 7] [3 8] [3 7] [3 8] nil]
           [nil [4 2] [4 3] [4 4] [4 5] [4 6] [4 7] [4 7] [3 7] [2 9] nil]
           [nil [5 2] [5 3] [5 3] [5 3] [5 6] [4 7] [5 6] [4 7] [3 8] nil]
@@ -237,7 +237,7 @@
           [nil [7 2] [7 3] [7 4] [7 4] [7 4] [5 6] [5 6] [5 8] [5 8] nil]
           [nil [8 2] [8 2] [8 4] [8 4] [8 4] [6 5] [6 6] [6 9] [6 9] nil]
           [nil [9 2] [9 2] [9 2] [9 3] [8 4] [7 6] [7 6] [7 9] [7 9] nil]
-          [nil nil [10 2] [9 2] [8 4] [8 4] [8 5] [10 8] [8 9] [8 9] nil]
+          [nil nil  [10 2] [9 2] [8 4] [8 4] [8 5] [10 8] [8 9] [8 9] nil]
           [nil nil nil [9 2] [9 3] nil nil [10 8] [10 9] [9 9] nil]
           [nil nil nil nil nil nil nil nil [10 8] nil nil]])))
 
@@ -246,26 +246,23 @@
          '([9 2]))))
 
 (def ordered-upstream-nodes
-  (order-upstream-nodes {:stream-intakes stream-intakes
-                         :service-network service-network
-                         :rows rows
-                         :cols cols}))
+  (:subnetwork-orders (order-upstream-nodes {:stream-intakes stream-intakes
+                                             :service-network service-network
+                                             :rows rows
+                                             :cols cols})))
 
 (deftest test-order-upstream-nodes
   (is (= ordered-upstream-nodes
-         '({0 [[9 2]],
-            1 [[8 1] [10 3] [8 2] [9 3] [8 3]],
-            2 [[7 1] [10 4] [7 2] [8 4]],
-            3 [[6 1] [9 4] [7 3] [9 5] [7 4] [8 5] [7 5]],
-            4 [[6 5] [6 2] [6 3] [9 6] [6 4]],
-            5 [[5 4] [7 6] [5 6] [5 1] [5 2] [5 3]],
-            6
-            [[4 3] [8 7] [4 4] [5 5] [6 6] [4 5] [6 7] [4 7] [4 1] [4 2] [8 6]],
-            7
-            [[3 2] [3 3] [7 7] [3 4] [4 6] [5 7] [3 6] [5 8] [3 7] [4 8] [3 1]],
-            8
-            [[2 1] [2 2] [2 3] [3 5] [6 8] [2 5] [6 9] [2 6] [5 9] [3 8] [2 8]],
-            9 [[1 1] [7 8] [1 2] [2 4] [7 9] [1 4] [1 5] [2 7] [4 9] [2 9]],
+         '({0  [[9 2]],
+            1  [[8 1] [10 3] [8 2] [9 3] [8 3]],
+            2  [[7 1] [10 4] [7 2] [8 4]],
+            3  [[6 1] [9 4] [7 3] [9 5] [7 4] [8 5] [7 5]],
+            4  [[6 5] [6 2] [6 3] [9 6] [6 4]],
+            5  [[5 4] [7 6] [5 6] [5 1] [5 2] [5 3]],
+            6  [[4 3] [8 7] [4 4] [5 5] [6 6] [4 5] [6 7] [4 7] [4 1] [4 2] [8 6]],
+            7  [[3 2] [3 3] [7 7] [3 4] [4 6] [5 7] [3 6] [5 8] [3 7] [4 8] [3 1]],
+            8  [[2 1] [2 2] [2 3] [3 5] [6 8] [2 5] [6 9] [2 6] [5 9] [3 8] [2 8]],
+            9  [[1 1] [7 8] [1 2] [2 4] [7 9] [1 4] [1 5] [2 7] [4 9] [2 9]],
             10 [[8 8] [8 9] [1 3] [1 6] [3 9] [1 8] [1 9]],
             11 [[9 8] [9 9]],
             12 [[10 9]],
@@ -273,3 +270,17 @@
             14 [[10 7] [11 8] [9 7]]})))
   (is (= (set (filter-matrix-for-coords (& not nil?) service-network))
          (set (apply concat (map #(apply concat (vals %)) ordered-upstream-nodes))))))
+
+(deftest test-propagate-runoff!
+  (let [{:keys [possible-flow-layer]}
+        (propagate-runoff! {:source-layer source-layer
+                            :sink-layer sink-layer
+                            :use-layer use-layer
+                            :actual-sink-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                            :possible-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                            :actual-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                            :possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                            :actual-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                            :service-network service-network
+                            :subnetwork-orders ordered-upstream-nodes})]
+    (pprint (map-matrix deref possible-flow-layer))))

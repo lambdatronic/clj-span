@@ -1,4 +1,4 @@
-;;; Copyright 2010-2013 Gary Johnson
+;;; Copyright 2010-2013 Gary Johnson & Ioannis Athanasiadis
 ;;;
 ;;; This file is part of clj-span.
 ;;;
