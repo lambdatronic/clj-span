@@ -44,41 +44,26 @@
 (def ^:dynamic _*_)
 (def ^:dynamic _d_)
 
-;; (defn assign-water-to-users!
-;;   [{:keys [stream-intakes cache-layer use-layer]}]
-;;   (with-message "Assigning water captured at stream intakes to users..." "done."
-;;     (doseq [[stream-id use-ids] stream-intakes]
-;;       (let [stream-cache     (get-in cache-layer stream-id)
-;;             service-carriers (map #(dissoc % :stream-bound?) (deref stream-cache))
-;;             use-caches       (map #(get-in cache-layer %) use-ids)
-;;             use-values       (map #(get-in use-layer %) use-ids)
-;;             total-use        (reduce _+_ use-values)
-;;             use-percents     (map #(_d_ % total-use) use-values)]
-;;         (dosync
-;;          (ref-set stream-cache ())
-;;          (doseq [{:keys [possible-weight actual-weight sink-effects] :as carrier} service-carriers]
-;;            (dorun
-;;             (map (fn [cache percent]
-;;                    (commute cache conj
-;;                             (assoc carrier
-;;                               :possible-weight (_*_ possible-weight percent)
-;;                               :actual-weight   (_*_ actual-weight   percent)
-;;                               :sink-effects    (mapmap identity #(_*_ % percent) sink-effects))))
-;;                  use-caches
-;;                  use-percents))))))))
+(defn create-output-layers
+  [{:keys []}]
+  {})
 
 (defn propagate-runoff!
   [{:keys [source-layer sink-layer use-layer
            actual-sink-layer possible-use-layer actual-use-layer
            possible-flow-layer actual-flow-layer
-           service-network subnetwork-orders] :as params}]
-  (let [_-_ (fn [A B] (rv-fn '(fn [a b] (max (- a b) 0.0)) A B))]
+           service-network subnetwork-orders stream-intakes rows cols] :as params}]
+  (let [intake-layer (make-matrix rows cols
+                                  (fn [id] (if-let [users (stream-intakes id)]
+                                             (reduce _+_ (map #(get-in use-layer %) users))
+                                             _0_)))
+        _-_ (fn [A B] (rv-fn '(fn [a b] (max (- a b) 0.0)) A B))]
     (doseq [subnetwork-order subnetwork-orders]
       (doseq [layer-number (range (apply max (keys subnetwork-order)) -1 -1)]
         (doseq [node (subnetwork-order layer-number)]
           (let [theoretical-source       (get-in source-layer node)
                 theoretical-sink         (get-in sink-layer node)
-                theoretical-use          (get-in use-layer node)
+                theoretical-use          (get-in intake-layer node)
                 in-situ-inflow           (_-_ theoretical-source theoretical-sink)
                 possible-upstream-inflow @(get-in possible-flow-layer node)
                 actual-upstream-inflow   @(get-in actual-flow-layer node)
@@ -86,19 +71,25 @@
                 actual-inflow            (_+_ in-situ-inflow actual-upstream-inflow) ;; inflow with rival use
                 possible-use             (_min_ possible-inflow theoretical-use) ;; user capture without rival use
                 actual-use               (_min_ actual-inflow theoretical-use) ;; user capture with rival use
-                actual-sink              actual-use ;; the same since we're treating user capture as sink for rival competition scenarios
                 possible-outflow         possible-inflow
                 actual-outflow           (_-_ actual-inflow actual-use)]
             (dosync
              ;; at this location
              (ref-set (get-in possible-flow-layer node) possible-outflow)
              (ref-set (get-in actual-flow-layer   node) actual-outflow)
-             (ref-set (get-in possible-use-layer  node) possible-use)
-             (ref-set (get-in actual-use-layer    node) actual-use)
-             (ref-set (get-in actual-sink-layer   node) actual-sink)
              ;; at our next downhill/downstream neighbor
              (commute (get-in possible-flow-layer (get-in service-network node)) _+_ possible-outflow)
-             (commute (get-in actual-flow-layer   (get-in service-network node)) _+_ actual-outflow)))))))
+             (commute (get-in actual-flow-layer   (get-in service-network node)) _+_ actual-outflow)
+             ;; at the use locations that draw from this intake point
+             ;; note: we also store actual-use in the actual-sink-layer since we're treating
+             ;;       user capture as a sink for rival competition scenarios
+             (doseq [user (stream-intakes node)]
+               (let [use-percentage        (_d_ (get-in use-layer user) theoretical-use)
+                     relative-possible-use (_*_ possible-use use-percentage)
+                     relative-actual-use   (_*_ actual-use use-percentage)]
+                 (ref-set (get-in possible-use-layer  user) relative-possible-use)
+                 (ref-set (get-in actual-use-layer    user) relative-actual-use)
+                 (ref-set (get-in actual-sink-layer   user) relative-actual-use)))))))))
   params)
 
 (defn upstream-parents
@@ -260,5 +251,5 @@
         build-stream-network
         filter-upstream-nodes
         order-upstream-nodes
-        propagate-runoff!)))
-        ;; assign-water-to-users!)))
+        propagate-runoff!
+        create-output-layers)))

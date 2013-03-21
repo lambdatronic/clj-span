@@ -272,15 +272,17 @@
          (set (apply concat (map #(apply concat (vals %)) ordered-upstream-nodes))))))
 
 (deftest test-propagate-runoff!
-  (let [{:keys [possible-flow-layer]}
-        (propagate-runoff! {:source-layer source-layer
-                            :sink-layer sink-layer
-                            :use-layer use-layer
-                            :actual-sink-layer (make-matrix rows cols (fn [_] (ref _0_)))
-                            :possible-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
-                            :actual-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
-                            :possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
-                            :actual-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
-                            :service-network service-network
-                            :subnetwork-orders ordered-upstream-nodes})]
-    (pprint (map-matrix deref possible-flow-layer))))
+  (let [params (propagate-runoff! {:source-layer source-layer
+                                   :sink-layer sink-layer
+                                   :use-layer use-layer
+                                   :actual-sink-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                                   :possible-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                                   :actual-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                                   :possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                                   :actual-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                                   :service-network service-network
+                                   :subnetwork-orders ordered-upstream-nodes
+                                   :stream-intakes stream-intakes
+                                   :rows rows
+                                   :cols cols})]
+    (pprint (map-matrix deref (:actual-flow-layer params)))))
