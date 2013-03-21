@@ -272,6 +272,23 @@
                       (rest open-list))
                     (conj! closed-set this-node))))))))
 
+(defn depth-first-graph-ordering
+  "Traverses a graph in depth-first order, returning a map of the node
+   values encountered to the number of steps they are from the root
+   node."
+  [root successors]
+  (loop [open-list     [root]
+         ordered-nodes (transient {root 0})]
+    (if (empty? open-list)
+      (persistent! ordered-nodes)
+      (let [this-node  (first open-list)
+            next-level (inc (ordered-nodes this-node))]
+        (if-let [children (seq (remove ordered-nodes (successors this-node)))]
+          (recur (concat children (rest open-list))
+                 (reduce #(assoc! %1 %2 next-level) ordered-nodes children))
+          (recur (rest open-list)
+                 ordered-nodes))))))
+
 (defn depth-limited-graph-search
   ([root successors goal? depth-limit]
      (depth-limited-graph-search successors goal? depth-limit [root] #{} 0))

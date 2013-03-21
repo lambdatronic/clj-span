@@ -23,7 +23,8 @@
 (ns clj-span.models.surface-water
   (:use [clj-misc.utils      :only [seq2map mapmap iterate-while-seq with-message
                                     memoize-by-first-arg angular-distance p &
-                                    with-progress-bar-cool depth-first-graph-traversal]]
+                                    with-progress-bar-cool depth-first-graph-traversal
+                                    depth-first-graph-ordering]]
         [clj-misc.matrix-ops :only [get-neighbors on-bounds? subtract-ids find-nearest
                                     filter-matrix-for-coords make-matrix map-matrix
                                     get-neighbors-clockwise group-by-adjacency]])
@@ -251,11 +252,12 @@
                          (nil? (get-in service-network downstream-child))))
           (keys stream-intakes)))
 
-;; FIXME: stub
-;; (defn order-upstream-nodes
-;;   [{:keys [stream-intakes service-network] :as params}]
-;;   (let [most-downstream-intakes (find-most-downstream-intakes stream-intakes service-network)]
-;;     (depth-first-graph-ordering intake-point upstream-parents  most-downstream-intakes)))
+(defn order-upstream-nodes
+  [{:keys [stream-intakes service-network rows cols] :as params}]
+  (let [upstream-parents (partial upstream-parents rows cols service-network)]
+    (for [intake-point (find-most-downstream-intakes stream-intakes service-network)]
+      (let [subnetwork-ordering (depth-first-graph-ordering intake-point upstream-parents)]
+        (group-by subnetwork-ordering (keys subnetwork-ordering))))))
 
 (defn filter-upstream-nodes
   [{:keys [stream-intakes stream-network rows cols] :as params}]
@@ -394,6 +396,7 @@
         link-streams-to-users
         make-buckets
         build-stream-network
-        filter-upstream-nodes)))
+        filter-upstream-nodes
+        order-upstream-nodes)))
         ;; propagate-runoff!
         ;; assign-water-to-users!)))
