@@ -104,8 +104,8 @@
              (ref-set (get-in possible-flow-layer node) possible-outflow)
              (ref-set (get-in actual-flow-layer   node) actual-outflow)
              ;; at our next downhill/downstream neighbor
-             (commute (get-in possible-flow-layer (get-in service-network node)) _+_ possible-outflow)
-             (commute (get-in actual-flow-layer   (get-in service-network node)) _+_ actual-outflow)
+             (alter (get-in possible-flow-layer (get-in service-network node)) _+_ possible-outflow)
+             (alter (get-in actual-flow-layer   (get-in service-network node)) _+_ actual-outflow)
              ;; at the use locations that draw from this intake point
              ;; note: we also store actual-use in the actual-sink-layer since we're treating
              ;;       user capture as a sink for rival competition scenarios
