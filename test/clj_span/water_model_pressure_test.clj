@@ -101,6 +101,6 @@
              :use-type           :finite
              :benefit-type       :rival
              :value-type         value-type
-             :result-type        :cli-menu
+             :result-type        :java-hashmap
              :flow-model         "SurfaceWaterMovement"
              :animation?         true}))
