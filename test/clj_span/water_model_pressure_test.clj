@@ -4,20 +4,17 @@
         clj-span.core
         clj-span.models.surface-water :reload-all
         clj-misc.utils
-        clj-span.water-model-test
         clj-misc.matrix-ops)
-  (:require [clojure.core.reducers :as r]))
+  (:require [clojure.core.reducers :as r]
+            [clj-span.water-model-test :as wmt]))
 
+(def value-type :numbers)
 
-;(defn register-math-syms [t]
-;  (with-typed-math-syms value-type [_0_ _+_ _*_ _d_ *_ _d  _<_  _>_ rv-fn _> _min_]
-;    (t)))
-;
-;(use-fixtures :once register-math-syms)
+(defn register-math-syms [t]
+  (with-typed-math-syms value-type [_0_ _+_ _*_ _d_ *_ _d  _<_  _>_ rv-fn _> _min_]
+    (t)))
 
-
-
-
+(use-fixtures :once register-math-syms)
 
 (def elev-layer-init
   [[30.0	55.0	34.0	32.0	33.0	32.0	22.0	12.0	10.0	 9.0	 8.0	 6.0]
@@ -34,21 +31,20 @@
    [ 5.0	 3.0	 1.0	 5.0	 5.0	 6.0	18.0	20.0	30.0	20.0	20.0	11.0]])
 
 (def water-layer-init
-	[[0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	1.0]
-	 [0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	1.0	1.0	0.0]
-	 [0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
-	 [0.0	1.0	0.0	0.0	0.0	0.0	0.0	1.0	1.0	0.0	0.0	0.0]
-	 [0.0	1.0	0.0	0.0	0.0	0.0	2.0	1.0	0.0	0.0	0.0	0.0]
-	 [0.0	1.0	1.0	0.0	0.0	0.0	1.0	0.0	1.0	0.0	0.0	0.0]
-	 [0.0	0.0	1.0	0.0	0.0	1.0	0.0	0.0	0.0	1.0	0.0	0.0]
-	 [0.0	0.0	0.0	1.0	1.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
-	 [0.0	0.0	0.0	0.0	1.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
-	 [0.0	0.0	1.0	1.0	0.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
-	 [0.0	0.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
-	 [1.0	1.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]])
+  [[0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	1.0]
+   [0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	1.0	1.0	0.0]
+   [0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
+   [0.0	1.0	0.0	0.0	0.0	0.0	0.0	1.0	1.0	0.0	0.0	0.0]
+   [0.0	1.0	0.0	0.0	0.0	0.0	2.0	1.0	0.0	0.0	0.0	0.0]
+   [0.0	1.0	1.0	0.0	0.0	0.0	1.0	0.0	1.0	0.0	0.0	0.0]
+   [0.0	0.0	1.0	0.0	0.0	1.0	0.0	0.0	0.0	1.0	0.0	0.0]
+   [0.0	0.0	0.0	1.0	1.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
+   [0.0	0.0	0.0	0.0	1.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
+   [0.0	0.0	1.0	1.0	0.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
+   [0.0	0.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0	1.0	0.0	0.0]
+   [0.0	1.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]])
 
 (def size 12)
-
 
 ; generates a uniformly distributed random matrix
 (defn make-random-matrix [factor bound]
@@ -59,56 +55,52 @@
 
 (defn make-palindrome [factor layer]
   (make-matrix (* factor size)  (* factor size)
-      (fn [[i j]] (get-in layer [(mod i size) (mod j size)]))))
+               (fn [[i j]] (get-in layer [(mod i size) (mod j size)]))))
+
 (defn ubertest
   [factor]
-(let 
-  [params    {:source-layer (make-random-matrix factor 20)
-              :sink-layer   (make-random-matrix factor 12)
-              :use-layer   (make-random-int-matrix factor 2)
-              :flow-layers {"Altitude"  (make-palindrome factor elev-layer-init)
-                            "River"     (make-palindrome factor water-layer-init)}
-              :source-threshold   1.0
-              :sink-threshold     1.0
-              :use-threshold      1.0
-              :trans-threshold    1.0
-              :cell-width         100.0
-              :cell-height        100.0
-              :rv-max-states      10
-              :downscaling-factor 1
-              :source-type        :finite
-              :sink-type          :finite
-              :use-type           :finite
-              :benefit-type       :rival
-              :value-type         :numbers
-              :result-type        :java-hashmap
-              :flow-model         "SurfaceWaterMovement"
-              :animation?         false}]
-  (run-span params)))
+  (run-span {:source-layer       (make-random-matrix factor 20)
+             :sink-layer         (make-random-matrix factor 12)
+             :use-layer          (make-random-int-matrix factor 2)
+             :flow-layers        {"Altitude" (make-palindrome factor elev-layer-init)
+                                  "River"    (make-palindrome factor water-layer-init)}
+             :source-threshold   1.0
+             :sink-threshold     1.0
+             :use-threshold      1.0
+             :trans-threshold    1.0
+             :cell-width         100.0
+             :cell-height        100.0
+             :rv-max-states      10
+             :downscaling-factor 1
+             :source-type        :finite
+             :sink-type          :finite
+             :use-type           :finite
+             :benefit-type       :rival
+             :value-type         value-type
+             :result-type        :java-hashmap
+             :flow-model         "SurfaceWaterMovement"
+             :animation?         true}))
 
-
-(defn simple-uber []
-(let 
-  [params    {:source-layer clj-span.water-model-test/source-layer
-              :sink-layer   clj-span.water-model-test/sink-layer
-              :use-layer   clj-span.water-model-test/use-layer
-              :flow-layers {"Altitude"  clj-span.water-model-test/elev-layer
-                            "River"     clj-span.water-model-test/water-layer}
-              :source-threshold   1.0
-              :sink-threshold     1.0
-              :use-threshold      1.0
-              :trans-threshold    1.0
-              :cell-width         100.0
-              :cell-height        100.0
-              :rv-max-states      10
-              :downscaling-factor 1
-              :source-type        :finite
-              :sink-type          :finite
-              :use-type           :finite
-              :benefit-type       :rival
-              :value-type         :numbers
-              :result-type        :java-hashmap
-              :flow-model         "SurfaceWaterMovement"
-              :animation?         true}]
-  (run-span params)))
-
+(defn ubersimple
+  []
+  (run-span {:source-layer       wmt/source-layer
+             :sink-layer         wmt/sink-layer
+             :use-layer          wmt/use-layer
+             :flow-layers        {"Altitude" wmt/elev-layer
+                                  "River"    wmt/water-layer}
+             :source-threshold   1.0
+             :sink-threshold     1.0
+             :use-threshold      1.0
+             :trans-threshold    1.0
+             :cell-width         100.0
+             :cell-height        100.0
+             :rv-max-states      10
+             :downscaling-factor 1
+             :source-type        :finite
+             :sink-type          :finite
+             :use-type           :finite
+             :benefit-type       :rival
+             :value-type         value-type
+             :result-type        :java-hashmap
+             :flow-model         "SurfaceWaterMovement"
+             :animation?         true}))
