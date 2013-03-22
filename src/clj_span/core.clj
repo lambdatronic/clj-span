@@ -108,7 +108,7 @@
 
 (defn generate-results-map
   "Return the simulation results as a map of layer names to closures."
-  [{:keys [value-type orig-rows orig-cols monitor]
+  [{:keys [possible-use-layer value-type orig-rows orig-cols monitor]
     :as params}]
   (monitor-info monitor "registering SPAN simulation output analyzers")
   (with-error-monitor ^IMonitor monitor
@@ -120,36 +120,62 @@
         "Generating result maps...\n"
         "Finished generating result maps."
         (apply array-map
-               (mapcat (fn [[label f]]
-                         (with-message (str "Adding " label " to computable outputs...") "done"
-                           [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler (f params))]))
-                       (array-map
-                        "Source - Theoretical"  theoretical-source
-                        "Source - Inaccessible" inaccessible-source
-                        "Source - Possible"     possible-source
-                        "Source - Blocked"      blocked-source
-                        "Source - Actual"       actual-source
-                        "Sink   - Theoretical"  theoretical-sink
-                        "Sink   - Inaccessible" inaccessible-sink
-                        "Sink   - Actual"       actual-sink
-                        "Use    - Theoretical"  theoretical-use
-                        "Use    - Inaccessible" inaccessible-use
-                        "Use    - Possible"     possible-use
-                        "Use    - Blocked"      blocked-use
-                        "Use    - Actual"       actual-use
-                        "Flow   - Possible"     possible-flow
-                        "Flow   - Blocked"      blocked-flow
-                        "Flow   - Actual"       actual-flow)))))))
+               (mapcat (fn [[label val]]
+                         (if val
+                           (with-message (str "Adding " label " to computable outputs...") "done"
+                             [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler
+                                                      (if (fn? val) (val params) val))])))
+                       (if possible-use-layer 
+                         ;; our SPAN simulation pre-generated the layers -> return layers
+                         (array-map
+                          "Source - Theoretical"  (:theoretical-source-layer  params)
+                          "Source - Inaccessible" (:inaccessible-source-layer params)
+                          "Source - Possible"     (:possible-source-layer     params)
+                          "Source - Blocked"      (:blocked-source-layer      params)
+                          "Source - Actual"       (:actual-source-layer       params)
+                          "Sink   - Theoretical"  (:theoretical-sink-layer    params)
+                          "Sink   - Inaccessible" (:inaccessible-sink-layer   params)
+                          "Sink   - Actual"       (:actual-sink-layer         params)
+                          "Use    - Theoretical"  (:theoretical-use-layer     params)
+                          "Use    - Inaccessible" (:inaccessible-use-layer    params)
+                          "Use    - Possible"     (:possible-use-layer        params)
+                          "Use    - Blocked"      (:blocked-use-layer         params)
+                          "Use    - Actual"       (:actual-use-layer          params)
+                          "Flow   - Possible"     (:possible-flow-layer       params)
+                          "Flow   - Blocked"      (:blocked-flow-layer        params)
+                          "Flow   - Actual"       (:actual-flow-layer         params))
+                         ;; our SPAN simulation simply generated the cache-layer -> return fns
+                         (array-map
+                          "Source - Theoretical"  theoretical-source
+                          "Source - Inaccessible" inaccessible-source
+                          "Source - Possible"     possible-source
+                          "Source - Blocked"      blocked-source
+                          "Source - Actual"       actual-source
+                          "Sink   - Theoretical"  theoretical-sink
+                          "Sink   - Inaccessible" inaccessible-sink
+                          "Sink   - Actual"       actual-sink
+                          "Use    - Theoretical"  theoretical-use
+                          "Use    - Inaccessible" inaccessible-use
+                          "Use    - Possible"     possible-use
+                          "Use    - Blocked"      blocked-use
+                          "Use    - Actual"       actual-use
+                          "Flow   - Possible"     possible-flow
+                          "Flow   - Blocked"      blocked-flow
+                          "Flow   - Actual"       actual-flow))))))))
 
 (defn deref-result-layers
-  [{:keys [cache-layer possible-flow-layer actual-flow-layer monitor]
+  [{:keys [possible-use-layer cache-layer possible-flow-layer actual-flow-layer monitor]
     :as params}]
   (monitor-info monitor "extracting SPAN simulation outputs")
   (with-error-monitor ^IMonitor monitor
-    (assoc params
-      :cache-layer         (map-matrix (& seq deref) cache-layer)
-      :possible-flow-layer (map-matrix deref possible-flow-layer)
-      :actual-flow-layer   (map-matrix deref actual-flow-layer))))
+    (if possible-use-layer
+      ;; our SPAN simulation pre-generated the layers
+      params
+      ;; our SPAN simulation simply generated the cache-layer
+      (assoc params
+        :cache-layer         (map-matrix (& seq deref) cache-layer)
+        :possible-flow-layer (map-matrix deref possible-flow-layer)
+        :actual-flow-layer   (map-matrix deref actual-flow-layer)))))
 
 (defmacro with-animation
   [value-type possible-flow-layer actual-flow-layer & body]
@@ -172,8 +198,14 @@
        result#)))
 
 (defn count-affected-users
-  [{:keys [cache-layer]}]
-  (count (filter (& seq deref) (matrix2seq cache-layer))))
+  [{:keys [possible-use-layer cache-layer value-type]}]
+  (let [_0_ (case value-type
+              :numbers  nb/_0_
+              :varprop  vp/_0_
+              :randvars rv/_0_)]
+    (if possible-use-layer
+      (count (filter-matrix-for-coords (p not= _0_) possible-use-layer))
+      (count (filter (& seq deref) (matrix2seq cache-layer))))))
 
 (defn run-simulation
   [{:keys [flow-model source-points use-points animation?
@@ -187,11 +219,12 @@
         #(str "Simulation complete.\nUsers affected: " (count-affected-users %))
         (if (and (seq source-points)
                  (seq use-points))
-          (if animation?
-            (with-animation value-type possible-flow-layer actual-flow-layer (distribute-flow! params))
-            (distribute-flow! params))
-          (println "Either source or use is zero everywhere. Therefore, there can be no service flow."))
-        params))))
+          (let [new-params (if animation?
+                             (with-animation value-type possible-flow-layer actual-flow-layer (distribute-flow! params))
+                             (distribute-flow! params))]
+            (or new-params params))
+          (do (println "Either source or use is zero everywhere. Therefore, there can be no service flow.")
+              params))))))
 
 (defn create-simulation-inputs
   [{:keys [source-layer sink-layer use-layer rows cols value-type monitor]

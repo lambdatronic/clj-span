@@ -50,17 +50,17 @@
 
 (def use-layer
   [[0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
-[0.0	0.0	0.0	0.0	0.0	0.0	0.0	2.0	0.0	0.0	0.0]
-[0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
-[0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
-[0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
-[0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
-[0.0	0.0	100.0	0.0	0.0	0.0	0.0	0.0	0.0	20.0	0.0]
-[0.0	100.0	0.0	0.0	1.0	0.0	0.0	0.0	10.0	150.0	0.0]
-[0.0	1.0	1.0	0.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0]
-[0.0	1.0	1.0	1.0	0.0	0.0	0.0	50.0		0.0	0.0]
-[0.0	1.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
-[0.0	1.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]])
+   [0.0	0.0	0.0	0.0	0.0	0.0	0.0	2.0	0.0	0.0	0.0]
+   [0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
+   [0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
+   [0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
+   [0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
+   [0.0	0.0	100.0	0.0	0.0	0.0	0.0	0.0	0.0	20.0 0.0]
+   [0.0	100.0	0.0	0.0	1.0	0.0	0.0	0.0	10.0 150.0	0.0]
+   [0.0	1.0	1.0	0.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0]
+   [0.0	1.0	1.0	1.0	0.0	0.0	0.0	50.0 0.0 0.0 0.0]
+   [0.0	1.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]
+   [0.0	1.0	1.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0	0.0]])
 
 (def elev-layer
  [[30.0 55.0 34.0 32.0 33.0 32.0 22.0 12.0 10.0 9.0 11.0]
@@ -271,6 +271,7 @@
   (is (= (set (filter-matrix-for-coords (& not nil?) service-network))
          (set (apply concat (map #(apply concat (vals %)) ordered-upstream-nodes))))))
 
+;; FIXME: needs an assertion
 (deftest test-propagate-runoff!
   (let [params (propagate-runoff! {:source-layer source-layer
                                    :sink-layer sink-layer
@@ -286,3 +287,23 @@
                                    :rows rows
                                    :cols cols})]
     (pprint (map-matrix deref (:actual-flow-layer params)))))
+
+(def runoff-results
+  (propagate-runoff! {:source-layer source-layer
+                      :sink-layer sink-layer
+                      :use-layer use-layer
+                      :actual-sink-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                      :possible-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                      :actual-use-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                      :possible-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                      :actual-flow-layer (make-matrix rows cols (fn [_] (ref _0_)))
+                      :service-network service-network
+                      :subnetwork-orders ordered-upstream-nodes
+                      :stream-intakes stream-intakes
+                      :rows rows
+                      :cols cols}))
+
+;; FIXME: needs an assertion
+(deftest test-create-output-layers
+  (let [params (create-output-layers runoff-results)]
+    (pprint (:possible-flow-layer params))))

@@ -135,7 +135,9 @@
   "Maps a function f over the values in matrix, returning a new
    matrix."
   ([f matrix]
-     (vec (map (fn [row] (vec (map f row))) matrix)))
+     (make-matrix (get-rows matrix) (get-cols matrix)
+                  (fn [coords](f (get-in matrix coords)))))
+     ;; (vec (map (fn [row] (vec (map f row))) matrix)))
   ([f matrix & matrices]
      (constraints-1.0 {:pre [(apply grids-align? matrix matrices)]})
      (let [matrices (cons matrix matrices)]

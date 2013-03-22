@@ -45,14 +45,40 @@
 (def ^:dynamic _d_)
 
 (defn create-output-layers
-  [{:keys []}]
-  {})
+  [{:keys [source-layer sink-layer use-layer
+           actual-sink-layer possible-use-layer actual-use-layer
+           possible-flow-layer actual-flow-layer]
+    :as params}]
+  (let [_-_ (fn [A B] (rv-fn '(fn [a b] (max (- a b) 0.0)) A B))
+        actual-sink-layer   (map-matrix deref actual-sink-layer)
+        possible-use-layer  (map-matrix deref possible-use-layer)
+        actual-use-layer    (map-matrix deref actual-use-layer)
+        possible-flow-layer (map-matrix deref possible-flow-layer)
+        actual-flow-layer   (map-matrix deref actual-flow-layer)]
+    (assoc params
+      :theoretical-source-layer  source-layer
+      :inaccessible-source-layer nil ;; FIXME: how can I compute this?
+      :possible-source-layer     nil ;; FIXME: how can I compute this?
+      :blocked-source-layer      nil ;; FIXME: how can I compute this?
+      :actual-source-layer       nil ;; FIXME: how can I compute this?
+      :theoretical-sink-layer    sink-layer
+      :inaccessible-sink-layer   (map-matrix _-_ sink-layer actual-sink-layer)
+      :actual-sink-layer         actual-sink-layer
+      :theoretical-use-layer     use-layer
+      :inaccessible-use-layer    (map-matrix _-_ use-layer possible-use-layer)
+      :possible-use-layer        possible-use-layer
+      :blocked-use-layer         (map-matrix _-_ possible-use-layer actual-use-layer)
+      :actual-use-layer          actual-use-layer
+      :possible-flow-layer       possible-flow-layer
+      :blocked-flow-layer        (map-matrix _-_ possible-flow-layer actual-flow-layer)
+      :actual-flow-layer         actual-flow-layer)))
 
 (defn propagate-runoff!
   [{:keys [source-layer sink-layer use-layer
            actual-sink-layer possible-use-layer actual-use-layer
            possible-flow-layer actual-flow-layer
-           service-network subnetwork-orders stream-intakes rows cols] :as params}]
+           service-network subnetwork-orders stream-intakes rows cols]
+    :as params}]
   (let [intake-layer (make-matrix rows cols
                                   (fn [id] (if-let [users (stream-intakes id)]
                                              (reduce _+_ (map #(get-in use-layer %) users))
