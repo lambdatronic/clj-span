@@ -183,9 +183,11 @@
 
 (defn select-stream-path-dirs
   [elev-layer stream-points-in-path]
-  (let [[left-path right-path] (split-at (int (/ (count stream-points-in-path) 2)) stream-points-in-path)
-        left-weight            (reduce _+_ (r/map #(get-in elev-layer %) left-path))
-        right-weight           (reduce _+_ (r/map #(get-in elev-layer %) right-path))]
+  (let [num-stream-points-in-path (count stream-points-in-path)
+        [left-path right-path]    (split-at (int (/ num-stream-points-in-path 2)) stream-points-in-path)
+        left-weight               (reduce _+_ (r/map #(get-in elev-layer %) left-path))
+        right-weight              (reduce _+_ (r/map #(get-in elev-layer %)
+                                                     (if (odd? num-stream-points-in-path) (rest right-path) right-path)))]
     (persistent!
      (reduce (fn [acc [curr next]] (assoc! acc curr next))
              (transient {})
@@ -230,8 +232,9 @@
         (persistent! stream-dirs)
         (let [id                  (first unexplored-links)
               stream-segment      (find-bounded-stream-segment id in-stream? explore-stream)
-              stream-segment-dirs (select-stream-path-dirs elev-layer stream-segment)]
-          (recur (reduce disj unexplored-links (keys stream-segment-dirs))
+              stream-segment-dirs (select-stream-path-dirs elev-layer stream-segment)
+              explored-links      (keys stream-segment-dirs)]
+          (recur (reduce disj unexplored-links (or (seq explored-links) [id])) ;; remove yourself if you terminated oddly
                  (reduce conj! stream-dirs stream-segment-dirs)))))))
 
 (defn build-stream-network
