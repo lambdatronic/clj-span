@@ -98,33 +98,35 @@
               (let [theoretical-source       (get-in source-layer node)
                     theoretical-sink         (get-in sink-layer node)
                     theoretical-use          (get-in intake-layer node)
-                    in-situ-inflow           (_-_ theoretical-source theoretical-sink)
-                    possible-upstream-inflow @(get-in possible-flow-layer node)
-                    actual-upstream-inflow   @(get-in actual-flow-layer node)
-                    possible-inflow          (_+_ in-situ-inflow possible-upstream-inflow) ;; inflow without rival use
-                    actual-inflow            (_+_ in-situ-inflow actual-upstream-inflow) ;; inflow with rival use
-                    possible-use             (_min_ possible-inflow theoretical-use) ;; user capture without rival use
-                    actual-use               (_min_ actual-inflow theoretical-use) ;; user capture with rival use
-                    possible-outflow         possible-inflow
-                    actual-outflow           (_-_ actual-inflow actual-use)]
+                    possible-upstream-inflow @(get-in possible-flow-layer node) ;; inflow without rival use
+                    actual-upstream-inflow   @(get-in actual-flow-layer node) ;; inflow with rival use
+                    possible-inflow          (_+_ theoretical-source possible-upstream-inflow)
+                    actual-inflow            (_+_ theoretical-source actual-upstream-inflow)
+                    possible-stock           (_-_ possible-inflow theoretical-sink) ;; amount left after sinks
+                    actual-stock             (_-_ actual-inflow theoretical-sink) ;; amount left after sinks
+                    ;; possible-sink            (_min_ possible-inflow theoretical-sink) ;; NOTE: this is a semantically new result!
+                    actual-sink              (_min_ actual-inflow theoretical-sink)
+                    possible-use             (_min_ possible-stock theoretical-use) ;; user capture without rival use
+                    actual-use               (_min_ actual-stock theoretical-use) ;; user capture with rival use
+                    possible-outflow         possible-stock
+                    actual-outflow           (_-_ actual-stock actual-use)]
                 (dosync
                  ;; at this location
                  (ref-set (get-in possible-flow-layer node) possible-outflow)
                  (ref-set (get-in actual-flow-layer   node) actual-outflow)
+                 (ref-set (get-in actual-sink-layer   node) actual-sink)
                  ;; at our next downhill/downstream neighbor
                  (alter (get-in possible-flow-layer (get-in service-network node)) _+_ possible-outflow)
                  (alter (get-in actual-flow-layer   (get-in service-network node)) _+_ actual-outflow)
                  ;; at the use locations that draw from this intake point
                  ;; note: we also store actual-use in the actual-sink-layer since we're treating
                  ;;       user capture as a sink for rival competition scenarios
-                 (if (not= _0_ theoretical-use) ;; FIXME: this should not be possible!
-                   (doseq [user (stream-intakes node)]
-                     (let [use-percentage        (_d_ (get-in use-layer user) theoretical-use)
-                           relative-possible-use (_*_ possible-use use-percentage)
-                           relative-actual-use   (_*_ actual-use use-percentage)]
-                       (ref-set (get-in possible-use-layer  user) relative-possible-use)
-                       (ref-set (get-in actual-use-layer    user) relative-actual-use)
-                       (ref-set (get-in actual-sink-layer   user) relative-actual-use))))))))))
+                 (doseq [user (stream-intakes node)]
+                   (let [use-percentage        (_d_ (get-in use-layer user) theoretical-use)
+                         relative-possible-use (_*_ possible-use use-percentage)
+                         relative-actual-use   (_*_ actual-use use-percentage)]
+                     (ref-set (get-in possible-use-layer  user) relative-possible-use)
+                     (ref-set (get-in actual-use-layer    user) relative-actual-use)))))))))
       params)))
 
 (defn upstream-parents
