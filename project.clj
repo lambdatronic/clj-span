@@ -20,4 +20,5 @@ Johnson et al.)
   :warn-on-reflection true
   :aot [clj-span.commandline clj-span.java-span-bridge]
   :main clj-span.commandline
+  :resource-paths [] ;; exclude resources/ from my jars and uberjars
   :repositories [["thinklab" "http://integratedmodelling.org/sw/lib"]])
