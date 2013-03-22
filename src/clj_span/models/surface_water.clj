@@ -117,13 +117,14 @@
                  ;; at the use locations that draw from this intake point
                  ;; note: we also store actual-use in the actual-sink-layer since we're treating
                  ;;       user capture as a sink for rival competition scenarios
-                 (doseq [user (stream-intakes node)]
-                   (let [use-percentage        (_d_ (get-in use-layer user) theoretical-use)
-                         relative-possible-use (_*_ possible-use use-percentage)
-                         relative-actual-use   (_*_ actual-use use-percentage)]
-                     (ref-set (get-in possible-use-layer  user) relative-possible-use)
-                     (ref-set (get-in actual-use-layer    user) relative-actual-use)
-                     (ref-set (get-in actual-sink-layer   user) relative-actual-use)))))))))
+                 (if (not= _0_ theoretical-use) ;; FIXME: this should not be possible!
+                   (doseq [user (stream-intakes node)]
+                     (let [use-percentage        (_d_ (get-in use-layer user) theoretical-use)
+                           relative-possible-use (_*_ possible-use use-percentage)
+                           relative-actual-use   (_*_ actual-use use-percentage)]
+                       (ref-set (get-in possible-use-layer  user) relative-possible-use)
+                       (ref-set (get-in actual-use-layer    user) relative-actual-use)
+                       (ref-set (get-in actual-sink-layer   user) relative-actual-use))))))))))
       params)))
 
 (defn upstream-parents

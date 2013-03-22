@@ -85,12 +85,12 @@
   [factor]
   (run-span {:source-layer       (make-random-matrix factor 20)
              :sink-layer         (make-random-matrix factor 12)
-             :use-layer          (make-random-int-matrix factor 2)
+             :use-layer          (make-random-matrix factor 10)
              :flow-layers        {"Altitude" (make-palindrome factor elev-layer-init)
                                   "River"    (make-palindrome factor water-layer-init)}
-             :source-threshold   1.0
-             :sink-threshold     1.0
-             :use-threshold      1.0
+             :source-threshold   5.0
+             :sink-threshold     2.0
+             :use-threshold      2.0
              :trans-threshold    1.0
              :cell-width         100.0
              :cell-height        100.0
