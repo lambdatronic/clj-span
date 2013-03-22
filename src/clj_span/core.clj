@@ -194,7 +194,6 @@
      (send-off actual-flow-animator#   run-animation)
      (let [result# ~@body]
        (reset! animation-running? false)
-       (shutdown-agents)
        result#)))
 
 (defn count-affected-users
