@@ -182,16 +182,16 @@
   [value-type source-layer possible-flow-layer actual-flow-layer & body]
   `(let [[rows# cols#]           ((juxt get-rows get-cols) ~possible-flow-layer)
          animation-pixel-size#   (quot 600 (max rows# cols#))
-         initial-legend-max#     (matrix-max ~source-layer) ;; seems like a decent heuristic
+         legend-max#             (atom (matrix-max ~source-layer)) ;; seems like a decent heuristic
          possible-flow-animator# (agent (draw-ref-layer "Possible Flow"
                                                         ~possible-flow-layer
                                                         animation-pixel-size#
-                                                        initial-legend-max#
+                                                        legend-max#
                                                         ~value-type))
          actual-flow-animator#   (agent (draw-ref-layer "Actual Flow"
                                                         ~actual-flow-layer
                                                         animation-pixel-size#
-                                                        initial-legend-max#
+                                                        legend-max#
                                                         ~value-type))]
      (reset! animation-running? true)
      (send-off possible-flow-animator# run-animation)

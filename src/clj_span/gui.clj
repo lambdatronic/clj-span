@@ -61,15 +61,15 @@
 (def ^:dynamic *legend-text-height*  10) ; pixels
 (def ^:dynamic *legend-padding*       5) ; pixels
 
-(defn render-ref-layer [ref-layer scale x-dim y-dim img-width img-height initial-legend-max deref-val]
+(defn render-ref-layer [ref-layer scale x-dim y-dim img-width img-height legend-max deref-val]
   (let [img             (BufferedImage. img-width img-height BufferedImage/TYPE_INT_ARGB)
         bg              (.getGraphics img)
-        legend-max      (max initial-legend-max
-                             (reduce-matrix max 0.0
-                                            (fn [x-max x] (max x-max (deref x))) 0.0
-                                            ref-layer))
         legend-top      (+ (* scale y-dim) *legend-padding*)
         legend-width    (- img-width (* 2 *legend-padding*))]
+    ;; Update legend-max globally to the largest value seen thus far
+    (swap! legend-max max (reduce-matrix max 0.0
+                                         (fn [x-max x] (max x-max (deref x))) 0.0
+                                         ref-layer))
     ;; Set background color to white
     (doto bg
       (.setColor Color/WHITE)
@@ -79,7 +79,7 @@
       (doseq [y (range y-dim)]
         (let [cell-val (deref-val (get-in ref-layer [y x]))]
           (if-not (zero? cell-val)
-            (fill-cell bg x (- y-dim y 1) scale (get-cell-color (/ cell-val legend-max)))))))
+            (fill-cell bg x (- y-dim y 1) scale (get-cell-color (/ cell-val @legend-max)))))))
     ;; Draw color legend
     (doseq [x (range *legend-padding* (- img-width *legend-padding*))] ; add whitespace padding on left and right of legend
       (let [cell-color (get-cell-color (/ (- x *legend-padding*) legend-width))] ; ranges from [0-1]
@@ -89,7 +89,7 @@
     (let [metrics        (.getFontMetrics bg)
           min-val-string "Min: 0.0"
           min-val-width  (.stringWidth metrics min-val-string)
-          max-val-string (format "Max: %.1f" legend-max)
+          max-val-string (format "Max: %.1f" @legend-max)
           max-val-width  (.stringWidth metrics max-val-string)]
       (doto bg
         (.setColor (get-cell-color 0.0))
@@ -174,7 +174,7 @@
       (doto (JFrame. (str title " Standard Deviation")) (.add stdev-panel) .pack .show))
     [mean-panel stdev-panel]))
 
-(defn draw-ref-layer [title ref-layer scale initial-legend-max value-type]
+(defn draw-ref-layer [title ref-layer scale legend-max value-type]
   (let [[rv-mean rv-stdev] (case value-type
                              :numbers  [nb/rv-mean nb/rv-stdev]
                              :varprop  [vp/rv-mean vp/rv-stdev]
@@ -187,14 +187,14 @@
         img-height  (+ (* scale y-dim) *legend-color-height* *legend-text-height* (* *legend-padding* 3))
         mean-panel  (doto (proxy [JPanel] [] (paint [^Graphics g] (let [img (render-ref-layer ref-layer scale x-dim y-dim
                                                                                               img-width img-height
-                                                                                              initial-legend-max deref-mean)]
+                                                                                              legend-max deref-mean)]
                                                                     (.drawImage g img 0 0 nil))))
                       (.setPreferredSize (Dimension. img-width img-height)))
         stdev-panel (if-not (= value-type :numbers)
                       (doto (proxy [JPanel] [] (paint [^Graphics g] (let [img (render-ref-layer ref-layer scale x-dim y-dim
                                                                                                 img-width img-height
-                                                                                                initial-legend-max deref-stdev)]
-                                                                      (.drawImage g img 200 200 nil))))
+                                                                                                legend-max deref-stdev)]
+                                                                      (.drawImage g img 0 0 nil))))
                         (.setPreferredSize (Dimension. img-width img-height))))]
     (doto (JFrame. (str title " Mean")) (.add mean-panel) .pack .show)
     (if-not (= value-type :numbers)
