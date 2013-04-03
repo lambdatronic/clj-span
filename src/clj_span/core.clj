@@ -27,6 +27,7 @@
                                           make-matrix
                                           resample-matrix
                                           matrix2seq
+                                          matrix-max
                                           get-rows
                                           get-cols
                                           grids-align?
@@ -178,16 +179,19 @@
         :actual-flow-layer   (map-matrix deref actual-flow-layer)))))
 
 (defmacro with-animation
-  [value-type possible-flow-layer actual-flow-layer & body]
+  [value-type source-layer possible-flow-layer actual-flow-layer & body]
   `(let [[rows# cols#]           ((juxt get-rows get-cols) ~possible-flow-layer)
          animation-pixel-size#   (quot 600 (max rows# cols#))
+         initial-legend-max#     (matrix-max ~source-layer) ;; seems like a decent heuristic
          possible-flow-animator# (agent (draw-ref-layer "Possible Flow"
                                                         ~possible-flow-layer
                                                         animation-pixel-size#
+                                                        initial-legend-max#
                                                         ~value-type))
          actual-flow-animator#   (agent (draw-ref-layer "Actual Flow"
                                                         ~actual-flow-layer
                                                         animation-pixel-size#
+                                                        initial-legend-max#
                                                         ~value-type))]
      (reset! animation-running? true)
      (send-off possible-flow-animator# run-animation)
@@ -207,7 +211,7 @@
       (count (filter (& seq deref) (matrix2seq cache-layer))))))
 
 (defn run-simulation
-  [{:keys [flow-model source-points use-points animation?
+  [{:keys [flow-model source-layer source-points use-points animation?
            value-type possible-flow-layer actual-flow-layer monitor]
     :as params}]
   (monitor-info monitor (str "running SPAN " flow-model " flow model"))
@@ -219,7 +223,7 @@
         (if (and (seq source-points)
                  (seq use-points))
           (let [new-params (if animation?
-                             (with-animation value-type possible-flow-layer actual-flow-layer (distribute-flow! params))
+                             (with-animation value-type source-layer possible-flow-layer actual-flow-layer (distribute-flow! params))
                              (distribute-flow! params))]
             (or new-params params))
           (do (println "Either source or use is zero everywhere. Therefore, there can be no service flow.")
