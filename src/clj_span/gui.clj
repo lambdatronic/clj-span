@@ -61,7 +61,7 @@
 (def ^:dynamic *legend-text-height*  10) ; pixels
 (def ^:dynamic *legend-padding*       5) ; pixels
 
-(defn render-ref-layer [ref-layer scale x-dim y-dim img-width img-height legend-max deref-val]
+(defn render-ref-layer [^Graphics g ref-layer scale x-dim y-dim img-width img-height legend-max deref-val]
   (let [img             (BufferedImage. img-width img-height BufferedImage/TYPE_INT_ARGB)
         bg              (.getGraphics img)
         legend-top      (+ (* scale y-dim) *legend-padding*)
@@ -96,9 +96,9 @@
         (.drawString min-val-string *legend-padding* (- img-height *legend-padding*))
         (.setColor (get-cell-color 1.0))
         (.drawString max-val-string (- img-width *legend-padding* max-val-width) (- img-height *legend-padding*))))
-    ;; Dispose of Graphics context and return BufferedImage
-    (.dispose bg)
-    img))
+    ;; Draw new BufferedImage and dispose of Graphics context.
+    (.drawImage g img 0 0 nil)
+    (.dispose bg)))
 
 (defn render-normalized [layer scale x-dim y-dim rv-to-number] ;; SLLLOOOOOOWWWWWWWWW
   (let [numeric-layer    (map-matrix rv-to-number layer)
@@ -185,16 +185,14 @@
         x-dim       (get-cols ref-layer)
         img-width   (* scale x-dim)
         img-height  (+ (* scale y-dim) *legend-color-height* *legend-text-height* (* *legend-padding* 3))
-        mean-panel  (doto (proxy [JPanel] [] (paint [^Graphics g] (let [img (render-ref-layer ref-layer scale x-dim y-dim
-                                                                                              img-width img-height
-                                                                                              legend-max deref-mean)]
-                                                                    (.drawImage g img 0 0 nil))))
+        mean-panel  (doto (proxy [JPanel] [] (paint [^Graphics g] (render-ref-layer g ref-layer scale x-dim y-dim
+                                                                                    img-width img-height
+                                                                                    legend-max deref-mean)))
                       (.setPreferredSize (Dimension. img-width img-height)))
         stdev-panel (if-not (= value-type :numbers)
-                      (doto (proxy [JPanel] [] (paint [^Graphics g] (let [img (render-ref-layer ref-layer scale x-dim y-dim
-                                                                                                img-width img-height
-                                                                                                legend-max deref-stdev)]
-                                                                      (.drawImage g img 0 0 nil))))
+                      (doto (proxy [JPanel] [] (paint [^Graphics g] (render-ref-layer g ref-layer scale x-dim y-dim
+                                                                                      img-width img-height
+                                                                                      legend-max deref-stdev)))
                         (.setPreferredSize (Dimension. img-width img-height))))]
     (doto (JFrame. (str title " Mean")) (.add mean-panel) .pack .show)
     (if-not (= value-type :numbers)
@@ -216,9 +214,10 @@
 
 (def animation-running? (atom false))
 
-(defn run-animation [[^JPanel mean-panel ^JPanel stdev-panel]]
+(defn run-animation [panels]
   (when @animation-running?
     (send-off *agent* run-animation)
+    (doseq [^JPanel panel panels]
+      (.repaint panel))
     (Thread/sleep *animation-sleep-ms*)
-    [(doto mean-panel  (.repaint))
-     (doto stdev-panel (.repaint))]))
+    panels))

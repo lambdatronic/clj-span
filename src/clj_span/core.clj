@@ -183,21 +183,23 @@
   `(let [[rows# cols#]           ((juxt get-rows get-cols) ~possible-flow-layer)
          animation-pixel-size#   (quot 600 (max rows# cols#))
          legend-max#             (atom (matrix-max ~source-layer)) ;; seems like a decent heuristic
-         possible-flow-animator# (agent (draw-ref-layer "Possible Flow"
-                                                        ~possible-flow-layer
-                                                        animation-pixel-size#
-                                                        legend-max#
-                                                        ~value-type))
-         actual-flow-animator#   (agent (draw-ref-layer "Actual Flow"
-                                                        ~actual-flow-layer
-                                                        animation-pixel-size#
-                                                        legend-max#
-                                                        ~value-type))]
+         animation-panels#       (remove nil?
+                                         (concat (draw-ref-layer "Possible Flow"
+                                                                 ~possible-flow-layer
+                                                                 animation-pixel-size#
+                                                                 legend-max#
+                                                                 ~value-type)
+                                                 (draw-ref-layer "Actual Flow"
+                                                                 ~actual-flow-layer
+                                                                 animation-pixel-size#
+                                                                 legend-max#
+                                                                 ~value-type)))
+         animator#               (agent animation-panels#)]
      (reset! animation-running? true)
-     (send-off possible-flow-animator# run-animation)
-     (send-off actual-flow-animator#   run-animation)
+     (send-off animator# run-animation)
      (let [result# ~@body]
        (reset! animation-running? false)
+       ;;(shutdown-agents)
        result#)))
 
 (defn count-affected-users
