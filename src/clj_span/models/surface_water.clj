@@ -243,8 +243,8 @@
         (let [id                  (first unexplored-links)
               stream-segment      (find-bounded-stream-segment id in-stream? explore-stream)
               stream-segment-dirs (select-stream-path-dirs elev-layer stream-segment)
-              explored-links      (keys stream-segment-dirs)]
-          (recur (reduce disj unexplored-links (or (seq explored-links) [id])) ;; remove yourself if you terminated oddly
+              explored-links      (cons id (keys stream-segment-dirs))]
+          (recur (reduce disj unexplored-links explored-links)
                  (reduce conj! stream-dirs stream-segment-dirs)))))))
 
 (defn build-stream-network
