@@ -131,8 +131,8 @@
                                              relative-actual-use   (_*_ actual-use use-percentage)]
                                          (ref-set (get-in possible-use-layer  user) relative-possible-use)
                                          (ref-set (get-in actual-use-layer    user) relative-actual-use))))))))]
-          ;; (dorun (map-indexed reducef subnetwork-orders)))
-          (r/fold workload-size combinef reducef subnetwork-orders))
+          ;; (dorun (map-indexed reducef subnetwork-orders))) ;; run sequentially
+          (r/fold workload-size combinef reducef subnetwork-orders)) ;; run in parallel
         params))))
 
 (defn upstream-parents
@@ -217,15 +217,15 @@
 (defn find-next-in-stream-step
   [rows cols elev-layer in-stream? [id unexplored-points]]
   (if-not (on-bounds? rows cols id)
-    (if-let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
+    (let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
       (if (= (stream-segment-type water-neighbors) :link)
         (if-let [unexplored-neighbors (seq (filter unexplored-points water-neighbors))]
           (let [next-step (find-lowest elev-layer unexplored-neighbors)]
             [next-step (disj unexplored-points next-step)]))))))
 
 (defn find-bounded-stream-segment
-  [id unexplored-points explore-stream]
-  (let [left-results  (take-while (& not nil?) (rest (iterate explore-stream [id (disj unexplored-points id)])))
+  [id stream-points explore-stream]
+  (let [left-results  (take-while (& not nil?) (rest (iterate explore-stream [id (disj stream-points id)])))
         right-results (take-while (& not nil?) (rest (iterate explore-stream [id (second (last left-results))])))]
     (concat (mapv first (reverse left-results)) [id] (mapv first right-results))))
 
@@ -242,7 +242,7 @@
         (persistent! stream-dirs)
         (let [id                  (first unexplored-links)
               stream-segment      (find-bounded-stream-segment id in-stream? explore-stream)
-              stream-segment-dirs (select-stream-path-dirs elev-layer stream-segment)
+              stream-segment-dirs (select-stream-path-dirs elev-layer stream-segment) ;; FIXME: segment local knowledge is insufficient
               explored-links      (cons id (keys stream-segment-dirs))]
           (recur (reduce disj unexplored-links explored-links)
                  (reduce conj! stream-dirs stream-segment-dirs)))))))
