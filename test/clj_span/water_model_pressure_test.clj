@@ -122,7 +122,7 @@
                                   "River"    @tanzania-water-layer}
              :source-threshold   5.0
              :sink-threshold     2.0
-             :use-threshold      2.0
+             :use-threshold      9.0
              :trans-threshold    1.0
              :cell-width         100.0
              :cell-height        100.0
