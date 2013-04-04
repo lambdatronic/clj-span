@@ -34,7 +34,10 @@
                                           is-matrix?
                                           filter-matrix-for-coords)]
         [clj-span.interface        :only [provide-results]]
-        [clj-span.gui              :only [draw-ref-layer run-animation animation-running?]]
+        [clj-span.gui              :only [draw-ref-layer
+                                          run-animation
+                                          stop-animation
+                                          animation-running?]]
         [clj-span.analyzer         :only [theoretical-source
                                           inaccessible-source
                                           possible-source
@@ -183,7 +186,7 @@
   `(let [[rows# cols#]           ((juxt get-rows get-cols) ~possible-flow-layer)
          animation-pixel-size#   (quot 600 (max rows# cols#))
          legend-max#             (atom (matrix-max ~source-layer)) ;; seems like a decent heuristic
-         animation-panels#       (remove nil?
+         animation-frames#       (remove nil?
                                          (concat (draw-ref-layer "Possible Flow"
                                                                  ~possible-flow-layer
                                                                  animation-pixel-size#
@@ -194,11 +197,12 @@
                                                                  animation-pixel-size#
                                                                  legend-max#
                                                                  ~value-type)))
-         animator#               (agent animation-panels#)]
+         animator#               (agent animation-frames#)]
      (reset! animation-running? true)
      (send-off animator# run-animation)
      (let [result# ~@body]
        (reset! animation-running? false)
+       (send-off animator# stop-animation)
        ;;(shutdown-agents)
        result#)))
 

@@ -191,11 +191,15 @@
                       (doto (proxy [JPanel] [] (paint [^Graphics g] (render-ref-layer g ref-layer scale x-dim y-dim
                                                                                       img-width img-height
                                                                                       legend-max deref-stdev)))
-                        (.setPreferredSize (Dimension. img-width img-height))))]
-    (doto (JFrame. (str title " Mean")) (.add mean-panel) .pack .show)
-    (if-not (= value-type :numbers)
-      (doto (JFrame. (str title " Standard Deviation")) (.add stdev-panel) .pack .show))
-    [mean-panel stdev-panel]))
+                        (.setPreferredSize (Dimension. img-width img-height))))
+        mean-frame  (doto (JFrame. (str title " Mean"))
+                      (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
+                      (.add mean-panel) .pack .show)
+        stdev-frame (if-not (= value-type :numbers)
+                      (doto (JFrame. (str title " Standard Deviation"))
+                        (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
+                        (.add stdev-panel) .pack .show))]
+    [mean-frame stdev-frame]))
 
 (defn draw-points [ids scale value-type]
   (let [[_+ _0_]    (case value-type
@@ -212,10 +216,14 @@
 
 (def animation-running? (atom false))
 
-(defn run-animation [panels]
+(defn run-animation [frames]
   (when @animation-running?
     (send-off *agent* run-animation)
-    (doseq [^JPanel panel panels]
-      (.repaint panel))
+    (doseq [^JFrame frame frames]
+      (.repaint frame))
     (Thread/sleep *animation-sleep-ms*)
-    panels))
+    frames))
+
+(defn stop-animation [frames]
+  (doseq [^JFrame frame frames]
+    (.dispose frame)))
