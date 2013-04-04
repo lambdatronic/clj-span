@@ -94,11 +94,12 @@
         (.drawString min-val-string *legend-padding* (- img-height *legend-padding*))
         (.setColor (get-cell-color 1.0))
         (.drawString max-val-string (- img-width *legend-padding* max-val-width) (- img-height *legend-padding*))))
-    ;; Draw new BufferedImage and dispose of Graphics context.
-    (.drawImage g img 0 0 nil)
-    (.dispose bg)))
+    ;; Draw new BufferedImage on the main Graphics context, dispose of temporary Graphics context, and return the BufferedImage
+    (if g (.drawImage g img 0 0 nil))
+    (.dispose bg)
+    img))
 
-(defn render-normalized [layer scale x-dim y-dim rv-to-number] ;; SLLLOOOOOOWWWWWWWWW
+(defn render-normalized [^Graphics g layer scale x-dim y-dim rv-to-number] ;; SLLLOOOOOOWWWWWWWWW
   (let [numeric-layer    (map-matrix rv-to-number layer)
         min-layer-value  (matrix-min numeric-layer 0.0)
         max-layer-value  (matrix-max numeric-layer)
@@ -133,7 +134,8 @@
         (.drawString min-val-string *legend-padding* (- (.getHeight img) *legend-padding*))
         (.setColor (get-cell-color 1.0))
         (.drawString max-val-string (- (.getWidth img) *legend-padding* max-val-width) (- (.getHeight img) *legend-padding*))))
-    ;; Dispose of Graphics context and return BufferedImage
+    ;; Draw new BufferedImage on the main Graphics context, dispose of temporary Graphics context, and return the BufferedImage
+    (if g (.drawImage g img 0 0 nil))
     (.dispose bg)
     img))
 
@@ -145,11 +147,11 @@
         y-dim (get-rows layer)
         x-dim (get-cols layer)]
     (let [outfile (io/file dirname (str file-prefix "-mean.png"))]
-      (try (ImageIO/write (render-normalized layer scale x-dim y-dim rv-mean) "png" outfile)
+      (try (ImageIO/write (render-normalized nil layer scale x-dim y-dim rv-mean) "png" outfile)
            (catch IOException e (println "Failed to write mean layer for" file-prefix "to file" (.getName outfile)))))
     (if-not (= value-type :numbers)
       (let [outfile (io/file dirname (str file-prefix "-stdev.png"))]
-        (try (ImageIO/write (render-normalized layer scale x-dim y-dim rv-stdev) "png" outfile)
+        (try (ImageIO/write (render-normalized nil layer scale x-dim y-dim rv-stdev) "png" outfile)
              (catch IOException e (println "Failed to write stdev layer for" file-prefix "to file" (.getName outfile))))))))
 
 (defn draw-layer [title layer scale value-type]
@@ -161,16 +163,19 @@
         x-dim       (get-cols layer)
         img-width   (* scale x-dim)
         img-height  (+ (* scale y-dim) *legend-color-height* *legend-text-height* (* *legend-padding* 3))
-        mean-panel  (doto (proxy [JPanel] [] (paint [g] (let [img (render-normalized layer scale x-dim y-dim rv-mean)]
-                                                          (.drawImage g img 0 0 nil))))
+        mean-panel  (doto (proxy [JPanel] [] (paint [^Graphics g] (render-normalized g layer scale x-dim y-dim rv-mean)))
                       (.setPreferredSize (Dimension. img-width img-height)))
-        stdev-panel (doto (proxy [JPanel] [] (paint [g] (let [img (render-normalized layer scale x-dim y-dim rv-stdev)]
-                                                          (.drawImage g img 0 0 nil))))
-                      (.setPreferredSize (Dimension. img-width img-height)))]
-    (doto (JFrame. (str title " Mean")) (.add mean-panel) .pack .show)
-    (if-not (= value-type :numbers)
-      (doto (JFrame. (str title " Standard Deviation")) (.add stdev-panel) .pack .show))
-    [mean-panel stdev-panel]))
+        stdev-panel (if-not (= value-type :numbers)
+                      (doto (proxy [JPanel] [] (paint [^Graphics g] (render-normalized g layer scale x-dim y-dim rv-stdev)))
+                        (.setPreferredSize (Dimension. img-width img-height))))
+        mean-frame  (doto (JFrame. (str title " Mean"))
+                      (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
+                      (.add mean-panel) .pack .show)
+        stdev-frame (if-not (= value-type :numbers)
+                      (doto (JFrame. (str title " Standard Deviation"))
+                        (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
+                        (.add stdev-panel) .pack .show))]
+    [mean-frame stdev-frame]))
 
 (defn draw-ref-layer [title ref-layer scale legend-max value-type]
   (let [[rv-mean rv-stdev] (case value-type

@@ -194,7 +194,7 @@
 (defn select-stream-path-dirs
   [elev-layer stream-points-in-path]
   (let [num-stream-points-in-path (count stream-points-in-path)
-        [left-path right-path]    (split-at (int (/ num-stream-points-in-path 2)) stream-points-in-path)
+        [left-path right-path]    (split-at (quot num-stream-points-in-path 2) stream-points-in-path)
         left-weight               (reduce _+_ (r/map #(get-in elev-layer %) left-path))
         right-weight              (reduce _+_ (r/map #(get-in elev-layer %)
                                                      (if (odd? num-stream-points-in-path) (rest right-path) right-path)))]

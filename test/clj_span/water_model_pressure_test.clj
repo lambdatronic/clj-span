@@ -2,8 +2,9 @@
   (:use clojure.test
         clojure.pprint
         clj-span.core
+        clj-span.gui
         clj-span.models.surface-water :reload-all
-        clj-span.worldgen
+        [clj-span.worldgen :only [read-layer-from-file]]
         clj-misc.utils
         clj-misc.matrix-ops)
   (:require [clojure.core.reducers :as r]
