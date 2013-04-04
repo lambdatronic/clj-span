@@ -3,6 +3,7 @@
         clojure.pprint
         clj-span.core
         clj-span.models.surface-water :reload-all
+        clj-span.worldgen
         clj-misc.utils
         clj-misc.matrix-ops)
   (:require [clojure.core.reducers :as r]
@@ -44,9 +45,16 @@
    [0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0]
    [0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]])
 
+(def tanzania-elevation-layer (delay (read-layer-from-file "clj_span/tanzania_elevation.clj")))
+
+(def tanzania-water-layer (delay (read-layer-from-file "clj_span/tanzania_water.clj")))
+
 (def size 12)
 
 ; generates a uniformly distributed random matrix
+(defn make-random-matrix-by-dims [rows cols bound]
+  (make-matrix rows cols (fn [_] (rand bound))))
+
 (defn make-random-matrix [factor bound]
   (make-matrix (* factor size) (* factor size) (fn [_] (rand bound))))
 
@@ -104,3 +112,45 @@
              :result-type        :java-hashmap
              :flow-model         "SurfaceWaterMovement"
              :animation?         true}))
+
+(defn tanzania-test
+  []
+  (run-span {:source-layer       (make-random-matrix-by-dims 239 222 20)
+             :sink-layer         (make-random-matrix-by-dims 239 222 12)
+             :use-layer          (make-random-matrix-by-dims 239 222 10)
+             :flow-layers        {"Altitude" @tanzania-elevation-layer
+                                  "River"    @tanzania-water-layer}
+             :source-threshold   5.0
+             :sink-threshold     2.0
+             :use-threshold      2.0
+             :trans-threshold    1.0
+             :cell-width         100.0
+             :cell-height        100.0
+             :rv-max-states      10
+             :downscaling-factor 1
+             :source-type        :finite
+             :sink-type          :finite
+             :use-type           :finite
+             :benefit-type       :rival
+             :value-type         value-type
+             :result-type        :java-hashmap
+             :flow-model         "SurfaceWaterMovement"
+             :animation?         true}))
+
+;; Sequential
+;; 358.55
+;; 363.49
+;; 368.38
+
+;; Parallel
+;; 335.96
+;; 344.27
+;; 347.5
+
+;; Parallel x4
+;; 351.12
+;; 354.12
+;; 355.96
+
+;; Parallel x2
+;; 360.99
