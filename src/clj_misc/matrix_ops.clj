@@ -371,11 +371,17 @@
   [A B]
   (map-matrix * A B))
 
-(defn reduce-matrix
+(defn reduce-matrix-ugly
   "Reduces f over init and each row then reduces f over init and the
    reduced row values."
   [row-f row-init col-f col-init matrix]
   (reduce (fn [row-acc row] (row-f row-acc (reduce col-f col-init row))) row-init matrix))
+
+(defn reduce-matrix
+  "Reduces f over init and each row then reduces f over init and the
+   reduced row values."
+  [f init matrix]
+  (reduce f init (for [row matrix col row] col)))
 
 (defn matrix-min
   "Returns the minimum value in the matrix or the minimum value above

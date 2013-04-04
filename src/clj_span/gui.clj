@@ -67,9 +67,7 @@
         legend-top      (+ (* scale y-dim) *legend-padding*)
         legend-width    (- img-width (* 2 *legend-padding*))]
     ;; Update legend-max globally to the largest value seen thus far
-    (swap! legend-max max (reduce-matrix max 0.0
-                                         (fn [x-max x] (max x-max (deref x))) 0.0
-                                         ref-layer))
+    (swap! legend-max max (reduce-matrix (fn [x-max x] (max x-max (deref-val x))) 0.0 ref-layer))
     ;; Set background color to white
     (doto bg
       (.setColor Color/WHITE)
