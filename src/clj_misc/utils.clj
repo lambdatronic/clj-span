@@ -289,6 +289,36 @@
           (recur (rest open-list)
                  ordered-nodes))))))
 
+(defn depth-first-graph-paths
+  "Traverses a graph in depth-first order, returning a sequence of the
+   paths to each leaf node."
+  [root successors]
+  (loop [open-list  [root]
+         closed-set (transient #{})
+         leaf-nodes (transient #{})
+         paths      (transient {root [root]})]
+    (if (empty? open-list)
+      ;; (reduce (fn [leaf-paths [node path-to-node]]
+      ;;           (if (leaf-nodes node)
+      ;;             (conj leaf-paths path-to-node)
+      ;;             leaf-paths))
+      ;;         []
+      ;;         (persistent! paths))
+      (mapv second
+            (filter (fn [[node path-to-node]] (leaf-nodes node))
+                    (persistent! paths)))
+      (let [this-node (first open-list)
+            curr-path (paths this-node)]
+        (if-let [children (seq (remove closed-set (successors this-node)))]
+          (recur (concat children (rest open-list))
+                 (conj! closed-set this-node)
+                 leaf-nodes
+                 (reduce #(assoc! %1 %2 (conj curr-path %2)) paths children))
+          (recur (rest open-list)
+                 (conj! closed-set this-node)
+                 (conj! leaf-nodes this-node)
+                 paths))))))
+
 (defn depth-limited-graph-search
   ([root successors goal? depth-limit]
      (depth-limited-graph-search successors goal? depth-limit [root] #{} 0))

@@ -24,7 +24,7 @@
   (:use [clj-misc.utils      :only [seq2map mapmap iterate-while-seq with-message
                                     memoize-by-first-arg angular-distance p &
                                     with-progress-bar-cool depth-first-graph-traversal
-                                    depth-first-graph-ordering]]
+                                    depth-first-graph-ordering depth-first-graph-paths]]
         [clj-misc.matrix-ops :only [get-neighbors on-bounds? subtract-ids find-nearest
                                     filter-matrix-for-coords make-matrix map-matrix
                                     get-neighbors-clockwise group-by-adjacency]]
@@ -203,7 +203,7 @@
              (transient {})
              (partition 2 1 (if (_>_ left-weight right-weight)
                               stream-points-in-path
-                              (reverse stream-points-in-path)))))))
+                              (rseq stream-points-in-path)))))))
 
 (defn stream-segment-type
   [water-neighbors]
@@ -227,9 +227,21 @@
   [id stream-points explore-stream]
   (let [left-results  (take-while (& not nil?) (rest (iterate explore-stream [id (disj stream-points id)])))
         right-results (take-while (& not nil?) (rest (iterate explore-stream [id (second (last left-results))])))]
-    (concat (mapv first (reverse left-results)) [id] (mapv first right-results))))
+    (vec (concat (mapv first (reverse left-results)) [id] (mapv first right-results)))))
 
-(defn determine-river-flow-directions
+(defn assoc-longest!
+  [transient-map & keyvals]
+  (reduce (fn [tm [k v]] (assoc! tm k (if-let [curr-val (tm k)] (max-key count curr-val v) v)))
+          transient-map
+          (partition 2 keyvals)))
+
+(defn assoc-conj!
+  [transient-map & keyvals]
+  (reduce (fn [tm [k v]] (assoc! tm k (if-let [curr-val (tm k)] (conj curr-val v) [v])))
+          transient-map
+          (partition 2 keyvals)))
+
+(defn collect-stream-segment-info
   [in-stream? elev-layer rows cols]
   (let [explore-stream (p find-next-in-stream-step rows cols elev-layer in-stream?)
         stream-links   (set (filter #(= :link
@@ -237,15 +249,60 @@
                                          (filter in-stream? (get-neighbors-clockwise rows cols %))))
                                     in-stream?))]
     (loop [unexplored-links stream-links
-           stream-dirs      (transient {})]
+           ends-to-segments (transient {})
+           ends-to-ends     (transient {})]
       (if (empty? unexplored-links)
-        (persistent! stream-dirs)
-        (let [id                  (first unexplored-links)
-              stream-segment      (find-bounded-stream-segment id in-stream? explore-stream)
-              stream-segment-dirs (select-stream-path-dirs elev-layer stream-segment) ;; FIXME: segment local knowledge is insufficient
-              explored-links      (cons id (keys stream-segment-dirs))]
-          (recur (reduce disj unexplored-links explored-links)
-                 (reduce conj! stream-dirs stream-segment-dirs)))))))
+        [(persistent! ends-to-segments)
+         (persistent! ends-to-ends)]
+        (let [id             (first unexplored-links)
+              stream-segment (find-bounded-stream-segment id in-stream? explore-stream)
+              segment-start  (first stream-segment)
+              segment-end    (peek stream-segment)]
+          (if (= 1 (count stream-segment))
+            ;; picked a link on the map bounds, disregard and continue
+            (recur (disj unexplored-links id)
+                   ends-to-segments
+                   ends-to-ends)
+            ;; detected a proper stream segment, terminated by edges, junctions, and/or links on the map bounds
+            (recur (reduce disj unexplored-links stream-segment)
+                   (assoc-longest! ends-to-segments
+                                   [segment-start segment-end] stream-segment
+                                   [segment-end segment-start] (rseq stream-segment))
+                   (assoc-conj! ends-to-ends
+                                segment-start segment-end
+                                segment-end segment-start))))))))
+
+(defn expand-stream-path
+  [ends-to-segments stream-path]
+  (into [(first stream-path)]
+        (mapcat (& rest ends-to-segments vec)
+                (partition 2 1 stream-path))))
+
+(defn filter-unique-paths
+  [paths]
+  (vals
+   (persistent!
+    (reduce (fn [unique-paths next-path]
+              (let [path-ids (set next-path)]
+                (if (unique-paths path-ids)
+                  unique-paths
+                  (assoc! unique-paths path-ids next-path))))
+            (transient {})
+            paths))))
+
+(defn find-all-unique-stream-paths
+  [ends-to-segments ends-to-ends]
+  (let [unexplored-ends  (keys ends-to-ends)
+        all-stream-paths (mapcat #(depth-first-graph-paths % ends-to-ends) unexplored-ends)
+        unique-paths     (filter-unique-paths all-stream-paths)]
+    (map #(expand-stream-path ends-to-segments %) unique-paths)))
+
+(defn determine-river-flow-directions
+  [in-stream? elev-layer rows cols]
+  (let [[ends-to-segments ends-to-ends] (collect-stream-segment-info in-stream? elev-layer rows cols)
+        all-stream-paths                (find-all-unique-stream-paths ends-to-segments ends-to-ends)
+        stream-paths-by-length          (sort-by count < all-stream-paths)]
+    (apply merge (map #(select-stream-path-dirs elev-layer %) stream-paths-by-length))))
 
 (defn build-stream-network
   [{:keys [in-stream? elev-layer rows cols monitor] :as params}]
