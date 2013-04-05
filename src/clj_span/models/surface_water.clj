@@ -25,7 +25,7 @@
                                     memoize-by-first-arg angular-distance p &
                                     with-progress-bar-cool depth-first-graph-traversal
                                     depth-first-graph-ordering depth-first-graph-paths
-                                    manhattan-distance-2]]
+                                    manhattan-distance-2 dofold]]
         [clj-misc.matrix-ops :only [get-neighbors on-bounds? subtract-ids find-nearest
                                     filter-matrix-for-coords make-matrix map-matrix
                                     get-neighbors-clockwise group-by-adjacency]]
@@ -81,12 +81,48 @@
           :blocked-flow-layer        (map-matrix _-_ possible-flow-layer actual-flow-layer)
           :actual-flow-layer         actual-flow-layer)))))
 
-;; FIXME: Can I parallelize this?
-(defn propagate-runoff!
-  [{:keys [source-layer sink-layer use-layer
+(defn distribute-water-locally!
+  [{:keys [source-layer sink-layer use-layer intake-layer
            actual-sink-layer possible-use-layer actual-use-layer
            possible-flow-layer actual-flow-layer
-           service-network serviceshed-bands stream-intakes rows cols monitor]
+           service-network stream-intakes _-_]}
+   node]
+  (dosync
+   (let [theoretical-source       (get-in source-layer node)
+         theoretical-sink         (get-in sink-layer node)
+         theoretical-use          (get-in intake-layer node)
+         possible-upstream-inflow @(get-in possible-flow-layer node) ;; inflow without rival use
+         actual-upstream-inflow   @(get-in actual-flow-layer node) ;; inflow with rival use
+         possible-inflow          (_+_ theoretical-source possible-upstream-inflow)
+         actual-inflow            (_+_ theoretical-source actual-upstream-inflow)
+         possible-stock           (_-_ possible-inflow theoretical-sink) ;; amount left after sinks
+         actual-stock             (_-_ actual-inflow theoretical-sink) ;; amount left after sinks
+         ;; possible-sink            (_min_ possible-inflow theoretical-sink) ;; NOTE: this is a new result!
+         actual-sink              (_min_ actual-inflow theoretical-sink)
+         possible-use             (_min_ possible-stock theoretical-use) ;; user capture without rival use
+         actual-use               (_min_ actual-stock theoretical-use) ;; user capture with rival use
+         possible-outflow         possible-stock
+         actual-outflow           (_-_ actual-stock actual-use)]
+     ;; at this location
+     (ref-set (get-in possible-flow-layer node) possible-outflow)
+     (ref-set (get-in actual-flow-layer   node) actual-outflow)
+     (ref-set (get-in actual-sink-layer   node) actual-sink)
+     ;; at our next downhill/downstream neighbor
+     (when-let [next-step-node (get-in service-network node)]
+       (commute (get-in possible-flow-layer next-step-node) _+_ possible-outflow)
+       (commute (get-in actual-flow-layer   next-step-node) _+_ actual-outflow))
+     ;; at the use locations that draw from this intake point
+     ;; note: we also store actual-use in the actual-sink-layer since we're treating
+     ;;       user capture as a sink for rival competition scenarios
+     (doseq [user (stream-intakes node)]
+       (let [use-percentage        (_d_ (get-in use-layer user) theoretical-use)
+             relative-possible-use (_*_ possible-use use-percentage)
+             relative-actual-use   (_*_ actual-use use-percentage)]
+         (ref-set (get-in possible-use-layer user) relative-possible-use)
+         (ref-set (get-in actual-use-layer   user) relative-actual-use))))))
+
+(defn propagate-runoff!
+  [{:keys [serviceshed-bands stream-intakes use-layer rows cols monitor]
     :as params}]
   (let [num-bands (count serviceshed-bands)]
     (monitor-info monitor (str "propagating runoff through " num-bands " serviceshed band" (if (> num-bands 1) "s")))
@@ -96,48 +132,14 @@
                                          (fn [id] (if-let [users (stream-intakes id)]
                                                     (reduce _+_ (map #(get-in use-layer %) users))
                                                     _0_)))
-              _-_           (fn [A B] (rv-fn '(fn [a b] (max (- a b) 0.0)) A B))]
-          ;; workload-size (max 1 (quot num-bands (* (.availableProcessors (Runtime/getRuntime)) 2)))
-          ;; combinef      (constantly nil)
-          ;; reducef       (fn [_ serviceshed-bands]
+              _-_           (fn [A B] (rv-fn '(fn [a b] (max (- a b) 0.0)) A B))
+              work-fn       (p distribute-water-locally! (assoc params :intake-layer intake-layer :_-_ _-_))
+              num-threads   (* (.availableProcessors (Runtime/getRuntime)) 2)]
           (doseq [band-number (range (apply max (keys serviceshed-bands)) -1 -1)]
-            (doseq [node (serviceshed-bands band-number)]
-              (dosync
-               (let [theoretical-source       (get-in source-layer node)
-                     theoretical-sink         (get-in sink-layer node)
-                     theoretical-use          (get-in intake-layer node)
-                     possible-upstream-inflow @(get-in possible-flow-layer node) ;; inflow without rival use
-                     actual-upstream-inflow   @(get-in actual-flow-layer node) ;; inflow with rival use
-                     possible-inflow          (_+_ theoretical-source possible-upstream-inflow)
-                     actual-inflow            (_+_ theoretical-source actual-upstream-inflow)
-                     possible-stock           (_-_ possible-inflow theoretical-sink) ;; amount left after sinks
-                     actual-stock             (_-_ actual-inflow theoretical-sink) ;; amount left after sinks
-                     ;; possible-sink            (_min_ possible-inflow theoretical-sink) ;; NOTE: this is a new result!
-                     actual-sink              (_min_ actual-inflow theoretical-sink)
-                     possible-use             (_min_ possible-stock theoretical-use) ;; user capture without rival use
-                     actual-use               (_min_ actual-stock theoretical-use) ;; user capture with rival use
-                     possible-outflow         possible-stock
-                     actual-outflow           (_-_ actual-stock actual-use)]
-                 ;; at this location
-                 (ref-set (get-in possible-flow-layer node) possible-outflow)
-                 (ref-set (get-in actual-flow-layer   node) actual-outflow)
-                 (ref-set (get-in actual-sink-layer   node) actual-sink)
-                 ;; at our next downhill/downstream neighbor
-                 (when-let [next-step-node (get-in service-network node)]
-                   (alter (get-in possible-flow-layer next-step-node) _+_ possible-outflow)
-                   (alter (get-in actual-flow-layer   next-step-node) _+_ actual-outflow))
-                 ;; at the use locations that draw from this intake point
-                 ;; note: we also store actual-use in the actual-sink-layer since we're treating
-                 ;;       user capture as a sink for rival competition scenarios
-                 (doseq [user (stream-intakes node)]
-                   (let [use-percentage        (_d_ (get-in use-layer user) theoretical-use)
-                         relative-possible-use (_*_ possible-use use-percentage)
-                         relative-actual-use   (_*_ actual-use use-percentage)]
-                     (ref-set (get-in possible-use-layer user) relative-possible-use)
-                     (ref-set (get-in actual-use-layer   user) relative-actual-use)))))))))
-      ;; (dorun (map-indexed reducef serviceshed-bands))) ;; run sequentially
-      ;; (r/fold workload-size combinef reducef serviceshed-bands)) ;; run in parallel
-      params)))
+            (let [nodes         (serviceshed-bands band-number)
+                  workload-size (max 1 (quot (count nodes) num-threads))]
+              (dofold workload-size work-fn nodes))))))
+    params))
 
 (defn upstream-parents
   [rows cols stream-network id]

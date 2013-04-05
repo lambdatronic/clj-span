@@ -22,6 +22,7 @@
 
 (ns clj-misc.utils
   (:use [clojure.string :only [join]])
+  (:require [clojure.core.reducers :as r])
   (:import (java.util HashMap)))
 
 ;; Some useful abbreviations for point-free style.
@@ -505,6 +506,10 @@
     (apply await agents)))
 
 (defn sum [nums] (reduce + nums))
+
+(defn dofold
+  [workload-size work-fn coll]
+  (r/fold workload-size (constantly nil) (fn [_ x] (work-fn x)) coll))
 
 (defmacro with-progress-bar
   [body]
