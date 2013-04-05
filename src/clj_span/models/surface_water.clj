@@ -272,7 +272,7 @@
               segment-start  (first stream-segment)
               segment-end    (peek stream-segment)]
           (if (= 1 (count stream-segment))
-            ;; picked a link on the map bounds, disregard and continue
+            ;; picked a link or edge on the map bounds, disregard and continue
             (recur (disj unexplored-links id)
                    ends-to-segments
                    ends-to-ends)
@@ -310,7 +310,7 @@
         unique-paths     (filter-unique-paths all-stream-paths)]
     (map #(expand-stream-path ends-to-segments %) unique-paths)))
 
-;; FIXME: ends-to-segments is missing 12 in-stream points
+;; FIXME: ends-to-segments is missing 4 in-stream points
 ;; FIXME: select-stream-path-dirs slices off 8 stream points in tanzania
 (defn determine-river-flow-directions
   [in-stream? elev-layer rows cols]
@@ -342,11 +342,11 @@
     :actual-use-layer   (make-matrix rows cols (fn [_] (ref _0_)))))
 
 (defn find-nearest-stream-points
-  [in-stream? rows cols use-points]
+  [safe-stream-points rows cols use-points]
   (with-message
     "Finding nearest stream points to all users...\n"
     #(str "\nDone. Found " (count %) " intake points.")
-    (let [in-stream-users (filter in-stream? use-points)
+    (let [in-stream-users (filter safe-stream-points use-points)
           claimed-intakes (zipmap in-stream-users (map vector in-stream-users))]
       (println "Detected" (count in-stream-users) "in-stream users.\nContinuing with out-of-stream users...")
       (apply merge-with concat
@@ -354,16 +354,17 @@
              (with-progress-bar-cool
                :keep
                (- (count use-points) (count in-stream-users))
-               (pmap #(if-let [stream-id (find-nearest in-stream? rows cols %)] {stream-id [%]})
-                     (remove in-stream? use-points)))))))
+               (pmap #(if-let [stream-id (find-nearest safe-stream-points rows cols %)] {stream-id [%]})
+                     (remove safe-stream-points use-points)))))))
 
 (defn link-streams-to-users
   "Stores a map of {stream-ids -> nearest-use-ids} under (params :stream-intakes)."
   [{:keys [in-stream? rows cols use-points monitor] :as params}]
   (monitor-info monitor "associating users with stream points")
   (with-interrupt-checking ^IMonitor monitor
-    (assoc params
-      :stream-intakes (find-nearest-stream-points in-stream? rows cols use-points))))
+    (let [safe-stream-points (set (remove on-bounds? in-stream?))]
+      (assoc params
+        :stream-intakes (find-nearest-stream-points safe-stream-points rows cols use-points)))))
 
 (defn create-in-stream-test
   "Stores a set of all in-stream ids under (params :in-stream?)."
