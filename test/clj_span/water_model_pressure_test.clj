@@ -66,6 +66,11 @@
   (make-matrix (* factor size) (* factor size)
                (fn [[i j]] (get-in layer [(mod i size) (mod j size)]))))
 
+(defn make-palindrome-by-dims [rows cols layer]
+	(make-matrix rows cols               
+			(fn [[i j]] (get-in layer [(mod i size) (mod j size)]))))
+
+
 (defn ubersimple
   []
   (run-span {:source-layer       wmt/source-layer
@@ -120,7 +125,10 @@
              :sink-layer         (make-random-matrix-by-dims 239 222 12)
              :use-layer          (make-random-matrix-by-dims 239 222 10)
              :flow-layers        {"Altitude" @tanzania-elevation-layer
+			; alternative with crazy elevation
+			;:flow-layers        {"Altitude" (make-palindrome-by-dims 239 222 elev-layer-init)
                                   "River"    @tanzania-water-layer}
+									
              :source-threshold   5.0
              :sink-threshold     2.0
              :use-threshold      9.0
