@@ -13,7 +13,7 @@
 (def value-type :numbers)
 
 (defn register-math-syms [t]
-  (with-typed-math-syms value-type [_0_ _+_ _*_ _d_ *_ _d  _<_  _>_ rv-fn _> _min_]
+  (with-typed-math-syms value-type [_0_ _+_ _-_ _*_ _d_ *_ _d  _<_  _>_ rv-fn _> _min_]
     (t)))
 
 (use-fixtures :once register-math-syms)

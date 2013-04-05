@@ -36,6 +36,7 @@
 
 (def ^:dynamic _0_)
 (def ^:dynamic _+_)
+(def ^:dynamic _-_)
 (def ^:dynamic *_)
 (def ^:dynamic _d)
 (def ^:dynamic rv-fn)
@@ -183,6 +184,17 @@
               lowest-id))
           ids))
 
+(defn find-least-slope
+  [elev-layer ids initial-id]
+  (let [initial-elev (get-in elev-layer initial-id)]
+    (reduce (fn [least-slope-id id]
+              (let [least-slope (let [s1 (_-_ (get-in elev-layer least-slope-id) initial-elev)] (if (_<_ s1 _0_) (*_ -1.0 s1) s1))
+                    new-slope   (let [s2 (_-_ (get-in elev-layer id)             initial-elev)] (if (_<_ s2 _0_) (*_ -1.0 s2) s2))]
+                (if (_<_ new-slope least-slope)
+                  id
+                  least-slope-id)))
+            ids)))
+
 (defn lowest-neighbors-overland
   [id in-stream? elev-layer rows cols]
   (if-not (on-bounds? rows cols id)
@@ -220,7 +232,8 @@
     (let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
       (if (= (stream-segment-type water-neighbors) :link)
         (if-let [unexplored-neighbors (seq (filter unexplored-points water-neighbors))]
-          (let [next-step (find-lowest elev-layer unexplored-neighbors)]
+          ;; (let [next-step (find-lowest elev-layer unexplored-neighbors)]
+          (let [next-step (find-least-slope elev-layer unexplored-neighbors id)]
             [next-step (disj unexplored-points next-step)]))))))
 
 (defn find-bounded-stream-segment
@@ -297,6 +310,8 @@
         unique-paths     (filter-unique-paths all-stream-paths)]
     (map #(expand-stream-path ends-to-segments %) unique-paths)))
 
+;; FIXME: ends-to-segments is missing 12 in-stream points
+;; FIXME: select-stream-path-dirs slices off 8 stream points in tanzania
 (defn determine-river-flow-directions
   [in-stream? elev-layer rows cols]
   (let [[ends-to-segments ends-to-ends] (collect-stream-segment-info in-stream? elev-layer rows cols)
@@ -358,7 +373,7 @@
 
 (defmethod distribute-flow! "SurfaceWaterMovement"
   [{:keys [flow-layers value-type monitor] :as params}]
-  (let [results (with-typed-math-syms value-type [_0_ _+_ *_ _d rv-fn _min_ _<_ _>_ _> _*_ _d_]
+  (let [results (with-typed-math-syms value-type [_0_ _+_ _-_ *_ _d rv-fn _min_ _<_ _>_ _> _*_ _d_]
                   (-> (assoc params :elev-layer (flow-layers "Altitude"))
                       create-in-stream-test
                       link-streams-to-users
