@@ -230,7 +230,7 @@
   [rows cols elev-layer in-stream? [id unexplored-points]]
   (if-not (on-bounds? rows cols id)
     (let [water-neighbors (seq (filter in-stream? (get-neighbors-clockwise rows cols id)))]
-      (if (= (stream-segment-type water-neighbors) :link)
+      (if (contains? #{:link :edge} (stream-segment-type water-neighbors))
         (if-let [unexplored-neighbors (seq (filter unexplored-points water-neighbors))]
           ;; (let [next-step (find-lowest elev-layer unexplored-neighbors)]
           (let [next-step (find-least-slope elev-layer unexplored-neighbors id)]
@@ -257,9 +257,9 @@
 (defn collect-stream-segment-info
   [in-stream? elev-layer rows cols]
   (let [explore-stream (p find-next-in-stream-step rows cols elev-layer in-stream?)
-        stream-links   (set (filter #(= :link
-                                        (stream-segment-type
-                                         (filter in-stream? (get-neighbors-clockwise rows cols %))))
+        stream-links   (set (filter #(contains? #{:link :edge}
+                                                (stream-segment-type
+                                                 (filter in-stream? (get-neighbors-clockwise rows cols %))))
                                     in-stream?))]
     (loop [unexplored-links stream-links
            ends-to-segments (transient {})
