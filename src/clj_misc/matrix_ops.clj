@@ -303,30 +303,33 @@
 
 (defn group-by-adjacency
   [points]
-  (let [adjacent?       #(== (manhattan-distance-2 %1 %2) 1)
-        adjacent-groups (loop [curr-point   (first points)
-                               next-point   (second points)
-                               other-points (nnext points)
-                               curr-group    [curr-point]
-                               groups        []]
-                          (if next-point
-                            (if (adjacent? curr-point next-point)
-                              (recur next-point
-                                     (first other-points)
-                                     (next other-points)
-                                     (conj curr-group next-point)
-                                     groups)
-                              (recur next-point
-                                     (first other-points)
-                                     (next other-points)
-                                     [next-point]
-                                     (conj groups curr-group)))
-                            (conj groups curr-group)))
-        first-group     (first adjacent-groups)
-        last-group      (peek adjacent-groups)]
-    (if (adjacent? (peek last-group) (first first-group))
-      (pop (assoc adjacent-groups 0 (concat last-group first-group)))
-      adjacent-groups)))
+  (if (seq points)
+    (let [adjacent?       #(== (manhattan-distance-2 %1 %2) 1)
+          adjacent-groups (loop [curr-point   (first points)
+                                 next-point   (second points)
+                                 other-points (nnext points)
+                                 curr-group    [curr-point]
+                                 groups        []]
+                            (if next-point
+                              (if (adjacent? curr-point next-point)
+                                (recur next-point
+                                       (first other-points)
+                                       (next other-points)
+                                       (conj curr-group next-point)
+                                       groups)
+                                (recur next-point
+                                       (first other-points)
+                                       (next other-points)
+                                       [next-point]
+                                       (conj groups curr-group)))
+                              (conj groups curr-group)))
+          first-group     (first adjacent-groups)
+          last-group      (peek adjacent-groups)]
+      (if (= (count adjacent-groups) 1)
+        adjacent-groups
+        (if (adjacent? (peek last-group) (first first-group))
+          (pop (assoc adjacent-groups 0 (concat last-group first-group)))
+          adjacent-groups)))))
 
 (defn print-matrix
   ([matrix]
