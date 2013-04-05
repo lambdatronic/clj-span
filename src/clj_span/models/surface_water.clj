@@ -24,7 +24,8 @@
   (:use [clj-misc.utils      :only [seq2map mapmap iterate-while-seq with-message
                                     memoize-by-first-arg angular-distance p &
                                     with-progress-bar-cool depth-first-graph-traversal
-                                    depth-first-graph-ordering depth-first-graph-paths]]
+                                    depth-first-graph-ordering depth-first-graph-paths
+                                    manhattan-distance-2]]
         [clj-misc.matrix-ops :only [get-neighbors on-bounds? subtract-ids find-nearest
                                     filter-matrix-for-coords make-matrix map-matrix
                                     get-neighbors-clockwise group-by-adjacency]]
@@ -195,6 +196,15 @@
                   least-slope-id)))
             ids)))
 
+(defn find-closest
+  [neighbor-ids initial-id]
+  (reduce (fn [closest-id id]
+            (if (< (manhattan-distance-2 initial-id id)
+                   (manhattan-distance-2 initial-id closest-id))
+              id
+              closest-id))
+          neighbor-ids))
+
 (defn lowest-neighbors-overland
   [id in-stream? elev-layer rows cols]
   (if-not (on-bounds? rows cols id)
@@ -233,7 +243,8 @@
       (if (contains? #{:link :edge} (stream-segment-type water-neighbors))
         (if-let [unexplored-neighbors (seq (filter unexplored-points water-neighbors))]
           ;; (let [next-step (find-lowest elev-layer unexplored-neighbors)]
-          (let [next-step (find-least-slope elev-layer unexplored-neighbors id)]
+          ;; (let [next-step (find-least-slope elev-layer unexplored-neighbors id)]
+          (let [next-step (find-closest unexplored-neighbors id)]
             [next-step (disj unexplored-points next-step)]))))))
 
 (defn find-bounded-stream-segment
@@ -305,7 +316,8 @@
 
 (defn find-all-unique-stream-paths
   [ends-to-segments ends-to-ends]
-  (let [unexplored-ends  (keys ends-to-ends)
+  ;; (let [unexplored-ends  (keys ends-to-ends)
+  (let [unexplored-ends  (filter #(= 1 (count (ends-to-ends %))) (keys ends-to-ends))
         all-stream-paths (mapcat #(depth-first-graph-paths % ends-to-ends) unexplored-ends)
         unique-paths     (filter-unique-paths all-stream-paths)]
     (map #(expand-stream-path ends-to-segments %) unique-paths)))
