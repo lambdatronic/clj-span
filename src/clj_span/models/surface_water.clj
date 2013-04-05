@@ -362,7 +362,7 @@
   [{:keys [in-stream? rows cols use-points monitor] :as params}]
   (monitor-info monitor "associating users with stream points")
   (with-interrupt-checking ^IMonitor monitor
-    (let [safe-stream-points (set (remove on-bounds? in-stream?))]
+    (let [safe-stream-points (set (remove (p on-bounds? rows cols) in-stream?))]
       (assoc params
         :stream-intakes (find-nearest-stream-points safe-stream-points rows cols use-points)))))
 
