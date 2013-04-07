@@ -52,12 +52,16 @@
 
 (def size 12)
 
+(def r-gen (java.util.Random. 12345))
+(defn random [bound] (* (.nextDouble r-gen) bound))
+(defn random-int [bound] (.nextInt r-gen  bound))
+
 ; generates a uniformly distributed random matrix
 (defn make-random-matrix-by-dims [rows cols bound]
-  (make-matrix rows cols (fn [_] (rand bound))))
+  (make-matrix rows cols (fn [_] (random bound))))
 
 (defn make-random-matrix [factor bound]
-  (make-matrix (* factor size) (* factor size) (fn [_] (rand bound))))
+  (make-matrix (* factor size) (* factor size) (fn [_] (random bound))))
 
 (defn make-random-int-matrix [factor bound]
   (make-matrix (* factor size) (* factor size) (fn [_] (rand-int bound))))
