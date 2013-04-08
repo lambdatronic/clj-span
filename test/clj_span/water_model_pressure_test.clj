@@ -52,12 +52,16 @@
 
 (def size 12)
 
+(def r-gen (java.util.Random. 12345))
+(defn random [bound] (* (.nextDouble r-gen) bound))
+(defn random-int [bound] (.nextInt r-gen  bound))
+
 ; generates a uniformly distributed random matrix
 (defn make-random-matrix-by-dims [rows cols bound]
-  (make-matrix rows cols (fn [_] (rand bound))))
+  (make-matrix rows cols (fn [_] (random bound))))
 
 (defn make-random-matrix [factor bound]
-  (make-matrix (* factor size) (* factor size) (fn [_] (rand bound))))
+  (make-matrix (* factor size) (* factor size) (fn [_] (random bound))))
 
 (defn make-random-int-matrix [factor bound]
   (make-matrix (* factor size) (* factor size) (fn [_] (rand-int bound))))
@@ -65,6 +69,11 @@
 (defn make-palindrome [factor layer]
   (make-matrix (* factor size) (* factor size)
                (fn [[i j]] (get-in layer [(mod i size) (mod j size)]))))
+
+(defn make-palindrome-by-dims [rows cols layer]
+	(make-matrix rows cols               
+			(fn [[i j]] (get-in layer [(mod i size) (mod j size)]))))
+
 
 (defn ubersimple
   []
@@ -120,7 +129,10 @@
              :sink-layer         (make-random-matrix-by-dims 239 222 12)
              :use-layer          (make-random-matrix-by-dims 239 222 10)
              :flow-layers        {"Altitude" @tanzania-elevation-layer
+			; alternative with crazy elevation
+			;:flow-layers        {"Altitude" (make-palindrome-by-dims 239 222 elev-layer-init)
                                   "River"    @tanzania-water-layer}
+									
              :source-threshold   5.0
              :sink-threshold     2.0
              :use-threshold      9.0
