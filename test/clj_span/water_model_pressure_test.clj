@@ -4,9 +4,10 @@
         clj-span.core
         clj-span.gui
         clj-span.models.surface-water :reload-all
-        [clj-span.worldgen :only [read-layer-from-file]]
+        [clj-span.worldgen :only [read-layer-from-file write-layer-to-file] :rename {write-layer-to-file write-matrix-to-file}]
         clj-misc.utils
-        clj-misc.matrix-ops)
+        clj-misc.matrix-ops
+        clj-span.elevation-correction)
   (:require [clojure.core.reducers :as r]
             [clj-span.water-model-test :as wmt]))
 
@@ -46,9 +47,13 @@
    [0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0]
    [0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]])
 
-(def tanzania-elevation-layer (delay (read-layer-from-file "clj_span/tanzania_elevation.clj")))
+(def tanzania-elevation-layer (delay (read-layer-from-file "input_layers/tanzania_elevation.clj")))
 
-(def tanzania-water-layer (delay (read-layer-from-file "clj_span/tanzania_water.clj")))
+(def tanzania-elevation-filled-layer (delay (read-layer-from-file "input_layers/tanzania_elevation_filled.clj")))
+
+(def tanzania-elevation-averaged-layer (delay (read-layer-from-file "input_layers/tanzania_elevation_averaged.clj")))
+
+(def tanzania-water-layer (delay (read-layer-from-file "input_layers/tanzania_water.clj")))
 
 (def size 12)
 
@@ -124,15 +129,17 @@
              :animation?         true}))
 
 (defn tanzania-test
-  []
+  [elev-type]
+  {:pre [(contains? #{:orig :filled :averaged :crazy} elev-type)]}
   (run-span {:source-layer       (make-random-matrix-by-dims 239 222 20)
              :sink-layer         (make-random-matrix-by-dims 239 222 12)
              :use-layer          (make-random-matrix-by-dims 239 222 10)
-             :flow-layers        {"Altitude" @tanzania-elevation-layer
-			; alternative with crazy elevation
-			;:flow-layers        {"Altitude" (make-palindrome-by-dims 239 222 elev-layer-init)
+             :flow-layers        {"Altitude" (case elev-type
+                                               :orig     @tanzania-elevation-layer
+                                               :filled   @tanzania-elevation-filled-layer
+                                               :averaged @tanzania-elevation-averaged-layer
+                                               :crazy    (make-palindrome-by-dims 239 222 elev-layer-init))
                                   "River"    @tanzania-water-layer}
-									
              :source-threshold   5.0
              :sink-threshold     2.0
              :use-threshold      9.0
@@ -149,21 +156,3 @@
              :result-type        :java-hashmap
              :flow-model         "SurfaceWaterMovement"
              :animation?         true}))
-
-;; Sequential
-;; 358.55
-;; 363.49
-;; 368.38
-
-;; Parallel
-;; 335.96
-;; 344.27
-;; 347.5
-
-;; Parallel x4
-;; 351.12
-;; 354.12
-;; 355.96
-
-;; Parallel x2
-;; 360.99
