@@ -124,11 +124,20 @@
           {}
           aseq))
 
-(defn mapmap
+(defn mapmap-old
   "Creates a new map by applying keyfn to every key of in-map and
    valfn to every corresponding val."
   [keyfn valfn in-map]
   (into {} (map (fn [[k v]] [(keyfn k) (valfn v)]) in-map)))
+
+(defn mapmap
+  "Creates a new map by applying keyfn to every key of in-map and
+   valfn to every corresponding val."
+  [keyfn valfn amap]
+  (persistent!
+   (reduce-kv (fn [newmap key val] (assoc! newmap (keyfn key) (valfn val)))
+              (transient {})
+              amap)))
 
 (defn mapmap-java
   "Creates a new Java map by applying keyfn to every key of in-map and
