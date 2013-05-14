@@ -15,8 +15,8 @@ Copyright Gary W. Johnson (gjohnson@green-compass.org) 2009-2013
 
 To run clj-span, you will need:
 
-1) Sun's JDK 1.6+
-2) clj-span-standalone.jar (contains clojure-1.5)
+1) Sun's JDK 1.7+
+2) clj-span-standalone.jar (contains clojure-1.5.1)
 
 Then simply place clj-span-standalone.jar on your classpath and fire
 up your JVM as follows:
