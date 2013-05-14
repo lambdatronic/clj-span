@@ -13,6 +13,8 @@ Johnson et al.)
 ----------------------------------------------------------------------"
   :license {:name "GNU General Public License v3",
             :url "http://www.gnu.org/licenses/gpl.html"}
+  :url "https://github.com/lambdatronic/clj-span"
+  ;; :url "http://lambdatronic.github.com/clj-span" <-- codox-generated API
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [meridian/clj-jts "0.0.1"]
                  [integratedmodelling/thinklab-api "1.0.0"]]
