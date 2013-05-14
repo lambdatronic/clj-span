@@ -8,7 +8,7 @@ pom.xml
 /.env
 /target
 /resources/pics
-/autodoc
+/doc
 /api_test/*.class
 /lib
 /classes

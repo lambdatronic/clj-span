@@ -16,6 +16,7 @@ Johnson et al.)
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [meridian/clj-jts "0.0.1"]
                  [integratedmodelling/thinklab-api "1.0.0"]]
+  :plugins [[codox "0.6.4"]]
   :min-lein-version "2.0.0"
   :warn-on-reflection true
   :aot [clj-span.commandline clj-span.java-span-bridge]
