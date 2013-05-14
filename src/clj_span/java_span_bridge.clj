@@ -22,7 +22,7 @@
 ;;; external Java programs.
 
 (ns clj-span.java-span-bridge
-  (:use [clj-misc.utils            :only (p & with-message mapmap mapmap-java)]
+  (:use [clj-misc.utils            :only (p & with-message mapmap-generic mapmap-java)]
         [clj-misc.matrix-ops       :only (make-matrix)]
         [clj-span.thinklab-monitor :only (monitor-info with-error-monitor)])
   (:require [clj-span.core :as core]
@@ -78,7 +78,7 @@
 
 (defn unpack-layer-map
   [value-type rows cols layer-map]
-  (mapmap identity (p unpack-layer value-type rows cols) layer-map))
+  (mapmap-generic identity (p unpack-layer value-type rows cols) layer-map))
 
 (defn funky-matrix2seq
   [rows cols matrix]

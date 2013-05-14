@@ -124,7 +124,7 @@
           {}
           aseq))
 
-(defn mapmap-old
+(defn mapmap-generic
   "Creates a new map by applying keyfn to every key of in-map and
    valfn to every corresponding val."
   [keyfn valfn in-map]
@@ -409,12 +409,12 @@
   "Returns the manhattan distance between two n-dimensional points."
   [pointA pointB]
   (constraints-1.0 {:pre [pointA pointB (== (count pointA) (count pointB))]})
-  (reduce + (map (fn [a b] (Math/abs (- a b))) pointA pointB)))
+  (reduce + (map (fn [a b] (Math/abs ^Integer (- a b))) pointA pointB)))
 
 (defn manhattan-distance-2
   "Returns the manhattan distance between two 2-dimensional points."
   [[i1 j1] [i2 j2]]
-  (+ (Math/abs (- i1 i2)) (Math/abs (- j1 j2))))
+  (+ (Math/abs ^Integer (- i1 i2)) (Math/abs ^Integer (- j1 j2))))
 
 (defn square-distance
   [pointA pointB]
