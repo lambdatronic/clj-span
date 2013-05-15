@@ -1,7 +1,8 @@
 (ns clj-span.elevation-correction
-  (:use clj-misc.matrix-ops))
+  (:use [clj-misc.matrix-ops :only [is-matrix? get-rows get-cols make-matrix get-neighbors on-bounds?]]))
 
-(defn average [sequence]
+(defn average
+  [sequence]
   (let [length (count sequence)]
     (if (zero? length)
       0
@@ -9,32 +10,46 @@
 
 (defn neighborhood-values
   "Returns the values of the 8 neighboring cells"
-  [layer rows cols id]
-  (map #(get-in layer %) (get-neighbors rows cols id)))
+  [elevation-layer rows cols id]
+  (map #(get-in elevation-layer %) (get-neighbors rows cols id)))
 
-(defn smooth
-  [elevation rows cols id]
-  (let [own-elev (get-in elevation id)]
+(defn neighbor-min
+  [elevation-layer rows cols id]
+  (let [own-elev (get-in elevation-layer id)]
     (if (on-bounds? rows cols id)
-      {:value own-elev :flag 0}
-      (let [neighbors-elevs (neighborhood-values elevation rows cols id)
-            min-elev        (reduce min neighbors-elevs)]
-        (cond
-         ;; (== own-elev min-elev){:value (+ 0.001 own-elev) :flag 1} ; Dont use that option
-         ;; (< own-elev min-elev) {:value (average neighbors-elevs) :flag 1} ; This should converge
-         (< own-elev min-elev) {:value min-elev :flag 1}
-         :else                 {:value own-elev :flag 0})))))
+      own-elev
+      (let [neighbor-elevs (neighborhood-values elevation-layer rows cols id)
+            min-elev       (reduce min neighbor-elevs)]
+        (if (< own-elev min-elev)
+          min-elev
+          own-elev)))))
+
+(defn neighbor-avg
+  [elevation-layer rows cols id]
+  (let [own-elev (get-in elevation-layer id)]
+    (if (on-bounds? rows cols id)
+      own-elev
+      (let [neighbor-elevs (neighborhood-values elevation-layer rows cols id)
+            min-elev       (reduce min neighbor-elevs)]
+        (if (< own-elev min-elev)
+          (average neighbor-elevs)
+          own-elev)))))
+
+(defn fill-pits
+  [pit-filling-algorithm elevation-layer]
+  (let [rows       (get-rows elevation-layer)
+        cols       (get-cols elevation-layer)
+        filling-fn (case pit-filling-algorithm
+                     :neighbor-min #(neighbor-min elevation-layer rows cols %)
+                     :neighbor-avg #(neighbor-avg elevation-layer rows cols %))
+        new-elevation-layer (make-matrix rows cols filling-fn)]
+    (if (not= elevation-layer new-elevation-layer)
+      new-elevation-layer)))
 
 (defn dem-smooth
-  [elevation]
-  (let [rows (get-rows elevation)
-        cols (get-cols elevation)]
-    (loop [counter (* rows cols)
-           layer   elevation]
-      (if (> counter 0)
-        (let [dem         (make-matrix rows cols #(smooth layer rows cols %))
-              dem-values  (map-matrix :value dem)
-              pits-filled (count (filter #(= (:flag %) 1) (matrix2seq dem)))]
-          (do (println "pits filled:" pits-filled)
-              (recur pits-filled dem-values)))
-        layer))))
+  "Returns a new elevation layer based on the original by applying one
+   of the following pit-filling algorithms: :neighbor-min :neighbor-avg."
+  [elevation-layer pit-filling-algorithm]
+  {:pre [(is-matrix? elevation-layer)
+         (contains? #{:neighbor-min :neighbor-avg} pit-filling-algorithm)]}
+    (last (take-while is-matrix? (iterate #(fill-pits pit-filling-algorithm %) elevation-layer))))
