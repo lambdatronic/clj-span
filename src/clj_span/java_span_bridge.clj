@@ -17,9 +17,9 @@
 ;;;
 ;;;-------------------------------------------------------------------
 ;;;
-;;; This namespace defines the clj-span.java-span-bridge/run-span
-;;; function, which is the main entry point into the SPAN system from
-;;; external Java programs.
+;;; This namespace defines the static runSpan {java.util.HashMap ->
+;;; java.util.HashMap} method, which is the main entry point into the
+;;; SPAN system from external Java programs.
 
 (ns clj-span.java-span-bridge
   (:use [clj-misc.utils            :only (p & with-message mapmap-generic mapmap-java)]

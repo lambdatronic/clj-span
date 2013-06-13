@@ -50,6 +50,12 @@
            (transient [])
            (range rows))))
 
+(defn transpose-matrix
+  [matrix]
+  (let [rows (get-rows matrix)
+        cols (get-cols matrix)]
+    (make-matrix cols rows (fn [[i j]] (get-in matrix [j i])))))
+
 (defn filter-matrix-for-coords
   [pred? matrix]
   (filter (fn [id] (pred? (get-in matrix id)))
@@ -300,6 +306,14 @@
            (map #(vector (+ i %1) (+ j %2))
                 [1 1 0 -1 -1 -1  0  1]
                 [0 1 1  1  0 -1 -1 -1])))
+
+(defn get-neighbors-counterclockwise
+  "Return a sequence of neighboring points within the map bounds."
+  [rows cols [i j]]
+  (filterv (p in-bounds? rows cols)
+           (map #(vector (+ i %1) (+ j %2))
+                [1 1 0 -1 -1 -1 0 1]
+                [0 -1 -1 -1 0 1 1 1])))
 
 (defn group-by-adjacency
   [points]
