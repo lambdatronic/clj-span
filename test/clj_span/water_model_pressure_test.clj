@@ -47,13 +47,13 @@
    [0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0]
    [0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]])
 
-(def tanzania-elevation-layer (delay (read-layer-from-file "input_layers/tanzania_elevation.clj")))
+(def tanzania-elevation-layer          (delay (read-layer-from-file "input_layers/tanzania_elevation.clj")))
 
-(def tanzania-elevation-filled-layer (delay (read-layer-from-file "input_layers/tanzania_elevation_filled.clj")))
+(def tanzania-elevation-filled-layer   (delay (read-layer-from-file "input_layers/tanzania_elevation_filled.clj")))
 
 (def tanzania-elevation-averaged-layer (delay (read-layer-from-file "input_layers/tanzania_elevation_averaged.clj")))
 
-(def tanzania-water-layer (delay (read-layer-from-file "input_layers/tanzania_water.clj")))
+(def tanzania-water-layer              (delay (read-layer-from-file "input_layers/tanzania_water.clj")))
 
 (def size 12)
 

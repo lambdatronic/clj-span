@@ -216,7 +216,8 @@
     (let [neighbors (get-neighbors rows cols id)]
       (if-let [water-neighbors (seq (filterv in-stream? neighbors))]
         (find-lowest elev-layer water-neighbors)
-        (find-lowest elev-layer (cons id neighbors))))))
+        (find-lowest elev-layer neighbors)))))
+        ;; (find-lowest elev-layer (cons id neighbors))))))
 
 (defn select-stream-path-dirs
   [elev-layer stream-points-in-path]
@@ -364,7 +365,7 @@
     (let [in-stream-users (filter safe-stream-points use-points)
           claimed-intakes (zipmap in-stream-users (map vector in-stream-users))]
       (println "Detected" (count in-stream-users) "in-stream users.\nContinuing with out-of-stream users...")
-      (apply merge-with concat
+      (apply merge-with #(reduce conj %1 %2)
              claimed-intakes
              (with-progress-bar-cool
                :keep
