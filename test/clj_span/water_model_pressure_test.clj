@@ -47,6 +47,34 @@
    [0.0 0.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 1.0 0.0 0.0]
    [0.0 1.0 1.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0 0.0]])
 
+(def source-layer
+  [[9.0 9.0 9.0 8.0 8.0 5.0 3.0  3.0  6.0  6.0  6.0  8.0]
+   [9.0 9.0 8.0 8.0 5.0 5.0 5.0  3.0  5.0  5.0  6.0  8.0]
+   [8.0 8.0 8.0 8.0 5.0 3.0 3.0  3.0  5.0  5.0  5.0  8.0]
+   [8.0 8.0 8.0 5.0 5.0 3.0 3.0  3.0  3.0  3.0  3.0  8.0]
+   [5.0 5.0 5.0 5.0 5.0 3.0 3.0  2.0  2.0  4.0  6.0  8.0]
+   [5.0 5.0 5.0 5.0 5.0 3.0 3.0  3.0  1.0  5.0  5.0  8.0]
+   [8.0 8.0 8.0 8.0 8.0 5.0 3.0  7.0  7.0  7.0  8.0  8.0]
+   [8.0 8.0 8.0 8.0 8.0 5.0 7.0  7.0  7.0  7.0  8.0  8.0]
+   [5.0 5.0 5.0 5.0 5.0 5.0 7.0  7.0 12.0 12.0 12.0 12.0]
+   [5.0 5.0 5.0 5.0 5.0 5.0 7.0 12.0 12.0 12.0 12.0 12.0]
+   [5.0 5.0 5.0 5.0 5.0 5.0 7.0 14.0 12.0 12.0 12.0 12.0]
+   [5.0 5.0 5.0 5.0 5.0 5.0 7.0 18.0 12.0 12.0 12.0 12.0]])
+
+(def use-layer
+  [[0.0 0.0   0.0   0.0 0.0 0.0 0.0 0.0  0.0  0.0   0.0 0.0]
+   [0.0 0.0   0.0   0.0 0.0 0.0 0.0 0.0  2.0  0.0   0.0 0.0]
+   [0.0 0.0   0.0   0.0 0.0 0.0 0.0 0.0  0.0  0.0   0.0 0.0]
+   [0.0 0.0   0.0   0.0 0.0 0.0 0.0 0.0  0.0  0.0   0.0 0.0]
+   [0.0 0.0   0.0   0.0 0.0 0.0 0.0 0.0  0.0  0.0   0.0 0.0]
+   [0.0 0.0   0.0   0.0 0.0 0.0 0.0 0.0  0.0  0.0   0.0 0.0]
+   [0.0 0.0   0.0 100.0 0.0 0.0 0.0 0.0  0.0  0.0  20.0 0.0]
+   [0.0 0.0 100.0   0.0 0.0 1.0 0.0 0.0  0.0 10.0 150.0 0.0]
+   [0.0 0.0   1.0   1.0 0.0 1.0 0.0 0.0  0.0  0.0   0.0 0.0]
+   [0.0 0.0   1.0   1.0 1.0 0.0 0.0 0.0 50.0  0.0   0.0 0.0]
+   [0.0 0.0   1.0   1.0 0.0 0.0 0.0 0.0  0.0  0.0   0.0 0.0]
+   [0.0 0.0   1.0   1.0 0.0 0.0 0.0 0.0  0.0  0.0   0.0 0.0]])
+
 (def tanzania-elevation-layer          (delay (read-layer-from-file "input_layers/tanzania_elevation.clj")))
 
 (def tanzania-elevation-filled-layer   (delay (read-layer-from-file "input_layers/tanzania_elevation_filled.clj")))
@@ -128,6 +156,13 @@
              :flow-model         "SurfaceWaterMovement"
              :animation?         true}))
 
+(comment
+(draw-layer "Source"   (make-random-matrix-by-dims 239 222 20) 1 :numbers)
+(draw-layer "Sink"     (make-random-matrix-by-dims 239 222 12) 1 :numbers)
+(draw-layer "Use"      (make-random-matrix-by-dims 239 222 10) 1 :numbers)
+(draw-layer "Altitude" @tanzania-elevation-filled-layer        1 :numbers)
+(tanzania-test "filled")
+)
 (defn tanzania-test
   [elev-type]
   {:pre [(contains? #{:orig :filled :averaged :crazy} elev-type)]}
@@ -156,3 +191,50 @@
              :result-type        :java-hashmap
              :flow-model         "SurfaceWaterMovement"
              :animation?         true}))
+
+(def view-source-layer     (delay (read-layer-from-file "input_layers/line_of_sight/view_source160_nb.clj")))
+
+(def view-sink-layer       (delay (read-layer-from-file "input_layers/line_of_sight/view_sink160_nb.clj")))
+
+(def view-use-layer        (delay (read-layer-from-file "input_layers/line_of_sight/view_use160_nb.clj")))
+
+(def view-elevation-layer  (delay (read-layer-from-file "input_layers/line_of_sight/view_flows160_nb.clj")))
+
+(defn tanzania-test-line-of-sight
+  []
+  (run-span {:source-layer       @view-source-layer
+             :sink-layer         @view-sink-layer
+             :use-layer          @view-use-layer
+             :flow-layers        {"Altitude" @view-elevation-layer}
+             :source-threshold   45.0
+             :sink-threshold     45.0
+             :use-threshold      0.3
+             :trans-threshold    1.0
+             :cell-width         100.0
+             :cell-height        100.0
+             :rv-max-states      10
+             :downscaling-factor 1
+             :source-type        :infinite
+             :sink-type          :infinite
+             :use-type           :infinite
+             :benefit-type       :non-rival
+             :value-type         value-type
+             :result-type        :java-hashmap
+             :flow-model         "LineOfSight"
+             :animation?         true}))
+
+(comment "LineOfSight Example"
+(draw-layer "Source"    @view-source-layer    3 :numbers)
+(draw-layer "Sink"      @view-sink-layer      3 :numbers)
+(draw-layer "Use"       @view-use-layer       3 :numbers)
+(draw-layer "Elevation" @view-elevation-layer 3 :numbers)
+(tanzania-test-line-of-sight)
+)
+
+(comment "SurfaceWaterMovementExample"
+(draw-layer "Source"   (make-random-matrix-by-dims 239 222 20) 1 :numbers)
+(draw-layer "Sink"     (make-random-matrix-by-dims 239 222 12) 1 :numbers)
+(draw-layer "Use"      (make-random-matrix-by-dims 239 222 10) 1 :numbers)
+(draw-layer "Altitude" @tanzania-elevation-filled-layer        1 :numbers)
+(tanzania-test :filled)
+)

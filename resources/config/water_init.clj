@@ -15,5 +15,5 @@
  "-use-type"           "finite"
  "-benefit-type"       "rival"
  "-value-type"         "numbers"
- "-animation?"         "false"
+ "-animation?"         "true"
  "-flow-model"         "surface-water"}
