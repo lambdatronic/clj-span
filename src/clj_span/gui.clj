@@ -232,3 +232,28 @@
 (defn stop-animation [frames]
   (doseq [^JFrame frame frames]
     (.dispose frame)))
+
+(defmacro with-animation
+  [value-type initial-legend-max possible-flow-layer actual-flow-layer & body]
+  `(let [[rows# cols#]           ((juxt get-rows get-cols) ~possible-flow-layer)
+         animation-pixel-size#   (quot 600 (max rows# cols#))
+         legend-max#             (atom ~initial-legend-max)
+         animation-frames#       (remove nil?
+                                         (concat (draw-ref-layer "Possible Flow"
+                                                                 ~possible-flow-layer
+                                                                 animation-pixel-size#
+                                                                 legend-max#
+                                                                 ~value-type)
+                                                 (draw-ref-layer "Actual Flow"
+                                                                 ~actual-flow-layer
+                                                                 animation-pixel-size#
+                                                                 legend-max#
+                                                                 ~value-type)))
+         animator#               (agent animation-frames#)]
+     (reset! animation-running? true)
+     (send-off animator# run-animation)
+     (let [result# ~@body]
+       (reset! animation-running? false)
+       (send-off animator# stop-animation)
+       ;;(shutdown-agents)
+       result#)))

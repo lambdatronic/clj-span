@@ -34,10 +34,7 @@
                                           is-matrix?
                                           filter-matrix-for-coords)]
         [clj-span.interface        :only [provide-results]]
-        [clj-span.gui              :only [draw-ref-layer
-                                          run-animation
-                                          stop-animation
-                                          animation-running?]]
+        [clj-span.gui              :only [with-animation]]
         [clj-span.analyzer         :only [theoretical-source
                                           inaccessible-source
                                           possible-source
@@ -181,31 +178,6 @@
         :possible-flow-layer (map-matrix deref possible-flow-layer)
         :actual-flow-layer   (map-matrix deref actual-flow-layer)))))
 
-(defmacro with-animation
-  [value-type source-layer possible-flow-layer actual-flow-layer & body]
-  `(let [[rows# cols#]           ((juxt get-rows get-cols) ~possible-flow-layer)
-         animation-pixel-size#   (quot 600 (max rows# cols#))
-         legend-max#             (atom (matrix-max ~source-layer)) ;; seems like a decent heuristic
-         animation-frames#       (remove nil?
-                                         (concat (draw-ref-layer "Possible Flow"
-                                                                 ~possible-flow-layer
-                                                                 animation-pixel-size#
-                                                                 legend-max#
-                                                                 ~value-type)
-                                                 (draw-ref-layer "Actual Flow"
-                                                                 ~actual-flow-layer
-                                                                 animation-pixel-size#
-                                                                 legend-max#
-                                                                 ~value-type)))
-         animator#               (agent animation-frames#)]
-     (reset! animation-running? true)
-     (send-off animator# run-animation)
-     (let [result# ~@body]
-       (reset! animation-running? false)
-       (send-off animator# stop-animation)
-       ;;(shutdown-agents)
-       result#)))
-
 (defn count-affected-users
   [{:keys [possible-use-layer cache-layer value-type]}]
   (let [_0_ (case value-type
@@ -229,7 +201,7 @@
         (if (and (seq source-points)
                  (seq use-points))
           (let [new-params (if animation?
-                             (with-animation value-type source-layer possible-flow-layer actual-flow-layer (distribute-flow! params))
+                             (with-animation value-type (matrix-max source-layer) possible-flow-layer actual-flow-layer (distribute-flow! params))
                              (distribute-flow! params))]
             (or new-params params))
           (do (println "Either source or use is zero everywhere. Therefore, there can be no service flow.")
