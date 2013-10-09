@@ -1,5 +1,6 @@
 import clj_span.java_span_bridge;
 import java.util.HashMap;
+import java.util.Map;
 
 public class APITest {
 
@@ -68,7 +69,7 @@ public class APITest {
              0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,
              0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0};
 
-        HashMap<String,double[]> flowLayers = new HashMap<String,double[]>();
+        Map<String,double[]> flowLayers = new HashMap<>();
         flowLayers.put("Altitude", elevLayer);
         flowLayers.put("WaterBodies", waterLayer);
 
@@ -98,7 +99,7 @@ public class APITest {
 
         String[] resultLayers = {"theoretical-source","actual-sink","possible-use","blocked-flow"};
 
-        HashMap<String,Object> spanParams = new HashMap<String,Object>();
+        Map<String,Object> spanParams = new HashMap<>();
         spanParams.put("source-layer", sourceLayer);
         spanParams.put("sink-layer", sinkLayer);
         spanParams.put("use-layer", useLayer);
@@ -122,7 +123,11 @@ public class APITest {
         spanParams.put("animation?", animation);
         spanParams.put("result-layers", resultLayers);
 
-        HashMap<String,Object> resultMap = clj_span.java_span_bridge.runSpan(spanParams);
+        /*
+         * FIXME: it would be better if runSpan() returned a Map
+         * instead of a HashMap. -- ef
+         */
+        Map<String,Object> resultMap = clj_span.java_span_bridge.runSpan(spanParams);
 
         System.out.println(resultMap);
     }
