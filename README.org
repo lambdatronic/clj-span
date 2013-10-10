@@ -21,6 +21,8 @@ To run clj-span, you will need:
 Then simply place clj-span-standalone.jar on your classpath and fire
 up your JVM as follows:
 
+#+BEGIN_SRC sh
+
 java -cp clj-span-standalone.jar clj_span.commandline \
      -config-file        <filepath>                 \
      -source-layer       <filepath>                 \
@@ -42,6 +44,7 @@ java -cp clj-span-standalone.jar clj_span.commandline \
      -value-type         <numbers|varprop|randvars> \
      -animation?         <true|false>               \
      -flow-model         <line-of-sight|proximity|carbon|flood-water|surface-water|sediment|coastal-storm-protection|subsistence-fisheries>
+#+END_SRC
 
 * License
 
