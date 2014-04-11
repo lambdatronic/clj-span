@@ -274,8 +274,8 @@
         :orig-cols    cols
         :rows         scaled-rows
         :cols         scaled-cols
-        :cell-width   (* cell-width  (/ scaled-cols cols))
-        :cell-height  (* cell-height (/ scaled-rows rows))
+        :cell-width   (* cell-width  (/ cols scaled-cols))
+        :cell-height  (* cell-height (/ rows scaled-rows))
         :source-layer (r-and-z source-layer source-threshold)
         :sink-layer   (r-and-z sink-layer   sink-threshold)
         :use-layer    (r-and-z use-layer    use-threshold)
