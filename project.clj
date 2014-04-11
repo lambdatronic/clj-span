@@ -1,4 +1,4 @@
-(defproject clj-span/clj-span "1.0.0-SNAPSHOT"
+(defproject clj-span/clj-span "1.1.0"
   :description
 "clj-span - SPAN models for Ecosystem Service Assessment
 Copyright 2009-2013 Gary W. Johnson (gjohnson@green-compass.org)
