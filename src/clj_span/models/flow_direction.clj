@@ -5,6 +5,8 @@
         [clj-span.thinklab-monitor :only [monitor-info]])
   (:require [clojure.core.reducers :as r]))
 
+(refer 'clj-span.core :only '(distribute-flow!))
+
 (set-current-implementation :vectorz)
 
 (defn on-bounds?
@@ -247,8 +249,8 @@
   [flow-type routing-matrices use-points]
   (throw (ex-info (str "compute-flow-directions is undefined for flow-type " flow-type) {})))
 
+;; For now, simply return Ferdinando's passed-in FlowDirection layer.
 (defmethod compute-flow-directions :surface-water
-  "For now, simply return Ferdinando's passed-in FlowDirection layer."
   [flow-type routing-matrices use-points]
   (routing-matrices "FlowDirection"))
 
