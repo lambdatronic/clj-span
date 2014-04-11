@@ -23,14 +23,18 @@
 
 (ns clj-span.java-span-bridge
   (:use [clj-misc.utils            :only (p & with-message mapmap-generic mapmap-java)]
-        [clj-misc.matrix-ops       :only (make-matrix)]
-        [clj-span.thinklab-monitor :only (monitor-info with-error-monitor)])
+        [clj-misc.matrix-ops       :only (make-matrix is-matrix?)]
+        [clj-span.thinklab-monitor :only (monitor-info with-error-monitor)]
+        clojure.core.matrix
+        clojure.core.matrix.operators)
   (:require [clj-span.core :as core]
             (clj-misc [numbers :as nb] [varprop :as vp] [randvars :as rv]))
   (:import (org.integratedmodelling.thinklab.api.listeners IMonitor))
   (:gen-class
    :main false
    :methods [^{:static true} [runSpan [java.util.HashMap] java.util.HashMap]]))
+
+(set-current-implementation :vectorz)
 
 (defn NaN-to-zero
   [double]
@@ -82,8 +86,10 @@
 
 (defn funky-matrix2seq
   [rows cols matrix]
-  (map #(get-in matrix (offset-to-yx rows cols %))
-       (range (* rows cols))))
+  (let [lookup-fn (if (is-matrix? matrix)
+                    #(get-in matrix (offset-to-yx rows cols %))
+                    #(apply mget matrix (offset-to-yx rows cols %)))]
+    (map lookup-fn (range (* rows cols)))))
 
 (defn pack-layer
   [value-type rows cols closure]

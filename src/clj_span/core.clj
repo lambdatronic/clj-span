@@ -105,7 +105,8 @@
                            subsistence-fisheries
                            coastal-storm-protection
                            flood-water
-                           sediment))
+                           sediment
+                           flow-direction))
 
 (defn generate-results-map
   "Return the simulation results as a map of layer names to closures."
@@ -124,8 +125,10 @@
                (mapcat (fn [[label val]]
                          (if val
                            (with-message (str "Adding " label " to computable outputs...") "done"
-                             [label #(resample-matrix orig-rows orig-cols rv-intensive-sampler
-                                                      (if (fn? val) (val params) val))])))
+                             [label #(let [matrix (if (fn? val) (val params) val)]
+                                       (if (is-matrix? val)
+                                         (resample-matrix orig-rows orig-cols rv-intensive-sampler)
+                                         matrix))])))
                        (if possible-use-layer 
                          ;; our SPAN simulation pre-generated the layers -> return layers
                          (array-map
@@ -197,7 +200,8 @@
     (with-interrupt-checking ^IMonitor monitor
       (with-message
         (str "\nRunning " flow-model " flow model...\n")
-        #(str "Simulation complete.\nUsers affected: " (count-affected-users %))
+        "Simulation complete."
+;;        #(str "Simulation complete.\nUsers affected: " (count-affected-users %))
         (if (and (seq source-points)
                  (seq use-points))
           (let [new-params (if animation?
@@ -313,7 +317,8 @@
                          "SurfaceWaterMovement"
                          "SedimentTransport"
                          "CoastalStormMovement"
-                         "SubsistenceFishAccessibility"}
+                         "SubsistenceFishAccessibility"
+                         "FlowDirection"}
                        flow-model))
     (assert (contains? #{:cli-menu :closure-map :java-hashmap} result-type))
     (assert (contains? #{true false nil} animation?))

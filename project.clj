@@ -17,7 +17,9 @@ Johnson et al.)
   ;; :url "http://lambdatronic.github.com/clj-span" <-- codox-generated API
   :dependencies [[org.clojure/clojure "1.5.1"]
                  [meridian/clj-jts "0.0.1"]
-                 [integratedmodelling/thinklab-api "1.0.0"]]
+                 [integratedmodelling/thinklab-api "1.0.0"]
+                 [net.mikera/core.matrix "0.22.0"]
+                 [net.mikera/vectorz-clj "0.21.0"]]
   :min-lein-version "2.0.0"
   :global-vars {*warn-on-reflection* true}
   :aot [clj-span.commandline clj-span.java-span-bridge]
