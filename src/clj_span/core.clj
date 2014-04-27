@@ -126,8 +126,8 @@
                          (if val
                            (with-message (str "Adding " label " to computable outputs...") "done"
                              [label #(let [matrix (if (fn? val) (val params) val)]
-                                       (if (is-matrix? val)
-                                         (resample-matrix orig-rows orig-cols rv-intensive-sampler)
+                                       (if (is-matrix? matrix)
+                                         (resample-matrix orig-rows orig-cols rv-intensive-sampler matrix)
                                          matrix))])))
                        (if possible-use-layer 
                          ;; our SPAN simulation pre-generated the layers -> return layers
