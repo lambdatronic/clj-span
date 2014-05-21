@@ -41,7 +41,7 @@
    7.0 [1   0]   ; S  (7)
    8.0 [1   1]}) ; SE (8)
 
-(def NO-FLOW-DIRECTION Double/NaN)
+(def NO-FLOW-DIRECTION 0.0)
 
 (defn downstream-point
   "Returns the neighboring point into which the given point flows."
